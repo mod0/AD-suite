@@ -9,7 +9,8 @@ driverADMsplit:   $(addsuffix .o, $(RTSUPP) iaddr) ad_inline.o stream_vel_variab
 	${F90C} -g -o $@ $^
 numCore.pre.xb.x2w.w2f.post.f90 $(addsuffix .f90, $(RTSUPP)) iaddr.c : toolChain 
 toolChain : numCore.f90
-	openad -c -m rs $<
+	echo "\n Faking the invocation of openad \n"
+#	openad -c -m rs $<
 
 numCore.f90: stream_vel_variables.f90 conj_gradStubs.f90 stream_vel.f90
 	cat $^ | sed 's/use conj_grad/use conj_gradStub/' > $@
@@ -32,7 +33,8 @@ ad_inline.f:toolChain
 #	ln -s ../$@ ./
 
 clean: 
-	rm -f ad_template* ad_inline.f OAD_* w2f__*  iaddr* head.f90 lu.f90
-	rm -f numCore.* *.o *.mod* driverADMsplit *~ 
+	rm -f *.o *.mod* driverADMsplit *~ 
+#	rm -f ad_template* ad_inline.f OAD_* w2f__*  iaddr* head.f90 lu.f90
+#	rm -f numCore.* *.o *.mod* driverADMsplit *~ 
 
 .PHONY: clean toolChain
