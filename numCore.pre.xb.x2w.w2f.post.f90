@@ -49,7 +49,7 @@ PARAMETER ( N = 79)
 REAL(w2f__8) NGLEN
 PARAMETER ( NGLEN = 3.0D00)
 INTEGER(w2f__i4) N_NL
-PARAMETER ( N_NL = 1)
+PARAMETER ( N_NL = 20)
 REAL(w2f__8) PI
 PARAMETER ( PI = 3.141592653589793116D00)
 REAL(w2f__8) RHOI
@@ -195,15 +195,15 @@ CONTAINS
 !        !call pop_s1(x_p)     
 !        !call pop_s2(A_p)     
 !        !call pop_s1(b_p)
-         do i=1,n
+         do i=n, 1, -1
             call pop_s0(x_p(i))
          end do
-         do i=1,n
-           do j=1,3
+         do i=n, 1, -1
+           do j=3,1, -1
             call pop_s0(A_p(i,j))
            end do
          end do
-         do i=1,n
+         do i=n,1,-1
             call pop_s0(b_p(i))
          end do
 ! set up for plain execution
@@ -437,7 +437,7 @@ DO I = 1,79,1
   ENDIF
 END DO
 B(79)%v = (B(79)%v+FEND%v)
-DO I = 1,1,1
+DO I = 1,20,1
   CALL stream_vel_visc(H,U,NU)
   CALL stream_assemble(NU,BETA_FRIC,A)
   UTMP(1:79)%v = 0.0
@@ -492,7 +492,7 @@ integer_tape(integer_tape_pointer) = OpenAD_Symbol_21
 integer_tape_pointer = integer_tape_pointer+1
 B(79)%v = (B(79)%v+FEND%v)
 OpenAD_Symbol_24 = 0_w2f__i8
-DO I = 1,1,1
+DO I = 1,20,1
   CALL stream_vel_visc(H,U,NU)
   CALL stream_assemble(NU,BETA_FRIC,A)
   UTMP(1:79)%v = 0.0

@@ -82,15 +82,15 @@
          !call pop_s1(x_p)     
          !call pop_s2(A_p)     
          !call pop_s1(b_p)
-         do i=1,n
+         do i=n, 1, -1
             call pop_s0(x_p(i))
          end do
-         do i=1,n
-           do j=1,3
+         do i=n, 1, -1
+           do j=3,1, -1
             call pop_s0(A_p(i,j))
            end do
          end do 
-         do i=1,n
+         do i=n,1,-1
             call pop_s0(b_p(i))
          end do   
 ! set up for plain execution
