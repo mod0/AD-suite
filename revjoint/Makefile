@@ -9,8 +9,8 @@ driverADMjoint:   $(addsuffix .o, $(RTSUPP) iaddr) ad_inline.o stream_vel_variab
 	${F90C} -g -o $@ $^
 numCore.pre.xb.x2w.w2f.post.f90 $(addsuffix .f90, $(RTSUPP)) iaddr.c : toolChain 
 toolChain : numCore.f90
-#	echo "Faking openadcall"
-	openad -c -m rj $<
+	echo "Faking openadcall"
+#	openad -c -m rj $<
 
 numCore.f90: stream_vel_variables.f90 conj_gradStubs.f90 stream_vel.f90
 	cat $^ | sed 's/use conj_grad/use conj_gradStub/' > $@

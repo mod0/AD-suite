@@ -40,9 +40,8 @@
         real(8), intent(inout), dimension(n) :: bb
         real(8), intent(inout) :: fc
 
-        real(8), dimension(n,3) :: A
-        real(8), dimension(n) :: f, beta_fric, h, beta_0, h0, utmp, b, nu
-        real(8), dimension(n+1) :: myutemp
+!        real(8), dimension(n,3) :: A
+        real(8), dimension(n) :: f, beta_fric, h, beta_0, h0, utmp, b
         real(8) :: fend
         integer :: i,j
 
@@ -77,23 +76,11 @@
         do i=1, n_nl
 
 !$TAF STORE u = tape_inner
-         myutemp = u
-         call stream_vel_visc (h, myutemp, nu)                 ! update viscosities
-              
-         call stream_assemble (nu, beta_fric, A)         ! assemble tridiag matrix
-                                                         ! this represents discretization of
-                                                         !  (nu^(i-1) u^(i)_x)_x - \beta^2 u^(i) = f
 
-         utmp = 0.
-         call solve (utmp, b, A)                     ! solve linear system for new u
-
-         do j=1,n
-          u(j+1) = utmp(j)                               ! effectively apply boundary condition u(1)==0
-         enddo
-
-
+         call phi (u, b, h, beta_fric)
  
         enddo
+        call phi (u, b, h, beta_fric)
 
         fc=0.
         do i=2,n+1
@@ -101,6 +88,36 @@
         enddo
 
         end subroutine stream_vel
+
+!-----------------------------
+        subroutine phi (u, b, h, beta_fric)
+!-----------------------------
+        use stream_vel_variables
+        use conj_grad_mod
+        real(8), dimension(n) :: b, h
+        real(8), intent(inout), dimension(n) :: beta_fric
+        real(8), dimension(n+1) :: u
+        real(8), dimension(n) :: nu,utmp
+        real(8), dimension(n,3) :: A
+        integer :: j
+
+
+        call stream_vel_visc (h, u, nu)                 ! update viscosities
+              
+        call stream_assemble (nu, beta_fric, A)         ! assemble tridiag matrix
+                                                         ! this represents discretization of
+                                                         !  (nu^(i-1) u^(i)_x)_x - \beta^2 u^(i) = f
+
+        utmp = 0.
+        call solve (utmp, b, A)                     ! solve linear system for new u
+
+        do j=1,n
+         u(j+1) = utmp(j)                               ! effectively apply boundary condition u(1)==0
+        enddo
+
+
+        end subroutine phi 
+
 
 !-----------------------------
         subroutine stream_vel_taud (h, f, fend)
@@ -159,7 +176,8 @@
 
         use stream_vel_variables
 
-        real(8), intent(inout), dimension(n) :: nu, beta_fric
+        real(8), intent(in), dimension(n) :: nu
+        real(8), intent(inout), dimension(n) :: beta_fric
         real(8), intent(inout), dimension(n,3) :: A
         integer :: i
 
