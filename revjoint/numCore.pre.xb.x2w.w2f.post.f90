@@ -540,7 +540,7 @@ type(active) :: OpenAD_prp_2
 !
 !     **** Statements ****
 !
-
+print*, " tape       ", our_rev_mode, "  ", our_rev_mode%plain
     if (our_rev_mode%arg_store) then
 ! store arguments
 call cp_store_real_scalar(DX,theArgFStack,theArgFStackoffset,theArgFStackSize)
@@ -554,7 +554,9 @@ theArgFStackoffset = theArgFStackoffset-1
       our_orig_mode=our_rev_mode
       our_rev_mode%arg_store=.FALSE.
 ! original function
+print*, " tape       ", our_rev_mode, "  ", our_rev_mode%plain
 CALL stream_vel_init(H0,BETA_0)
+print*, " tape       ", our_rev_mode, "  ", our_rev_mode%plain
 BETA_FRIC(1 : 79) = BETA_0(1 : 79)
 H(1:79)%v = (BB(1:79)%v+H0(1:79))
 CALL stream_vel_taud(H,F,FEND)
@@ -697,8 +699,9 @@ do jj=1,80
  U_DUMMY(jj)%d=U(jj)%d
  U_DUMMY(jj)%v=U(jj)%v
 enddo
-
+      our_rev_mode%arg_look=.TRUE.
 CALL phi(U,B_DUMMY,H_DUMMY,BETA_FRIC)
+      our_rev_mode%arg_look=.FALSE.
 CALL phi(U_DUMMY,B,H,BETA_FRIC)
 
 do jj=1,80
@@ -840,7 +843,7 @@ INTEGER(w2f__i4) OpenAD_Symbol_71
 
 ! floats 'F'
     double precision, dimension(:), allocatable, save :: theArgFStack
-    integer, save :: theArgFStackoffset=0, theArgFStackSize=0
+    integer, save :: theArgFStackoffset=0, theArgFStackSize=0, theArgFStackoffsetTemp=0
 ! integers 'I'
     integer, dimension(:), allocatable, save :: theArgIStack
     integer, save :: theArgIStackoffset=0, theArgIStackSize=0
@@ -859,7 +862,6 @@ INTEGER(w2f__i4) OpenAD_Symbol_71
 !
 !     **** Statements ****
 !
-
     if (our_rev_mode%arg_store) then
 ! store arguments
 call cp_store_real_scalar(DX,theArgFStack,theArgFStackoffset,theArgFStackSize)
@@ -877,6 +879,7 @@ call cp_store_p_real_vector(BETA_FRIC,size(BETA_FRIC),theArgFStack,theArgFStacko
 
     end if
     if (our_rev_mode%arg_restore) then
+theArgFStackoffsetTemp=theArgFStackoffset
 ! restore arguments
 do cp_loop_variable_1 = ubound(BETA_FRIC,1),lbound(BETA_FRIC,1),-1
 BETA_FRIC(cp_loop_variable_1) = theArgFStack(theArgFStackoffset)
@@ -975,6 +978,9 @@ CALL stream_vel_visc(H,U,NU)
       our_rev_mode%plain=.FALSE.
       our_rev_mode%tape=.TRUE.
       our_rev_mode%adjoint=.FALSE.
+    end if
+if (our_rev_mode%arg_look) then
+theArgFStackoffset=theArgFStackoffsetTemp 
     end if
   end subroutine phi
 !#########################################################

@@ -23,6 +23,7 @@ program driver
 ! call adjoint model
      our_rev_mode%arg_store=.FALSE.
      our_rev_mode%arg_restore=.FALSE.
+     our_rev_mode%arg_look=.FALSE.
      our_rev_mode%res_store=.FALSE.
      our_rev_mode%res_restore=.FALSE.
      our_rev_mode%plain=.FALSE.
