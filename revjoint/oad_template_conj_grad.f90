@@ -76,6 +76,7 @@
         our_rev_mode=our_orig_mode
       end if
       if (our_rev_mode%tape) then
+        our_orig_mode = our_rev_mode
         our_rev_mode%arg_store=.TRUE.
         our_rev_mode%arg_restore=.FALSE.
         our_rev_mode%plain=.TRUE.
@@ -84,50 +85,6 @@
         b_p  = b%v
         x_p  = x%v
         A_p  = A%v
-        do i=1,n
-          call push_s0(b_p(i))
-        end do 
-        do i=1,n
-          do j=1,3
-            call push_s0(A_p(i,j))
-          end do
-        end do     
-        call solve(x_p,b_p,A_p) 
-        do i=1,n
-          call push_s0(x_p(i))
-        end do   
-! taping end
-        our_rev_mode%arg_store=.FALSE.
-        our_rev_mode%arg_restore=.FALSE.
-        our_rev_mode%plain=.FALSE.
-        our_rev_mode%tape=.FALSE.
-        our_rev_mode%adjoint=.TRUE.
-      end if
-      if (our_rev_mode%adjoint) then
-        our_rev_mode%arg_store=.FALSE.
-        our_rev_mode%arg_restore=.TRUE.
-        our_rev_mode%plain=.FALSE.
-        our_rev_mode%tape=.TRUE.
-        our_rev_mode%adjoint=.FALSE.
-! adjoint
-        do i=n, 1, -1
-          call pop_s0(x_p(i))
-        end do
-        do i=n, 1, -1
-          do j=3,1, -1
-            call pop_s0(A_p(i,j))
-          end do
-        end do 
-        do i=n,1,-1
-          call pop_s0(b_p(i))
-        end do   
-! set up for plain execution
-        our_orig_mode=our_rev_mode
-        our_rev_mode%arg_store=.FALSE.
-        our_rev_mode%arg_restore=.FALSE.
-        our_rev_mode%plain=.TRUE.
-        our_rev_mode%tape=.FALSE.
-        our_rev_mode%adjoint=.FALSE.
         b_d  = b%d
         x_d  = x%d
         A_d  = A%d
@@ -138,10 +95,5 @@
 ! reset the mode
         our_rev_mode=our_orig_mode
 !adjoint end
-        our_rev_mode%arg_store=.FALSE.
-        our_rev_mode%arg_restore=.TRUE.
-        our_rev_mode%plain=.FALSE.
-        our_rev_mode%tape=.TRUE.
-        our_rev_mode%adjoint=.FALSE.
       end if 
       end subroutine template
