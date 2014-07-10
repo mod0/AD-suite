@@ -679,8 +679,8 @@ OpenAD_Symbol_15 = 1
 
 
 
-!UNEW(1:80)%d = UNEW(1:80)%d+U(1:80)%d
-!U(1:80)%d = 0.0d0
+UNEW(1:80)%d = UNEW(1:80)%d+U(1:80)%d
+U(1:80)%d = 0.0d0
 
 our_rev_mode%arg_look = .true.
 
