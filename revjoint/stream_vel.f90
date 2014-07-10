@@ -42,6 +42,7 @@
 
 !        real(8), dimension(n,3) :: A
         real(8), dimension(n) :: f, beta_fric, h, beta_0, h0, utmp, b
+        real(8), dimension(n+1) :: unew
         real(8) :: fend
         integer :: i,j
 
@@ -73,14 +74,18 @@
         b(n) = b(n) + fend
 
 !-----------------------------------
+        conv_flag = 0
         do i=1, n_nl
 
 !$TAF STORE u = tape_inner
 
-         call phi (u, b, h, beta_fric)
- 
+          call phi (u, unew, b, h, beta_fric)
+
+          u = unew 
+
         enddo
-        call phi (u, b, h, beta_fric)
+        call phi (u, unew, b, h, beta_fric)
+        u = unew
 
         fc=0.
         do i=2,n+1
@@ -90,19 +95,21 @@
         end subroutine stream_vel
 
 !-----------------------------
-        subroutine phi (u, b, h, beta_fric)
+        subroutine phi (u_i, u_ip1, b, h, beta_fric)
 !-----------------------------
         use stream_vel_variables
         use conj_grad_mod
         real(8), dimension(n) :: b, h
         real(8), intent(inout), dimension(n) :: beta_fric
-        real(8), dimension(n+1) :: u
+        real(8), intent(in), dimension(n+1) :: u_i
+        real(8), intent(out), dimension(n+1) :: u_ip1
+        
         real(8), dimension(n) :: nu,utmp
         real(8), dimension(n,3) :: A
         integer :: j
 
 
-        call stream_vel_visc (h, u, nu)                 ! update viscosities
+        call stream_vel_visc (h, u_i, nu)                 ! update viscosities
               
         call stream_assemble (nu, beta_fric, A)         ! assemble tridiag matrix
                                                          ! this represents discretization of
@@ -112,7 +119,7 @@
         call solve (utmp, b, A)                     ! solve linear system for new u
 
         do j=1,n
-         u(j+1) = utmp(j)                               ! effectively apply boundary condition u(1)==0
+         u_ip1(j+1) = utmp(j)                               ! effectively apply boundary condition u(1)==0
         enddo
 
 

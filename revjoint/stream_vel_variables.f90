@@ -3,7 +3,7 @@
 !-----------------------------
 
         integer, parameter :: n = 79                ! grid size
-        integer, parameter :: n_nl = 20            ! # nonlin iterations (mat solves)
+        integer, parameter :: n_nl = 60            ! # nonlin iterations (mat solves)
         real(8), parameter :: Lx = 79.e3            ! domain length
         real(8), parameter :: ep_glen = 1.e-7       ! reg. parameter for glen's law
         real(8), parameter :: eps = 1.e-5           
