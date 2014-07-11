@@ -127,7 +127,7 @@
 !-----------------------------
         subroutine phistage (u, b, h, beta_fric, isinloop)
 !-----------------------------
-!$openad xxx template oad_template_phistage_grad.f90
+!$openad xxx template oad_template_phistage.f90
         use stream_vel_variables
         real(8), dimension(n) :: b, h
         real(8), intent(inout), dimension(n) :: beta_fric
