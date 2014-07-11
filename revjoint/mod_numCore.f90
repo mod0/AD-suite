@@ -417,7 +417,7 @@ INTEGER(w2f__i8) OpenAD_Symbol_35
 !
 type(active) :: U(1:80)
 type(active) :: U_DUMMY(1:80)
-type(active) :: UNEW_DUMMY(1:80)
+type(active) :: W(1:80)
 type(active) :: BB(1:79)
 type(active) :: FC
 !
@@ -652,25 +652,16 @@ FC%d = 0.0d0
 
 CALL phi(U,UNEW,B,H,BETA_FRIC)
 
-do jj=1,80
- if (jj.lt.80) then
- B_DUMMY(jj)%d=B(jj)%d
- H_DUMMY(jj)%d=H(jj)%d
- B_DUMMY(jj)%v=B(jj)%v
- H_DUMMY(jj)%v=H(jj)%v
- endif
- U_DUMMY(jj)%d=U(jj)%d
- U_DUMMY(jj)%v=U(jj)%v
- UNEW_DUMMY(jj)%d=UNEW(jj)%d
-enddo
+! -------- BELOW HERE: CALL TO SUBROUTINE THAT CALLS LOOP
 
-!      our_rev_mode%arg_look=.TRUE.
-!      CALL phi(U,UNEW,B_DUMMY,H_DUMMY,BETA_FRIC)
+! -----------------------------------------------------------
 
-!      our_rev_mode%arg_look=.FALSE.
-!      CALL phi(U_DUMMY,UNEW_DUMMY,B,H,BETA_FRIC)
-
-! -----------------------------------------
+ B_DUMMY(1:79)%d=B(1:79)%d
+ H_DUMMY(1:79)%d=H(1:79)%d
+ B_DUMMY(1:79)%v=B(1:79)%v
+ H_DUMMY(1:79)%v=H(1:79)%v
+ U_DUMMY(1:80)%d=U(1:80)%d
+ U_DUMMY(1:80)%v=U(1:80)%v
 
 
 integer_tape_pointer = integer_tape_pointer-1
@@ -678,30 +669,27 @@ OpenAD_Symbol_14 = integer_tape(integer_tape_pointer)
 OpenAD_Symbol_15 = 1
 
 
-
-UNEW(1:80)%d = UNEW(1:80)%d+U(1:80)%d
-U(1:80)%d = 0.0d0
-
 our_rev_mode%arg_look = .true.
+
+W(1:80)%d = U(1:80)%d
 
 do while (INT(OpenAD_Symbol_15).LE.INT(OpenAD_Symbol_14))
 
-!UNEW(1:80)%d = UNEW(1:80)%d+U(1:80)%d
-!U(1:80)%d = 0.0d0
-  
-  CALL phi(U,UNEW,B_dummy,H_dummy,BETA_FRIC)
-  print *, "GOT HERE", u(80)%d
 
-  unew(1:80)%d = u(1:80)%d
-  u(1:80)%v=u_dummy(1:80)%v 
-  u(1:80)%d=u_dummy(1:80)%d
+  U(1:80)%d = U_DUMMY(1:80)%d
+
+  CALL phi(U,W,B_dummy,H_dummy,BETA_FRIC)
+
+  W(1:80)%d = U(1:80)%d
+
 
   OpenAD_Symbol_15 = INT(OpenAD_Symbol_15)+1
 END DO
 
 our_rev_mode%arg_look=.false.
-CALL phi(U_DUMMY,UNEW,B,H,BETA_FRIC)
+CALL phi(U_DUMMY,W,B,H,BETA_FRIC)
 
+! -------------------------------------------------
 
 FEND%d = FEND%d+B(79)%d
 OpenAD_prp_1%d = OpenAD_prp_1%d+B(79)%d
