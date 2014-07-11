@@ -76,19 +76,20 @@
 !-----------------------------------
         conv_flag = 0
 
-        call phistage (u, b, h, beta_fric, 0)
+        call phistage (u, unew, b, h, beta_fric, 0)
+       ! u = unew
 
         do i=1, n_nl
 
 !$TAF STORE u = tape_inner
-          call phistage (u, b, h, beta_fric, 1)
-          !u = unew
+          call phistage (u, unew, b, h, beta_fric, 1)
+          u = unew
           
 
         enddo
 
-        call phistage (u, b, h, beta_fric, 2)
-        !u = unew
+        call phistage (u, unew, b, h, beta_fric, 2)
+        u = unew
 
         fc=0.
         do i=2,n+1
@@ -129,19 +130,19 @@
         end subroutine phi 
 
 !-----------------------------
-        subroutine phistage (u, b, h, beta_fric, isinloop)
+        subroutine phistage (u, u_ip1, b, h, beta_fric, isinloop)
 !-----------------------------
 !$openad xxx template oad_template_phistage.f90
         use stream_vel_variables
         real(8), dimension(n) :: b, h
         real(8), intent(inout), dimension(n) :: beta_fric
-        real(8), intent(inout), dimension(n+1) :: u
-        !real(8), intent(out), dimension(n+1) :: u_ip1
-        real(8), dimension(n+1) :: u_ip1
+        real(8), intent(in), dimension(n+1) :: u
+        real(8), intent(out), dimension(n+1) :: u_ip1
+!        real(8), dimension(n+1) :: u_ip1
         integer, intent(in) :: isinloop 
 
         call phi (u, u_ip1, b, h, beta_fric)
-        u = u_ip1
+!        u = u_ip1
 
         end subroutine phistage 
 
