@@ -108,6 +108,10 @@ U(1:80)%v = U_IP1(1:80)%v
  CALL phi(U,U_IP1,B,H,BETA_FRIC)
  U(1:80)%v = U_IP1(1:80)%v
 
+ if (isinloop.eq.1) then
+ our_rev_mode%arg_store=.true.
+ endif
+
 ! taping end
       our_rev_mode%arg_store=.FALSE.
       our_rev_mode%arg_restore=.FALSE.
@@ -141,13 +145,13 @@ U(1:80)%v = U_IP1(1:80)%v
 
   U_IP1(1:80)%d = U_DUMMY(1:80)%d
 
- case (0)
+ case (2)
 
   U_IP1(1:80)%d = U_IP1(1:80)%d+U(1:80)%d
   U(1:80)%d = 0.0d0
   CALL phi(U,U_IP1,B,H,BETA_FRIC)
 
- case (2)
+ case (0)
 
   CALL phi(U,U_IP1,B,H,BETA_FRIC)
 
