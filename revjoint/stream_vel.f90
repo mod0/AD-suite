@@ -75,15 +75,19 @@
 
 !-----------------------------------
         conv_flag = 0
+
+        call phistage (u, b, h, beta_fric, 0)
+
         do i=1, n_nl
 
 !$TAF STORE u = tape_inner
-          call phistage (u, b, h, beta_fric, .true.)
+          call phistage (u, b, h, beta_fric, 1)
           !u = unew
           
 
         enddo
-        call phistage (u, b, h, beta_fric, .false.)
+
+        call phistage (u, b, h, beta_fric, 2)
         !u = unew
 
         fc=0.
@@ -134,7 +138,7 @@
         real(8), intent(inout), dimension(n+1) :: u
         !real(8), intent(out), dimension(n+1) :: u_ip1
         real(8), dimension(n+1) :: u_ip1
-        logical, intent(in) :: isinloop 
+        integer, intent(in) :: isinloop 
 
         call phi (u, u_ip1, b, h, beta_fric)
         u = u_ip1

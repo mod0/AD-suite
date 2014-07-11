@@ -5,6 +5,12 @@
 !$TEMPLATE_PRAGMA_DECLARATIONS
     type(modeType) :: our_orig_mode
 
+! dummy variables for calling adjoint computation without side effects, storing
+! adjoint variable iterates
+    type(active) :: B_DUMMY(1:79)
+    type(active) :: H_DUMMY(1:79)
+    type(active) :: U_DUMMY(1:80)
+
 ! checkpointing stacks and offsets
     integer :: cp_loop_variable_1,cp_loop_variable_2,cp_loop_variable_3,cp_loop_&
      &variable_4,cp_loop_variable_5,cp_loop_variable_6
@@ -13,6 +19,10 @@
 ! floats 'F'
     double precision, dimension(:), allocatable, save :: theArgFStack
     integer, save :: theArgFStackoffset=0, theArgFStackSize=0
+
+    ! added to roll back file offset after "look" into stack
+    integer, save :: theArgFStackoffsetTemp=0
+
 ! integers 'I'
     integer, dimension(:), allocatable, save :: theArgIStack
     integer, save :: theArgIStackoffset=0, theArgIStackSize=0
@@ -49,6 +59,10 @@ call cp_store_p_real_vector(BETA_FRIC,size(BETA_FRIC),theArgFStack,theArgFStacko
     end if
     if (our_rev_mode%arg_restore) then
 ! restore arguments
+
+! current top of stack -- for look functionality
+theArgFStackoffsetTemp=theArgFStackoffset
+
 do cp_loop_variable_1 = ubound(BETA_FRIC,1),lbound(BETA_FRIC,1),-1
 BETA_FRIC(cp_loop_variable_1) = theArgFStack(theArgFStackoffset)
 theArgFStackoffset = theArgFStackoffset-1
@@ -80,14 +94,19 @@ U(1:80)%v = U_IP1(1:80)%v
     end if
     if (our_rev_mode%tape) then
 !            print*, " tape       ", our_rev_mode
-      our_rev_mode%arg_store=.TRUE.
       our_rev_mode%arg_restore=.FALSE.
       our_rev_mode%plain=.TRUE.
       our_rev_mode%tape=.FALSE.
       our_rev_mode%adjoint=.FALSE.
 ! taping
-CALL phi(U,U_IP1,B,H,BETA_FRIC)
-U(1:80)%v = U_IP1(1:80)%v
+
+ our_rev_mode%arg_store=.true.
+ if (isinloop.eq.1) then
+ our_rev_mode%arg_store=.false.
+ endif
+
+ CALL phi(U,U_IP1,B,H,BETA_FRIC)
+ U(1:80)%v = U_IP1(1:80)%v
 
 ! taping end
       our_rev_mode%arg_store=.FALSE.
@@ -104,9 +123,35 @@ U(1:80)%v = U_IP1(1:80)%v
       our_rev_mode%tape=.TRUE.
       our_rev_mode%adjoint=.FALSE.
 ! adjoint
-U_IP1(1:80)%d = U_IP1(1:80)%d+U(1:80)%d
-U(1:80)%d = 0.0d0
-CALL phi(U,U_IP1,B,H,BETA_FRIC)
+
+ select case (isinloop) 
+
+  case (1)
+
+  B_DUMMY(1:79)%d=B(1:79)%d
+  H_DUMMY(1:79)%d=H(1:79)%d
+  U_DUMMY(1:80)%d = U(1:80)%d
+
+!  U_IP1(1:80)%d = U_IP1(1:80)%d+U(1:80)%d
+!  U(1:80)%d = 0.0d0
+
+  our_rev_mode%arg_look = .true.
+  CALL phi(U_DUMMY,U_IP1,B_DUMMY,H_DUMMY,BETA_FRIC)
+  our_rev_mode%arg_look = .false.
+
+  U_IP1(1:80)%d = U_DUMMY(1:80)%d
+
+ case (0)
+
+  U_IP1(1:80)%d = U_IP1(1:80)%d+U(1:80)%d
+  U(1:80)%d = 0.0d0
+  CALL phi(U,U_IP1,B,H,BETA_FRIC)
+
+ case (2)
+
+  CALL phi(U,U_IP1,B,H,BETA_FRIC)
+
+end select
 
 ! adjoint end
       our_rev_mode%arg_store=.FALSE.
@@ -115,4 +160,12 @@ CALL phi(U,U_IP1,B,H,BETA_FRIC)
       our_rev_mode%tape=.TRUE.
       our_rev_mode%adjoint=.FALSE.
     end if
+
+    ! added -- if called in "look" mode this 
+    !          will prevent stack offset changes
+    if (our_rev_mode%arg_look) then
+     theArgFStackoffset=theArgFStackoffsetTemp
+    end if
+
+
       end subroutine template

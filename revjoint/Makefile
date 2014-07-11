@@ -11,6 +11,7 @@ numCore.pre.xb.x2w.w2f.post.f90 $(addsuffix .f90, $(RTSUPP)) iaddr.c : toolChain
 toolChain : numCore.f90
 	echo "Faking openadcall"
 	openad -c -m rj $<
+	svn revert OAD_rev.f90
 
 numCore.f90: stream_vel_variables.f90 conj_gradStubs.f90 stream_vel.f90
 	cat $^ | sed 's/use conj_grad/use conj_gradStub/' > $@
@@ -34,6 +35,6 @@ ad_inline.f:toolChain
 
 clean: 
 	rm -f ad_template* ad_inline.f OAD_* w2f__*  iaddr* head.f90 lu.f90
-	rm -f numCore.* *.o *.mod* driverADMjoint *~ 
+	rm -f  *.o *.mod* driverADMjoint *~ 
 
 .PHONY: clean toolChain
