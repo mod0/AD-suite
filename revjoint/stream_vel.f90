@@ -78,14 +78,13 @@
         do i=1, n_nl
 
 !$TAF STORE u = tape_inner
-
-          call phi (u, unew, b, h, beta_fric)
-
-          u = unew 
+          call phistage (u, b, h, beta_fric, .true.)
+          !u = unew
+          
 
         enddo
-        call phi (u, unew, b, h, beta_fric)
-        u = unew
+        call phistage (u, b, h, beta_fric, .false.)
+        !u = unew
 
         fc=0.
         do i=2,n+1
@@ -125,6 +124,22 @@
 
         end subroutine phi 
 
+!-----------------------------
+        subroutine phistage (u, b, h, beta_fric, isinloop)
+!-----------------------------
+!$openad xxx template oad_template_phistage_grad.f90
+        use stream_vel_variables
+        real(8), dimension(n) :: b, h
+        real(8), intent(inout), dimension(n) :: beta_fric
+        real(8), intent(inout), dimension(n+1) :: u
+        !real(8), intent(out), dimension(n+1) :: u_ip1
+        real(8), dimension(n+1) :: u_ip1
+        logical, intent(in) :: isinloop 
+
+        call phi (u, u_ip1, b, h, beta_fric)
+        u = u_ip1
+
+        end subroutine phistage 
 
 !-----------------------------
         subroutine stream_vel_taud (h, f, fend)
