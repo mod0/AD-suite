@@ -652,41 +652,32 @@ FC%d = 0.0d0
 
 CALL phi(U,UNEW,B,H,BETA_FRIC)
 
-! -------- BELOW HERE: CALL TO SUBROUTINE THAT CALLS LOOP
-
-! -----------------------------------------------------------
-
-
-
 integer_tape_pointer = integer_tape_pointer-1
 OpenAD_Symbol_14 = integer_tape(integer_tape_pointer)
 OpenAD_Symbol_15 = 1
 
+! -------------------------------------------------
 
 our_rev_mode%arg_look = .true.
 
-W(1:80)%d = U(1:80)%d
-U_DUMMY(1:80)%d=U(1:80)%d
 
 do while (INT(OpenAD_Symbol_15).LE.INT(OpenAD_Symbol_14))
 
- B_DUMMY(1:79)%d=B(1:79)%d
- H_DUMMY(1:79)%d=H(1:79)%d
- B_DUMMY(1:79)%v=B(1:79)%v
- H_DUMMY(1:79)%v=H(1:79)%v
+  B_DUMMY(1:79)%d=B(1:79)%d
+  H_DUMMY(1:79)%d=H(1:79)%d
 
-  U(1:80)%d = U_DUMMY(1:80)%d
+  U_DUMMY(1:80)%d = U(1:80)%d
 
-  CALL phi(U,W,B_dummy,H_dummy,BETA_FRIC)
+  CALL phi(U_DUMMY,UNEW,B_dummy,H_dummy,BETA_FRIC)
 
-  W(1:80)%d = U(1:80)%d
+  UNEW(1:80)%d = U_DUMMY(1:80)%d
 
 
   OpenAD_Symbol_15 = INT(OpenAD_Symbol_15)+1
 END DO
 
 our_rev_mode%arg_look=.false.
-CALL phi(U_DUMMY,W,B,H,BETA_FRIC)
+CALL phi(U,UNEW,B,H,BETA_FRIC)
 
 ! -------------------------------------------------
 
