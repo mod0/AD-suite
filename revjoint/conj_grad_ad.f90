@@ -59,7 +59,7 @@ contains
 
         do ii=1,20*n
 
-        if (resid.gt. 1e-6*res_init) then
+        if (resid.gt. 1e-14*res_init) then
 
          k_iter = k_iter + 1
 
