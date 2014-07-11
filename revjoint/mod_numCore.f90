@@ -656,12 +656,6 @@ CALL phi(U,UNEW,B,H,BETA_FRIC)
 
 ! -----------------------------------------------------------
 
- B_DUMMY(1:79)%d=B(1:79)%d
- H_DUMMY(1:79)%d=H(1:79)%d
- B_DUMMY(1:79)%v=B(1:79)%v
- H_DUMMY(1:79)%v=H(1:79)%v
- U_DUMMY(1:80)%d=U(1:80)%d
- U_DUMMY(1:80)%v=U(1:80)%v
 
 
 integer_tape_pointer = integer_tape_pointer-1
@@ -672,9 +666,14 @@ OpenAD_Symbol_15 = 1
 our_rev_mode%arg_look = .true.
 
 W(1:80)%d = U(1:80)%d
+U_DUMMY(1:80)%d=U(1:80)%d
 
 do while (INT(OpenAD_Symbol_15).LE.INT(OpenAD_Symbol_14))
 
+ B_DUMMY(1:79)%d=B(1:79)%d
+ H_DUMMY(1:79)%d=H(1:79)%d
+ B_DUMMY(1:79)%v=B(1:79)%v
+ H_DUMMY(1:79)%v=H(1:79)%v
 
   U(1:80)%d = U_DUMMY(1:80)%d
 
