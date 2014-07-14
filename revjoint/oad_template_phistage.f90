@@ -119,15 +119,14 @@ CALL phi(U,U_IP1,B,H,BETA_FRIC)
       our_rev_mode%tape=.TRUE.
       our_rev_mode%adjoint=.FALSE.
     if(isinloop.eq.0) then
-      do i=1,n+1
+      do i=n+1,1,-1
         call pop_s0(U_DUMMY(i)%d)
       end do
 ! adjoint
-      print *, "U_IP1(80)%d ", U_IP1(80)%d
       CALL phi(U,U_IP1,B,H,BETA_FRIC)
     end if 
     if(isinloop.eq.1) then
-      do i=1,n+1
+      do i=n+1,1,-1
         call pop_s0(U_DUMMY(i)%d)
       end do
       do i=1,n+1
@@ -138,7 +137,7 @@ CALL phi(U,U_IP1,B,H,BETA_FRIC)
       U_DUMMY%v = U%v
 ! adjoint
      CALL phi(U_DUMMY,U_IP1,B_DUMMY,H_DUMMY,BETA_FRIC)
-     U_IP1%d = U_DUMMY%d 
+     U_IP1%d = U_DUMMY%d
     end if
 !We have to push the value of U%d as it is overwritten in the caller (stream_vel in this case)
     if(isinloop.eq.2) then
