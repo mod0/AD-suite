@@ -18,11 +18,7 @@
 
 ! floats 'F'
     double precision, dimension(:), allocatable, save :: theArgFStack
-    integer, save :: theArgFStackoffset=0, theArgFStackSize=0
-
-    ! added to roll back file offset after "look" into stack
-    integer, save :: theArgFStackoffsetTemp=0
-
+    integer, save :: theArgFStackoffset=0, theArgFStackSize=0, theArgFStackoffsetTemp=0
 ! integers 'I'
     integer, dimension(:), allocatable, save :: theArgIStack
     integer, save :: theArgIStackoffset=0, theArgIStackSize=0
@@ -32,7 +28,7 @@
 ! strings 'S'
     character*(80), dimension(:), allocatable, save :: theArgSStack
     integer, save :: theArgSStackoffset=0, theArgSStackSize=0
-
+    integer :: i
 
 ! external C function used in inlined code
     integer iaddr
@@ -42,6 +38,7 @@
 !
 
     if (our_rev_mode%arg_store) then
+if(isinloop.eq.2) then
 ! store arguments
 call cp_store_real_scalar(DX,theArgFStack,theArgFStackoffset,theArgFStackSize)
 call cp_store_real_vector(U,size(U),theArgFStack,theArgFStackoffset,theArgFStack&
@@ -58,14 +55,13 @@ call cp_store_real_vector(H,size(H),theArgFStack,theArgFStackoffset,theArgFStack
 
 call cp_store_p_real_vector(BETA_FRIC,size(BETA_FRIC),theArgFStack,theArgFStacko&
      &ffset,theArgFStackSize)
-
+end if
     end if
     if (our_rev_mode%arg_restore) then
+!Set the Temporary offset to the actual offset
+theArgFStackoffsetTemp = theArgFStackoffset
+
 ! restore arguments
-
-! current top of stack -- for look functionality
-theArgFStackoffsetTemp=theArgFStackoffset
-
 do cp_loop_variable_1 = ubound(BETA_FRIC,1),lbound(BETA_FRIC,1),-1
 BETA_FRIC(cp_loop_variable_1) = theArgFStack(theArgFStackoffset)
 theArgFStackoffset = theArgFStackoffset-1
@@ -94,30 +90,19 @@ theArgFStackoffset = theArgFStackoffset-1
       our_rev_mode%arg_store=.FALSE.
 ! original function
 CALL phi(U,U_IP1,B,H,BETA_FRIC)
-U(1:80)%v = U_IP1(1:80)%v
 
 ! original function end
       our_rev_mode=our_orig_mode
     end if
     if (our_rev_mode%tape) then
 !            print*, " tape       ", our_rev_mode
+      our_rev_mode%arg_store=.TRUE.
       our_rev_mode%arg_restore=.FALSE.
       our_rev_mode%plain=.TRUE.
       our_rev_mode%tape=.FALSE.
       our_rev_mode%adjoint=.FALSE.
 ! taping
-
- our_rev_mode%arg_store=.true.
- if (isinloop.eq.1) then
- our_rev_mode%arg_store=.false.
- endif
-
- CALL phi(U,U_IP1,B,H,BETA_FRIC)
- U(1:80)%v = U_IP1(1:80)%v
-
- if (isinloop.eq.1) then
- our_rev_mode%arg_store=.true.
- endif
+CALL phi(U,U_IP1,B,H,BETA_FRIC)
 
 ! taping end
       our_rev_mode%arg_store=.FALSE.
@@ -133,50 +118,45 @@ U(1:80)%v = U_IP1(1:80)%v
       our_rev_mode%plain=.FALSE.
       our_rev_mode%tape=.TRUE.
       our_rev_mode%adjoint=.FALSE.
+    if(isinloop.eq.0) then
+      do i=1,n+1
+        call pop_s0(U_DUMMY(i)%d)
+      end do
 ! adjoint
-
- select case (isinloop) 
-
-  case (1)
-
-  B_DUMMY(1:79)%d=B(1:79)%d
-  H_DUMMY(1:79)%d=H(1:79)%d
-  U_DUMMY(1:80)%d = U(1:80)%d
-
-!  U_IP1(1:80)%d = U_IP1(1:80)%d+U(1:80)%d
-!  U(1:80)%d = 0.0d0
-
-  our_rev_mode%arg_look = .true.
-  CALL phi(U_DUMMY,U_IP1,B_DUMMY,H_DUMMY,BETA_FRIC)
-  our_rev_mode%arg_look = .false.
-
-  U_IP1(1:80)%d = U_DUMMY(1:80)%d
-
- case (2)
-
-  U_IP1(1:80)%d = U_IP1(1:80)%d+U(1:80)%d
-  U(1:80)%d = 0.0d0
-  CALL phi(U,U_IP1,B,H,BETA_FRIC)
-
- case (0)
-
-  CALL phi(U,U_IP1,B,H,BETA_FRIC)
-
-end select
-
+      print *, "U_IP1(80)%d ", U_IP1(80)%d
+      CALL phi(U,U_IP1,B,H,BETA_FRIC)
+    end if 
+    if(isinloop.eq.1) then
+      do i=1,n+1
+        call pop_s0(U_DUMMY(i)%d)
+      end do
+      do i=1,n+1
+        call push_s0(U_DUMMY(i)%d)
+      end do
+      B_DUMMY = B
+      H_DUMMY = H
+      U_DUMMY%v = U%v
+! adjoint
+     CALL phi(U_DUMMY,U_IP1,B_DUMMY,H_DUMMY,BETA_FRIC)
+     U_IP1%d = U_DUMMY%d 
+    end if
+!We have to push the value of U%d as it is overwritten in the caller (stream_vel in this case)
+    if(isinloop.eq.2) then
+! adjoint
+      CALL phi(U,U_IP1,B,H,BETA_FRIC)
+      do i=1,n+1
+        call push_s0(U(i)%d)
+      end do
+    end if
 ! adjoint end
+    if(isinloop.ne.0) then
+      !Set the Temporary offset to the actual offset
+      theArgFStackoffset = theArgFStackoffsetTemp
+    end if
       our_rev_mode%arg_store=.FALSE.
       our_rev_mode%arg_restore=.TRUE.
       our_rev_mode%plain=.FALSE.
       our_rev_mode%tape=.TRUE.
       our_rev_mode%adjoint=.FALSE.
     end if
-
-    ! added -- if called in "look" mode this 
-    !          will prevent stack offset changes
-    if (our_rev_mode%arg_look) then
-     theArgFStackoffset=theArgFStackoffsetTemp
-    end if
-
-
       end subroutine template
