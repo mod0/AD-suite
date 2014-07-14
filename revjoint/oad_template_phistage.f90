@@ -89,8 +89,10 @@ theArgFStackoffset = theArgFStackoffset-1
       our_orig_mode=our_rev_mode
       our_rev_mode%arg_store=.FALSE.
 ! original function
-CALL phi(U,U_IP1,B,H,BETA_FRIC)
-
+if(isinloop.ne.0) then
+! The call in phistage_0 has no effect on the computation
+  CALL phi(U,U_IP1,B,H,BETA_FRIC)
+end if
 ! original function end
       our_rev_mode=our_orig_mode
     end if
