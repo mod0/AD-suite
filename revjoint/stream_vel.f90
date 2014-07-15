@@ -51,7 +51,8 @@
 !$openad DEPENDENT(fc)
 
 !$TAF INIT tape_inner = static, n_nl
-        
+       
+ 
         call stream_vel_init (h0, beta_0)
         beta_fric = beta_0
         h=h0+bb
@@ -74,7 +75,6 @@
         b(n) = b(n) + fend
 
 !-----------------------------------
-        conv_flag = 0
 
         call phistage (u, unew, b, h, beta_fric, 0)
        ! u = unew
@@ -84,7 +84,6 @@
 !$TAF STORE u = tape_inner
           call phistage (u, unew, b, h, beta_fric, 1)
           u = unew
-          
 
         enddo
 
@@ -140,9 +139,24 @@
         real(8), intent(out), dimension(n+1) :: u_ip1
 !        real(8), dimension(n+1) :: u_ip1
         integer, intent(in) :: isinloop 
+        integer, save :: conv_flag=0, iter=0
+        integer, save :: adj_conv_flag=0, adj_iter=0
+        integer :: k
+        real(8) :: normdiff, normZ, diff
 
-        call phi (u, u_ip1, b, h, beta_fric)
-!        u = u_ip1
+        if (conv_flag .eq. 0) then
+
+          iter = iter + 1
+
+          call phi (u, u_ip1, b, h, beta_fric)
+
+         
+        endif
+        normdiff=0.
+        normZ=0.
+        diff = 0.
+        k=0
+        
 
         end subroutine phistage 
 

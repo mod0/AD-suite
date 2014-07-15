@@ -10,6 +10,7 @@
     type(active) :: B_DUMMY(1:79)
     type(active) :: H_DUMMY(1:79)
     type(active) :: U_DUMMY(1:80)
+    type(active) :: U_IP1_PRE(1:80)
 
 ! checkpointing stacks and offsets
     integer :: cp_loop_variable_1,cp_loop_variable_2,cp_loop_variable_3,cp_loop_&
@@ -91,7 +92,30 @@ theArgFStackoffset = theArgFStackoffset-1
 ! original function
 if(isinloop.ne.0) then
 ! The call in phistage_0 has no effect on the computation
+
+ 
+  IF (CONV_FLAG.eq.0) THEN
+  iter = iter + 1
   CALL phi(U,U_IP1,B,H,BETA_FRIC)
+          normDiff = 0.0
+          normZ = 0.0
+          do k=1,n+1
+           diff = abs(u_ip1(k)%v-u(k)%v)
+           if (diff.gt.normDiff) then
+            normdiff=diff
+           endif
+!           diff = abs(u(k)%v)
+           if (abs(u(k)%v).gt.normZ) then
+            normZ=abs(u(k)%v)
+           endif
+          enddo
+
+          if (normDIff/(normZ + 1.0).le.tol) then
+            conv_flag = 1
+            print *, "forward converged i=", iter
+          endif     
+  ENDIF
+
 end if
 ! original function end
       our_rev_mode=our_orig_mode
@@ -128,18 +152,37 @@ CALL phi(U,U_IP1,B,H,BETA_FRIC)
       CALL phi(U,U_IP1,B,H,BETA_FRIC)
     end if 
     if(isinloop.eq.1) then
+     if(ADJ_CONV_FLAG.eq.0) then
+      adj_iter = adj_iter + 1
       do i=n+1,1,-1
-        call pop_s0(U_DUMMY(i)%d)
+        call pop_s0(U_dummy(i)%d)
       end do
       do i=1,n+1
-        call push_s0(U_DUMMY(i)%d)
+        call push_s0(U_dummy(i)%d)
       end do
       B_DUMMY = B
       H_DUMMY = H
-      U_DUMMY%v = U%v
+      U_IP1_PRE = U_IP1
 ! adjoint
-     CALL phi(U_DUMMY,U_IP1,B_DUMMY,H_DUMMY,BETA_FRIC)
-     U_IP1%d = U_DUMMY%d
+      CALL phi(U_dummy,U_IP1,B_DUMMY,H_DUMMY,BETA_FRIC)
+      U_IP1%d = U_dummy%d
+          normDiff = 0.0
+          normZ = 0.0
+          do k=1,n+1
+           diff = abs(u_ip1(k)%d-u_ip1_pre(k)%d)
+           if (diff.gt.normDiff) then
+            normdiff=diff
+           endif
+           if (abs(u_ip1_pre(k)%d).gt.normZ) then
+            normZ=abs(u_ip1_pre(k)%d)
+           endif
+          enddo
+
+          if (normDIff/(normZ + 1.0).le.adjtol) then
+            adj_conv_flag = 1
+            print *, "adjoint converged i=", adj_iter
+          endif     
+     end if
     end if
 !We have to push the value of U%d as it is overwritten in the caller (stream_vel in this case)
     if(isinloop.eq.2) then
