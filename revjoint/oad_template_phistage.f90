@@ -94,7 +94,7 @@ if(isinloop.ne.0) then
 ! The call in phistage_0 has no effect on the computation
 
  
-  IF (CONV_FLAG.eq.0) THEN
+  IF (CONV_FLAG.eqv..false.) THEN
   iter = iter + 1
   CALL phi(U,U_IP1,B,H,BETA_FRIC)
           normDiff = 0.0
@@ -111,7 +111,7 @@ if(isinloop.ne.0) then
           enddo
 
           if (normDIff/(normZ + 1.0).le.tol) then
-            conv_flag = 1
+            conv_flag = .true.
             print *, "forward converged i=", iter
           endif     
   ENDIF
@@ -152,7 +152,7 @@ CALL phi(U,U_IP1,B,H,BETA_FRIC)
       CALL phi(U,U_IP1,B,H,BETA_FRIC)
     end if 
     if(isinloop.eq.1) then
-     if(ADJ_CONV_FLAG.eq.0) then
+     if(ADJ_CONV_FLAG.eqv..false.) then
       adj_iter = adj_iter + 1
       do i=n+1,1,-1
         call pop_s0(U_dummy(i)%d)
@@ -179,7 +179,7 @@ CALL phi(U,U_IP1,B,H,BETA_FRIC)
           enddo
 
           if (normDIff/(normZ + 1.0).le.adjtol) then
-            adj_conv_flag = 1
+            adj_conv_flag = .true.
             print *, "adjoint converged i=", adj_iter
           endif     
      end if

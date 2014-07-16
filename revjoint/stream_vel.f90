@@ -139,12 +139,12 @@
         real(8), intent(out), dimension(n+1) :: u_ip1
 !        real(8), dimension(n+1) :: u_ip1
         integer, intent(in) :: isinloop 
-        integer, save :: conv_flag=0, iter=0
-        integer, save :: adj_conv_flag=0, adj_iter=0
+        integer, save :: iter=0, adj_iter=0
+        logical, save :: conv_flag=.FALSE., adj_conv_flag=.FALSE.
         integer :: k
         real(8) :: normdiff, normZ, diff
 
-        if (conv_flag .eq. 0) then
+        if (conv_flag .eqv. .false.) then
 
           iter = iter + 1
 
