@@ -44,7 +44,7 @@
 !  enddo
 !end subroutine phi 
 !
-!2. Instead of calling phi() from within the fixedpoint loop, we instead call phistage()
+!2. Instead of calling phi() from within the fixed point loop, we instead call phistage()
 !   which is a function whose body will be replaced by the contents of this template
 !   in the differentiated code. phistage() will simply call phi(). phistage()
 !   also contains a directive informing OpenAD that the differentiated contents of phistage()
@@ -62,7 +62,11 @@
 !  call phi (u, u_ip1, b, h, beta_fric)
 !end subroutine phistage 
 !
-!3. The template must be changed as follows:
+!3. Add a call to phistage() before the loop
+!
+!4. Add a call to phistage() after the loop
+!
+!5. The template must be changed as follows:
 !   a)As a user of the template, one must add code to store the arguments and global variables
 !     that should normally be checkpointed for the reverse mode to function correctly. If one is 
 !     unsure of what these variables are, then perform the following steps
@@ -90,7 +94,7 @@
 !         of the output of the fixed point iteration, i.e,. U%d to the static variable U_0_d
 !   h) No other changes are necessary at this moment
 !
-!4. Optional changes for convergence criteria of the original loop and adjoint loop
+!6. Optional changes for convergence criteria of the original loop and adjoint loop
 !   a) Modify phistage to contain declarations and 'stub-statements' used in the actual convergence criteria given in the template
 !      The modified subroutine is given below
 !
