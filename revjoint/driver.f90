@@ -9,7 +9,7 @@ program driver
   TYPE (active), dimension(80) :: u
   TYPE (active) :: fc
   integer :: ii, jj, n
-  real(8) :: fc_0, accuracyAD
+  real(8) :: fc_0, accuracyAD, fdfc
   real(8), parameter :: ep = 1.d-7
 
   external stream_vel
@@ -23,21 +23,34 @@ program driver
   u(n+1)%d =  0.0D0
   fc%v = 0.	
   fc%d = 1.0D0
+
+           our_rev_mode%arg_store=.FALSE.
+           our_rev_mode%arg_restore=.FALSE.
+           our_rev_mode%arg_look=.FALSE.
+           our_rev_mode%res_store=.FALSE.
+           our_rev_mode%res_restore=.FALSE.
+           our_rev_mode%plain=.TRUE.
+           our_rev_mode%tape=.FALSE.
+           our_rev_mode%adjoint=.FALSE.
+      call stream_vel_timedep( h, u, bb, fc )
+ print *, '    position       velocity'
+ print *, '----------------------------------------------------------------'
+        do ii=1,n
+         print *,ii,u(ii+1)%v, h(ii)%v
+        enddo
+
 ! call adjoint model
      our_rev_mode%arg_store=.FALSE.
      our_rev_mode%arg_restore=.FALSE.
-     our_rev_mode%arg_look=.FALSE.
+     !our_rev_mode%arg_look=.FALSE.
      our_rev_mode%res_store=.FALSE.
      our_rev_mode%res_restore=.FALSE.
      our_rev_mode%plain=.FALSE.
      our_rev_mode%tape=.TRUE.
      our_rev_mode%adjoint=.TRUE.
         call stream_vel_timedep( h, u, bb, fc )
- print *, '    position       velocity'
- print *, '----------------------------------------------------------------'
-        do ii=1,n
-         print *,ii,u(ii+1)%v, h(ii)%v
-        enddo
+
+
 
          
 
@@ -53,7 +66,7 @@ print *, '----------------------------------------------------------------', &
            do jj=1,n
             bb(jj)%v=0.0
            enddo
-           bb(ii)=ep
+           bb(ii)%v=ep
            our_rev_mode%arg_store=.FALSE.
            our_rev_mode%arg_restore=.FALSE.
            our_rev_mode%arg_look=.FALSE.
@@ -64,7 +77,7 @@ print *, '----------------------------------------------------------------', &
            our_rev_mode%adjoint=.FALSE.
 
            call stream_vel_timedep (h,u,bb,fc)
-           fdfc = (fc-fc_0)/ep      
+           fdfc = (fc%v-fc_0)/ep      
            accuracyAD = 1-bb(ii)%d/fdfc
 
  

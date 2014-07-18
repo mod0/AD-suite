@@ -32,13 +32,11 @@
          
          h(1) = h(1) - dt/dx * h(2)
 
-         do i=2,n
-
-          h(i) = h(i) - dt/dx * (u(i+1)*h(i) - u(i)*h(i-1))
-
-         enddo
-
-         call stream_vel (u,h,beta_fric)
+         !do i=2,n
+         !h(i) = h(i) - dt/dx * (u(i+1)*h(i) - u(i)*h(i-1))
+         !enddo
+         !call stream_vel (u,h,beta_fric)
+         call OpenAD_forward_step (h, u, beta_fric)
 
         enddo
 
@@ -48,6 +46,23 @@
         enddo
 
         end subroutine stream_vel_timedep
+
+!-----------------------------
+subroutine OpenAD_forward_step (h, u, beta_fric)
+!-----------------------------
+        use stream_vel_variables
+        real(8), intent(inout), dimension(n) :: h
+        real(8), intent(out), dimension(n+1) :: u
+        real(8), intent(inout), dimension(n) :: beta_fric
+        integer :: i
+         do i=2,n
+
+          h(i) = h(i) - dt/dx * (u(i+1)*h(i) - u(i)*h(i-1))
+
+         enddo
+
+         call stream_vel (u,h,beta_fric)
+end subroutine OpenAD_forward_step
 
 !-----------------------------
         subroutine stream_vel_init (h, beta)
