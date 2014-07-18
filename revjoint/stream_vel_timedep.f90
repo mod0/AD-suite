@@ -18,6 +18,9 @@
         real(8), dimension(n) :: h0, beta_0, beta_fric
         integer :: nt,i
 
+!$openad INDEPENDENT(u)
+!$openad INDEPENDENT(bb)
+!$openad DEPENDENT(fc)
         call stream_vel_init (h0, beta_0)
         beta_fric = beta_0
         h=h0+bb
@@ -76,7 +79,8 @@
         use conj_grad_mod
 
         real(8), intent(inout), dimension(n+1) :: u
-        real(8), intent(in), dimension(n) :: h, beta_fric
+        real(8), intent(in), dimension(n) :: h
+        real(8), intent(inout), dimension(n) :: beta_fric
 !        real(8), intent(inout) :: fc
 
 !        real(8), dimension(n,3) :: A
@@ -84,10 +88,6 @@
         real(8), dimension(n+1) :: unew
         real(8) :: fend
         integer :: i,j
-
-!$openad INDEPENDENT(u)
-!$openad INDEPENDENT(bb)
-!$openad DEPENDENT(fc)
 
 !$TAF INIT tape_inner = static, n_nl
        
@@ -138,7 +138,7 @@
         use stream_vel_variables
         use conj_grad_mod
         real(8), dimension(n) :: b, h
-        real(8), intent(in), dimension(n) :: beta_fric
+        real(8), intent(inout), dimension(n) :: beta_fric
         real(8), intent(in), dimension(n+1) :: u_i
         real(8), intent(out), dimension(n+1) :: u_ip1
         
@@ -169,17 +169,17 @@
 !$openad xxx template oad_template_phistage.f90
         use stream_vel_variables
         real(8), dimension(n) :: b, h
-        real(8), intent(in), dimension(n) :: beta_fric
+        real(8), intent(inout), dimension(n) :: beta_fric
         real(8), intent(in), dimension(n+1) :: u
         real(8), intent(out), dimension(n+1) :: u_ip1
 !        real(8), dimension(n+1) :: u_ip1
         integer, intent(in) :: isinloop 
-        integer, save :: conv_flag=0, iter=0
-        integer, save :: adj_conv_flag=0, adj_iter=0
+        integer, save :: iter=0, adj_iter=0
+        logical, save :: conv_flag=.FALSE., adj_conv_flag=.FALSE.
         integer :: k
         real(8) :: normdiff, normZ, diff
 
-        if (conv_flag .eq. 0) then
+        if (conv_flag .eqv. .false.) then
 
           iter = iter + 1
 
@@ -254,7 +254,7 @@
         use stream_vel_variables
 
         real(8), intent(in), dimension(n) :: nu
-        real(8), intent(in), dimension(n) :: beta_fric
+        real(8), intent(inout), dimension(n) :: beta_fric
         real(8), intent(inout), dimension(n,3) :: A
         integer :: i
 
