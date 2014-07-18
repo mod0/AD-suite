@@ -90,6 +90,12 @@ theArgFStackoffset = theArgFStackoffset-1
       our_orig_mode=our_rev_mode
       our_rev_mode%arg_store=.FALSE.
 ! original function
+if(isinloop.eq.0) then
+  CONV_FLAG = .false.
+  ADJ_CONV_FLAG = .false.
+  iter = 0
+  adj_iter = 0
+endif
 if(isinloop.ne.0) then
 ! The call in phistage_0 has no effect on the computation
 
@@ -112,7 +118,7 @@ if(isinloop.ne.0) then
 
           if (normDIff/(normZ + 1.0).le.tol) then
             conv_flag = .true.
-            print *, "forward converged i=", iter
+!            print *, "forward converged i=", iter
           endif     
   ENDIF
 
@@ -180,7 +186,7 @@ CALL phi(U,U_IP1,B,H,BETA_FRIC)
 
           if (normDIff/(normZ + 1.0).le.adjtol) then
             adj_conv_flag = .true.
-            print *, "adjoint converged i=", adj_iter
+!            print *, "adjoint converged i=", adj_iter
           endif     
      end if
     end if

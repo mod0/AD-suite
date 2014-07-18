@@ -30,7 +30,7 @@
 
         do nt=1,n_timesteps
          
-         h(1) = h(1) - dt/dx * h(2)
+         !h(1) = h(1) - dt/dx * h(2)
 
          !do i=2,n
          !h(i) = h(i) - dt/dx * (u(i+1)*h(i) - u(i)*h(i-1))
@@ -52,9 +52,11 @@ subroutine OpenAD_forward_step (h, u, beta_fric)
 !-----------------------------
         use stream_vel_variables
         real(8), intent(inout), dimension(n) :: h
-        real(8), intent(out), dimension(n+1) :: u
+        real(8), intent(inout), dimension(n+1) :: u
         real(8), intent(inout), dimension(n) :: beta_fric
         integer :: i
+         
+         h(1) = h(1) - dt/dx * u(2)*h(2)
          do i=2,n
 
           h(i) = h(i) - dt/dx * (u(i+1)*h(i) - u(i)*h(i-1))

@@ -33,7 +33,7 @@ program driver
            our_rev_mode%tape=.FALSE.
            our_rev_mode%adjoint=.FALSE.
       call stream_vel_timedep( h, u, bb, fc )
- print *, '    position       velocity'
+ print *, '    position       velocity     thickness'
  print *, '----------------------------------------------------------------'
         do ii=1,n
          print *,ii,u(ii+1)%v, h(ii)%v
@@ -62,6 +62,7 @@ print *, '----------------------------------------------------------------', &
 
 ! loop over each directional derivative
         do ii = 1, n
+!        do ii = 1, 0
 
            do jj=1,n
             bb(jj)%v=0.0
@@ -82,8 +83,7 @@ print *, '----------------------------------------------------------------', &
 
  
 ! write output
-           print *, 'ph: ii, adfc, fdfc, acc = ', &
-                     ii, bb(ii)%d, fdfc, accuracyAD
+          print *, '                          ',ii, fdfc, bb(ii)%d, accuracyAD
         end do
 
 	end program
