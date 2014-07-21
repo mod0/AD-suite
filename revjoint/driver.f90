@@ -81,7 +81,7 @@ print *, '----------------------------------------------------------------', &
 
  
 ! write output
-          print *, '                          ',ii, fdfc, bb(ii)%d, accuracyAD
+          print *, '                          ',ii, bb(ii)%d, fdfc, accuracyAD
         end do
 
 	end program
