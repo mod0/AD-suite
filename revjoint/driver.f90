@@ -10,7 +10,7 @@ program driver
   TYPE (active) :: fc
   integer :: ii, jj, n
   real(8) :: fc_0, accuracyAD, fdfc
-  real(8), parameter :: ep = 1.d-7
+  real(8), parameter :: ep = 1.d-4
 
   external stream_vel
   n = 79
@@ -32,6 +32,7 @@ program driver
            our_rev_mode%tape=.FALSE.
            our_rev_mode%adjoint=.FALSE.
       call stream_vel_timedep( h, u, bb, fc )
+      fc_0 = fc%v
  print *, '    position       velocity     thickness'
  print *, '----------------------------------------------------------------'
         do ii=1,n

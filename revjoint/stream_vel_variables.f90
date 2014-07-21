@@ -4,6 +4,8 @@
 
         integer, parameter :: n = 79                ! grid size
         integer, parameter :: n_nl = 60            ! # nonlin iterations (mat solves)
+        integer, parameter :: n_timesteps = 10            
+        real(8), parameter :: dt = 0.04   
         real(8), parameter :: Lx = 79.e3            ! domain length
         real(8), parameter :: tol = 1.e-7    !tolerance of fwd loop
         real(8), parameter :: adjtol = 1.e-7 !tolerance of adjoint loop

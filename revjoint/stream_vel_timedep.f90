@@ -29,14 +29,20 @@
         call stream_vel (u,h,beta_fric)
 
         do nt=1,n_timesteps
-         
-         !h(1) = h(1) - dt/dx * h(2)
 
-         !do i=2,n
-         !h(i) = h(i) - dt/dx * (u(i+1)*h(i) - u(i)*h(i-1))
-         !enddo
-         !call stream_vel (u,h,beta_fric)
-         call OpenAD_forward_step (h, u, beta_fric)
+! these lines added back in -- no side effects
+         
+         h(1) = h(1) - dt/dx * h(2)
+         do i=2,n
+         h(i) = h(i) - dt/dx * (u(i+1)*h(i) - u(i)*h(i-1))
+         enddo
+         call stream_vel (u,h,beta_fric)
+
+! --- this line taken out -- causes side effects
+
+!         call OpenAD_forward_step (h, u, beta_fric)
+
+! ----------------------------------------------
 
         enddo
 
