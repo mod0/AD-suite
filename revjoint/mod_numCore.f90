@@ -660,7 +660,7 @@ OpenAD_Symbol_15 = 1
 
 our_rev_mode%arg_look = .true.
 
-
+print *, "U(80)%d ", U(80)%d
 do while (INT(OpenAD_Symbol_15).LE.INT(OpenAD_Symbol_14))
 
   B_DUMMY(1:79)%d=B(1:79)%d
@@ -671,7 +671,7 @@ do while (INT(OpenAD_Symbol_15).LE.INT(OpenAD_Symbol_14))
   CALL phi(U_DUMMY,UNEW,B_dummy,H_dummy,BETA_FRIC)
 
   UNEW(1:80)%d = U_DUMMY(1:80)%d
-
+  print *, "UNEW(80)%d ", UNEW(80)%d
 
   OpenAD_Symbol_15 = INT(OpenAD_Symbol_15)+1
 END DO
