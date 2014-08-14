@@ -9,10 +9,15 @@ driverADMsplit:   $(addsuffix .o, $(RTSUPP) iaddr) ad_inline.o stream_vel_variab
 	${F90C} -g -o $@ $^
 numCore.pre.xb.x2w.w2f.post.f90 $(addsuffix .f90, $(RTSUPP)) iaddr.c : toolChain 
 toolChain : numCore.f90
-	echo "\n Faking the invocation of openad \n"
-#	openad -c -m rs $<
+#	echo "Faking openadcall"
+	openad -c -m rs $<
+#	svn revert OAD_rev.f90
 
-numCore.f90: stream_vel_variables.f90 conj_gradStubs.f90 stream_vel.f90
+#OAD_revolve_cp.f90:
+#	cat ~/sandbox/hg/MITgcm/verification/halfpipe_streamice/build_oad/OAD_cp.f90 |sed 's/OAD_cp/OAD_revolve_cp/' > ./OAD_revolve_cp.f90
+        
+#numCore.f90: stream_vel_variables.f90 conj_gradStubs.f90 stream_vel.f90
+numCore.f90: stream_vel_variables.f90 conj_gradStubs.f90 stream_vel_timedep.f90
 	cat $^ | sed 's/use conj_grad/use conj_gradStub/' > $@
 
 stream_vel_variables_passive.f90: stream_vel_variables.f90
@@ -21,20 +26,20 @@ stream_vel_variables_passive.f90: stream_vel_variables.f90
 ad_inline.f:toolChain
 
 %.o : %.f90
-	${F90C} ${F90FLAGS} -g -o $@ -c $< 
+	${F90C} ${F90FLAGS} -g  -O -o $@ -c $< 
 
 %.o : %.f
-	${F90C} ${F90FLAGS} -g -o $@ -c $< 
+	${F90C} ${F90FLAGS} -g -O -o $@ -c $< 
 
 %.o : %.c
-	${CC} -g -o $@ -c $< 
+	${CC} -g -O0 -o $@ -c $< 
 
 #head.f90 lu.f90: 
 #	ln -s ../$@ ./
 
 clean: 
-	rm -f *.o *.mod* driverADMsplit *~ 
-#	rm -f ad_template* ad_inline.f OAD_* w2f__*  iaddr* head.f90 lu.f90
-#	rm -f numCore.* *.o *.mod* driverADMsplit *~ 
+	rm -f  numCore.* *.o *.mod* driverADMsplit *~ 
+	rm -f ad_template* ad_inline.f OAD_* w2f__*  iaddr* head.f90 lu.f90
+#	rm -f  *.o *.mod* driverADMjoint *~ 
 
 .PHONY: clean toolChain
