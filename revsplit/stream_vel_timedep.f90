@@ -97,8 +97,6 @@ end subroutine OpenAD_forward_step
         real(8), dimension(n+1) :: unew
         real(8) :: fend
         integer :: i,j 
-        integer, save :: isinloop0, isinloop1, isinloop2
-
         isinloop0 =0
         isinloop1 =1
         isinloop2 =2

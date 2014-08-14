@@ -123,7 +123,7 @@ integer myi
             conv_flag = .TRUE.
             !print *, "TAPE converged i=", iter, " double_tape_pointer = ", double_tape_pointer
           endif 
-          if (conv_flag.eqv..true. .OR. iter.eq.n_nl) then
+          if (conv_flag.neqv..true. .AND. iter.ne.n_nl) then
             !Restore the stack pointers
             double_tape_pointer = temp_double_tape_pointer   
             integer_tape_pointer = temp_integer_tape_pointer     
@@ -141,7 +141,7 @@ integer myi
       if(isinloop.eq.2 ) then
         !print *, "TAPE:2 Before call double_tape_pointer = ", double_tape_pointer
         CALL phi(U,U_IP1,B,H,BETA_FRIC)
-        !print *, "TAPE:2 After call double_tape_pointer = ", double_tape_pointer
+        print *, "TAPE:2 After call double_tape_pointer = ", double_tape_pointer
       endif 
       our_rev_mode=our_orig_mode
     end if
@@ -198,7 +198,7 @@ integer myi
             adj_conv_flag = .true.
            !print *, "ADJOINT:1 converged i=", adj_iter, " double_tape_pointer = ", double_tape_pointer
           endif 
-          if (adj_conv_flag.eqv..true. .OR. adj_iter.eq.n_nl) then
+          if (adj_conv_flag.neqv..true. .AND. adj_iter.ne.n_nl) then
           !if (1) then
            !print *, "ADJOINT:1 Before reset double_tape_pointer = ", double_tape_pointer
             !Retore the stack pointers
@@ -219,7 +219,7 @@ integer myi
       end if
       if(isinloop.eq.2) then
 ! adjoint
-       !print *, "ADJOINT:2 Before call double_tape_pointer = ", double_tape_pointer
+        print *, "ADJOINT:2 Before call double_tape_pointer = ", double_tape_pointer
         CALL phi(U,U_IP1,B,H,BETA_FRIC)
        !print *, "ADJOINT:2 After call double_tape_pointer = ", double_tape_pointer
         do myi=1,n+1

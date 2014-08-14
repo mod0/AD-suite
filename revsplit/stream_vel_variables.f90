@@ -26,7 +26,7 @@
         real(8), dimension (n,3) :: tridiag_0
 
         real(8) :: dx
-        !integer, parameter :: isinloop0 = 0
-        !integer, parameter :: isinloop1 = 1
-        !integer, parameter :: isinloop2 = 2
+        integer isinloop0
+        integer isinloop1
+        integer isinloop2
         end module stream_vel_variables
