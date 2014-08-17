@@ -23,13 +23,13 @@ stream_vel_variables_passive.f90: stream_vel_variables.f90
 ad_inline.f:toolChain
 
 %.o : %.f90
-	${F90C} ${F90FLAGS} -g  -O3 -o $@ -c $< 
+	${F90C} ${F90FLAGS} -g  -O -o $@ -c $< 
 
 %.o : %.f
-	${F90C} ${F90FLAGS} -g -O3 -o $@ -c $< 
+	${F90C} ${F90FLAGS} -g -O -o $@ -c $< 
 
 %.o : %.c
-	${CC} -g -O3 -o $@ -c $< 
+	${CC} -g -O0 -o $@ -c $< 
 
 #head.f90 lu.f90: 
 #	ln -s ../$@ ./
