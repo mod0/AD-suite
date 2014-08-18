@@ -26,5 +26,7 @@
         real(8), dimension (n,3) :: tridiag_0
 
         real(8) :: dx
-
+        integer isinloop0
+        integer isinloop1
+        integer isinloop2
         end module stream_vel_variables

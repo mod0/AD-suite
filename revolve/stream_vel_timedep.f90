@@ -113,7 +113,9 @@ end subroutine OpenAD_forward_step
         integer :: i,j
 
 !$TAF INIT tape_inner = static, n_nl
-       
+        isinloop0 = 0
+        isinloop1 = 1
+        isinloop2 = 2
  
 !        call stream_vel_init (h0, beta_0)
 !        beta_fric = beta_0
@@ -139,18 +141,18 @@ end subroutine OpenAD_forward_step
 
 !-----------------------------------
 
-        call phistage (u, unew, b, h, beta_fric, 0)
+        call phistage (u, unew, b, h, beta_fric, isinloop0)
        ! u = unew
 
         do i=1, n_nl
 
 !$TAF STORE u = tape_inner
-          call phistage (u, unew, b, h, beta_fric, 1)
+          call phistage (u, unew, b, h, beta_fric, isinloop1)
           u = unew
 
         enddo
 
-        call phistage (u, unew, b, h, beta_fric, 2)
+        call phistage (u, unew, b, h, beta_fric, isinloop2)
         u = unew
 
         end subroutine stream_vel
@@ -189,7 +191,7 @@ end subroutine OpenAD_forward_step
 !-----------------------------
         subroutine phistage (u, u_ip1, b, h, beta_fric, isinloop)
 !-----------------------------
-! xxx template oad_template_phistage.f90
+!$openad xxx template oad_template_fixedpointstage_withconvergence.f90
         use stream_vel_variables
         real(8), dimension(n) :: b, h
         real(8), intent(inout), dimension(n) :: beta_fric

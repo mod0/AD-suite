@@ -7,8 +7,6 @@
       use OAD_rev
       use revolve
 
-c we may need these for the checkpointing
-!SHK: I removed them all
       
 !$TEMPLATE_PRAGMA_DECLARATIONS
       LOGICAL :: initialized=.FALSE.
@@ -21,6 +19,8 @@ c we may need these for the checkpointing
 
       double precision, dimension(:), allocatable, save :: theArgFStack
       integer, save :: theArgFStackoffset=0, theArgFStackSize=0
+      integer, dimension(:), allocatable, save :: theArgIStack
+      integer, save :: theArgIStackoffset=0, theArgIStackSize=0
       type(modeType) :: our_orig_mode
 
       integer iaddr
