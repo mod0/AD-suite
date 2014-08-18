@@ -9,9 +9,7 @@ driver:   $(addsuffix .o, $(RTSUPP) iaddr) ad_inline.o OAD_revolve_cp.o stream_v
 	${F90C} -g -o $@ $^
 numCore.pre.xb.x2w.w2f.post.f90 $(addsuffix .f90, $(RTSUPP)) iaddr.c : toolChain 
 toolChain : numCore.f90
-#	echo "Faking openadcall"
 	openad -c -m rs $<
-#	svn revert OAD_rev.f90
 
 OAD_revolve_cp.f90:
 	cat ~/sandbox/hg/MITgcm/verification/halfpipe_streamice/build_oad/OAD_cp.f90 |sed 's/OAD_cp/OAD_revolve_cp/' > ./OAD_revolve_cp.f90
