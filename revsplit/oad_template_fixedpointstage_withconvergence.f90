@@ -61,7 +61,7 @@ integer myi
     end if
     if (our_rev_mode%tape) then
       our_orig_mode=our_rev_mode
-      if(isinloop.eq.2) then
+      if(isinloop.eq.0) then
         CONV_FLAG = .false.
         ADJ_CONV_FLAG = .false.
         iter = 0
@@ -100,14 +100,6 @@ integer myi
           if (iter.eq. 1) then
             !print *, "TAPE:1 After call double_tape_pointer = ", double_tape_pointer
           endif
-          if (iter.lt. 0) then 
-            !Restore the stack pointers
-            double_tape_pointer = temp_double_tape_pointer   
-            integer_tape_pointer = temp_integer_tape_pointer     
-            logical_tape_pointer = temp_logical_tape_pointer    
-            character_tape_pointer = temp_character_tape_pointer 
-            stringlength_tape_pointer = temp_stringlength_tape_pointer
-          end if
           normDiff = 0.0
           normZ = 0.0
           do k=1,n+1
