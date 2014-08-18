@@ -36,7 +36,7 @@ ad_inline.f:toolChain
 
 clean: 
 	rm -f  numCore.* *.o *.mod* driverADMjoint *~ 
-	rm -f ad_template* ad_inline.f OAD_* w2f__*  iaddr* head.f90 lu.f90
+	rm -f ad_template* ad_inline.f OAD_* w2f__*  iaddr* stream_vel_variables_passive.f90
 #	rm -f  *.o *.mod* driverADMjoint *~ 
 
 .PHONY: clean toolChain
