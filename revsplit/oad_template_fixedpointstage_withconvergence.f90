@@ -31,7 +31,7 @@ integer myi
     if (our_rev_mode%plain) then
       our_orig_mode=our_rev_mode
 ! original function
-      if(isinloop.eq.2) then
+      if(isinloop.eq.0) then
         CONV_FLAG = .false.
         ADJ_CONV_FLAG = .false.
         iter = 0
