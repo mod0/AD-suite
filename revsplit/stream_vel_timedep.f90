@@ -8,6 +8,7 @@
 !-----------------------------
         subroutine stream_vel_timedep (h, u, bb, fc)
 !-----------------------------
+
         use stream_vel_variables
 
         real(8), intent(inout), dimension(n) :: h, bb
@@ -27,7 +28,9 @@
 
         call stream_vel (u,h,beta_fric)
 
-        call stream_vel_timedep_stage(h, u, beta_fric)
+        do nt=1,n_timesteps
+         call OpenAD_forward_step (h, u, beta_fric)
+        enddo
 
         fc=0.
         do i=2,n+1
@@ -35,23 +38,6 @@
         enddo
 
         end subroutine stream_vel_timedep
-
-!-----------------------------
-        subroutine stream_vel_timedep_stage (h, u, beta_fric)
-!-----------------------------
-!$openad xxx template ad_revolve_template.F
-        use stream_vel_variables
-        real(8), intent(inout), dimension(n) :: h
-        real(8), intent(inout), dimension(n+1) :: u
-        real(8), intent(inout), dimension(n) :: beta_fric
-        integer :: nt
-
-        do nt=1,n_timesteps
-         call OpenAD_forward_step (h, u, beta_fric)
-        enddo
-
-
-        end subroutine stream_vel_timedep_stage
 
 !-----------------------------
 subroutine OpenAD_forward_step (h, u, beta_fric)
@@ -110,12 +96,12 @@ end subroutine OpenAD_forward_step
         real(8), dimension(n) :: f, utmp, b
         real(8), dimension(n+1) :: unew
         real(8) :: fend
-        integer :: i,j
-
+        integer :: i,j 
+        isinloop0 =0
+        isinloop1 =1
+        isinloop2 =2
 !$TAF INIT tape_inner = static, n_nl
-        isinloop0 = 0
-        isinloop1 = 1
-        isinloop2 = 2
+       
  
 !        call stream_vel_init (h0, beta_0)
 !        beta_fric = beta_0
@@ -199,17 +185,17 @@ end subroutine OpenAD_forward_step
         real(8), intent(out), dimension(n+1) :: u_ip1
 !        real(8), dimension(n+1) :: u_ip1
         integer, intent(in) :: isinloop 
-        integer, save :: iter=0, adj_iter=0
-        logical, save :: conv_flag=.FALSE., adj_conv_flag=.FALSE.
+        integer :: iter=0, adj_iter=0
         integer :: k
         real(8) :: normdiff, normZ, diff
+        logical, save :: conv_flag=.FALSE., adj_conv_flag=.FALSE.
 
         if (conv_flag .eqv. .false.) then
 
           iter = iter + 1
 
           call phi (u, u_ip1, b, h, beta_fric)
-
+              
          
         endif
         normdiff=0.
