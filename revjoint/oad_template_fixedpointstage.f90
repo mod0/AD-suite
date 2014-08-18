@@ -218,6 +218,10 @@ subroutine template()
     if (our_rev_mode%plain) then
       our_orig_mode=our_rev_mode
       our_rev_mode%arg_store=.FALSE.
+      if(isinloop.eq.0) then
+        CONV_FLAG = .false.
+        iter = 0
+      endif
       if(isinloop.eq.1) then
 !!<------------------Begin user function call --------------------->!
 !! Comment this call out if convergence criteria is used
@@ -244,7 +248,7 @@ subroutine template()
           enddo
           if (normDIff/(normZ + 1.0).le.tol) then
             conv_flag = .TRUE.
-            print *, "forward converged i=", iter
+            !print *, "forward converged i=", iter
           endif     
         end if
 !<------------------End USER FORWARD CONVERGENCE CRITERIA--------->!
@@ -273,6 +277,8 @@ subroutine template()
       our_rev_mode%tape=.TRUE.
       our_rev_mode%adjoint=.FALSE.
       if(isinloop.eq.0) then
+        ADJ_CONV_FLAG = .false.
+        adj_iter = 0
 !<------------------Begin user function call --------------------->!
         CALL phi(U,U_IP1,B,H,BETA_FRIC)
 !<------------------End user function call ----------------------->!
@@ -324,7 +330,7 @@ subroutine template()
           enddo
           if (normDIff/(normZ + 1.0).le.adjtol) then
             adj_conv_flag = .TRUE.
-            print *, "adjoint converged i=", adj_iter
+            !print *, "adjoint converged i=", adj_iter
           end if          
         end if
 !<------------------End USER ADJOINT CONVERGENCE CRITERIA--------->!
