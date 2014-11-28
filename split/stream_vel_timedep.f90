@@ -128,18 +128,18 @@ end subroutine OpenAD_forward_step
 !-----------------------------------
 
         call phistage (u, unew, b, h, beta_fric, isinloop0)
-       ! u = unew
+        u = unew
 
         do i=1, n_nl
 
 !$TAF STORE u = tape_inner
           call phistage (u, unew, b, h, beta_fric, isinloop1)
-          u = unew
+          !u = unew
 
         enddo
 
         call phistage (u, unew, b, h, beta_fric, isinloop2)
-        u = unew
+        !u = unew
 
         end subroutine stream_vel
 

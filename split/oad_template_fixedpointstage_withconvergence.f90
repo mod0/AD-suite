@@ -58,6 +58,7 @@ integer myi
         end if
       end if
       our_rev_mode=our_orig_mode
+      u(1:80)%v = u_ip1(1:80)%v
     end if
     if (our_rev_mode%tape) then
       !If isinloop==0, then call phi(..) in plain mode once
@@ -103,6 +104,7 @@ integer myi
             !print *, "FW:1-2", double_tape_pointer, integer_tape_pointer, our_rev_mode%plain, our_rev_mode%tape, our_rev_mode%adjoint
           endif 
         ENDIF
+        u(1:80)%v = u_ip1(1:80)%v
       endif
       if(isinloop.eq.0) then
         our_rev_mode%plain=.TRUE.
@@ -114,6 +116,7 @@ integer myi
         !print *, "FW:2-1", double_tape_pointer, integer_tape_pointer, our_rev_mode%plain, our_rev_mode%tape, our_rev_mode%adjoint
         CALL phi(U,U_IP1,B,H,BETA_FRIC)
         !print *, "FW:2-2", double_tape_pointer, integer_tape_pointer, our_rev_mode%plain, our_rev_mode%tape, our_rev_mode%adjoint
+        u(1:80)%v = u_ip1(1:80)%v
       endif 
       our_rev_mode=our_orig_mode
     end if
@@ -138,6 +141,8 @@ integer myi
         !print *, "BW:0  ", double_tape_pointer, integer_tape_pointer, our_rev_mode%plain, our_rev_mode%tape, our_rev_mode%adjoint
       end if
       if(isinloop.eq.1) then
+        u_ip1(1:80)%d = u_ip1(1:80)%d+u(1:80)%d
+        u(1:80)%d = 0.0d0
         if(ADJ_CONV_FLAG.eqv..false.) then
           adj_iter = adj_iter + 1
           do myi=n+1,1,-1
@@ -181,6 +186,8 @@ integer myi
         end if
       end if
       if(isinloop.eq.2) then
+        u_ip1(1:80)%d = u_ip1(1:80)%d+u(1:80)%d
+        u(1:80)%d = 0.0d0
         !print *, "BW:2-2", double_tape_pointer, integer_tape_pointer, our_rev_mode%plain, our_rev_mode%tape, our_rev_mode%adjoint
 ! adjoint
         CALL phi(U,U_IP1,B,H,BETA_FRIC)
