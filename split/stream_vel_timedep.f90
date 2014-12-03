@@ -126,9 +126,9 @@ end subroutine OpenAD_forward_step
         b(n) = b(n) + fend
 
 !-----------------------------------
-
-        call phistage (u, unew, b, h, beta_fric, isinloop0)
         u = unew
+        call phistage (u, unew, b, h, beta_fric, isinloop0)
+
 
         do i=1, n_nl
 

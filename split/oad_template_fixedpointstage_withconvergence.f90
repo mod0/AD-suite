@@ -61,7 +61,7 @@ integer myi
       u(1:80)%v = u_ip1(1:80)%v
     end if
     if (our_rev_mode%tape) then
-      !If isinloop==0, then call phi(..) in plain mode once
+      !If isinloop==0, setup the counters
       !If isinloop==1, then call phi(..) in plain mode till convergence, then call phi(..) once in tape mode to inject partials onto the stack correctly
       !If isinloop==2, then call phi(..) in tape mode once 
       our_orig_mode=our_rev_mode
@@ -96,6 +96,7 @@ integer myi
           if (normDIff/(normZ + 1.0).le.tol) then
             conv_flag = .TRUE.
           endif 
+          u(1:80)%v = u_ip1(1:80)%v
           if (conv_flag.eqv..true. .OR. iter.eq.n_nl) then
             our_rev_mode%plain=.FALSE.
             our_rev_mode%tape=.TRUE.
@@ -104,13 +105,6 @@ integer myi
             !print *, "FW:1-2", double_tape_pointer, integer_tape_pointer, our_rev_mode%plain, our_rev_mode%tape, our_rev_mode%adjoint
           endif 
         ENDIF
-        u(1:80)%v = u_ip1(1:80)%v
-      endif
-      if(isinloop.eq.0) then
-        our_rev_mode%plain=.TRUE.
-        our_rev_mode%tape=.FALSE.
-        our_rev_mode%adjoint=.FALSE.
-        CALL phi(U,U_IP1,B,H,BETA_FRIC)
       endif 
       if(isinloop.eq.2 ) then
         !print *, "FW:2-1", double_tape_pointer, integer_tape_pointer, our_rev_mode%plain, our_rev_mode%tape, our_rev_mode%adjoint
@@ -141,8 +135,6 @@ integer myi
         !print *, "BW:0  ", double_tape_pointer, integer_tape_pointer, our_rev_mode%plain, our_rev_mode%tape, our_rev_mode%adjoint
       end if
       if(isinloop.eq.1) then
-        u_ip1(1:80)%d = u_ip1(1:80)%d+u(1:80)%d
-        u(1:80)%d = 0.0d0
         if(ADJ_CONV_FLAG.eqv..false.) then
           adj_iter = adj_iter + 1
           do myi=n+1,1,-1
