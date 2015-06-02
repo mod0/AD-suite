@@ -1,0 +1,6 @@
+routines.F   -- nonlinear routines
+const.inc    -- include file with a small COMMON block
+adStack.c    -- pop/push intrinsics for TAPENADE-generated code
+testlinadj.F -- validation code, comparing linear routines to complex
+                                 and adjoint routines to linear
+Makefile     -- Makefile to generate all executables, and run TAPENADE
