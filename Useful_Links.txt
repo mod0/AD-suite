@@ -1,0 +1,11 @@
+Mike Giles - University of Oxford:
+1) http://people.maths.ox.ac.uk/gilesm/codes/airfoil/
+2) HYDRA - http://people.maths.ox.ac.uk/gilesm/old/hydra.html  (Couldn't find)
+
+Useful papers:
+--------------
+What is an Adjoint Model? Ronald M Errico
+Adjoint Algorithmic Differentiation of a GPU Accelerated Application (NAG) has a useful+concise section on Tangent Linear and Adjoint Model
+
+
+

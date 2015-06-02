@@ -1,0 +1,63 @@
+\documentclass[11pt]{article}
+\usepackage{geometry}                % See geometry.pdf to learn the layout options. There are lots.
+\geometry{letterpaper}                   % ... or a4paper or a5paper or ... 
+%\geometry{landscape}                % Activate for for rotated page geometry
+\usepackage[parfill]{parskip}    % Activate to begin paragraphs with an empty line rather than an indent
+\setlength\textheight{9.0in}
+\setlength\textwidth{6.5in}
+\usepackage{graphicx}
+\usepackage{amssymb}
+
+\usepackage{epstopdf}
+\usepackage{amsmath, amsthm, amssymb}
+\usepackage{float}
+\newcommand{\vectornorm}[1]{\left|\left|#1\right|\right|}
+\newcommand{\reg}[1]{^{(#1)}}
+\DeclareGraphicsRule{.tif}{png}{.png}{`convert #1 `dirname #1`/`basename #1 .tif`.png}
+
+\title{MATH 609 Homework \#1}
+\author{Hayes Stripling}
+%\date{\today}                                           % Activate to display a given date or no date
+
+\begin{document}
+
+\section*{An Analytic Toy Problem for Computing Global Error}
+Here's a very simple DAE
+\begin{align*}
+F(\dot{x},x,p,t)=\left\{\begin{array}{c}y'+p\cdot a(t)y(t)\\t/200-a(t)\end{array}\right\}=0
+\end{align*}
+The analytic solution for $y$ is
+\begin{align*}
+Y(t)=\frac{y_0}{\text{exp}\left(\frac{pt^2}{200}\right)}
+\end{align*}
+Now say our metric is $g(p)=y(t_f)$.  Then 
+\begin{align*}
+\frac{dg}{dp}=\frac{dy(t_f)}{dp}=\frac{-y_0t_f^2}{200\text{exp}\left(\frac{pt^2}{200}\right)}
+\end{align*}
+The global error is
+\begin{align*}
+e(t)=Y(t)-y(t).
+\end{align*}
+The adjoint equation is
+\begin{align*}
+\left(\begin{array}{c}\lambda^d\\0\end{array}\right)'&=\left(\begin{array}{cc}(F_{x^d}^d)^T & (F_{x^d}^a)^T\\(F_{x^a}^d)^T & (F_{x^a}^a)^T\end{array}\right)\left(\begin{array}{c}\lambda^T\\\lambda^a\end{array}\right)\\
+&=\left(\begin{array}{cc}p\cdot a(t) & 0\\p\cdot y & -1\end{array}\right)\left(\begin{array}{c}\lambda^T\\\lambda^a\end{array}\right)
+\end{align*}
+
+\subsection*{Running the matlab code}
+You will need the subdirectory \emph{builtIns} as it contains the hacked ODE solvers that I created for extracting truncation eror.  The driver code file is
+\begin{align*}
+\text{[forSol, backSol]=testAnalyticDAE(doPlot)}
+\end{align*}
+where doPlot==1 will produce a couple of plots and doPlot==0 will suppress the plots.  The code has some comments which should help you see what I am doing.  As far as how I am extracting/estimating the truncation error, I think I'd rather explain and show in person.
+
+Here is an example code output:\\
+
+True Global Error: -1.4057e-05\\
+Est. Global Error: 3.9762e-07 (Rel Error = -1.028e+00)\\
+True dgdp: -1.0394e-01\\
+Est. dpgp: -1.0394e-01 (Rel Error = 1.683e-05)\\
+
+Feel free to send me questions.
+\end{document}
+
