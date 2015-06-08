@@ -32,6 +32,28 @@ c
      &            x1(2),x2(2),q1(4),q2(4),adt1,adt2, res1(4),res2(4),
      &            dx,dy,mu, r1i,u1,v1,p1,vol1, r2i,u2,v2,p2,vol2, f(4)
 c
+
+c----------------------------------------------------------------------
+c      OpenAD Directives
+c----------------------------------------------------------------------
+#ifdef OPENAD_D
+c$OPENAD INDEPENDENT(q1)
+c$OPENAD INDEPENDENT(q2)
+c$OPENAD INDEPENDENT(adt1)
+c$OPENAD INDEPENDENT(adt2)
+c$OPENAD DEPENDENT(res1)
+c$OPENAD DEPENDENT(res2)
+#elif OPENAD_DX
+c$OPENAD INDEPENDENT(x1)
+c$OPENAD INDEPENDENT(x2)
+c$OPENAD INDEPENDENT(q1)
+c$OPENAD INDEPENDENT(q2)
+c$OPENAD INDEPENDENT(adt1)
+c$OPENAD INDEPENDENT(adt2)
+c$OPENAD DEPENDENT(res1)
+c$OPENAD DEPENDENT(res2)
+#endif
+
        dx = x1(1) - x2(1)
        dy = x1(2) - x2(2)
        mu = 0.5d0*(adt1+adt2)*eps
