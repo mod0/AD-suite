@@ -32,6 +32,19 @@ c
      &            x1(2),x2(2),q(4),res(4),
      &            dx,dy, ri,u,v,p
 c
+c----------------------------------------------------------------------
+c      OpenAD Directives
+c----------------------------------------------------------------------
+#ifdef OPENAD_D
+c$OPENAD INDEPENDENT(q)
+c$OPENAD DEPENDENT(res)
+#elif OPENAD_DX
+c$OPENAD INDEPENDENT(x1)
+c$OPENAD INDEPENDENT(x2)
+c$OPENAD INDEPENDENT(q)
+c$OPENAD DEPENDENT(res)
+#endif
+c
        dx = x1(1) - x2(1)
        dy = x1(2) - x2(2)
 c

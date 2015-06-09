@@ -37,6 +37,20 @@ c
        external   min, max, abs
        complex*16 min, max, abs
 #endif
+c----------------------------------------------------------------------
+c      OpenAD Directives
+c----------------------------------------------------------------------
+#ifdef OPENAD_D
+c$OPENAD INDEPENDENT(q)
+c$OPENAD DEPENDENT(adt)
+#elif OPENAD_DX
+c$OPENAD INDEPENDENT(x1)
+c$OPENAD INDEPENDENT(x2)
+c$OPENAD INDEPENDENT(x3)
+c$OPENAD INDEPENDENT(x4)
+c$OPENAD INDEPENDENT(q)
+c$OPENAD DEPENDENT(adt)
+#endif
 c
        dx(1) = x2(1) - x1(1)
        dx(2) = x3(1) - x2(1)

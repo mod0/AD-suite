@@ -29,7 +29,7 @@ LFLAGS   = -lm -static-libgcc
 
 RTSUPP  =	w2f__types OAD_active
 
-RTSUPP_ADJ = ad_inline OAD_cp OAD_tape OAD_rev 
+RTSUPP_ADJ = OAD_cp OAD_tape OAD_rev 
 
 TARGETS =  airfoil air_lin air_adj #testlinadj
 

@@ -31,6 +31,19 @@ c
      &          x1(2),x2(2),q(4),lift,
      &          dx, ri,u,v,p
 c
+c----------------------------------------------------------------------
+c      OpenAD Directives
+c----------------------------------------------------------------------
+#ifdef OPENAD_D
+c$OPENAD INDEPENDENT(q)
+c$OPENAD DEPENDENT(lift)
+#elif OPENAD_DX
+c$OPENAD INDEPENDENT(x1)
+c$OPENAD INDEPENDENT(x2)
+c$OPENAD INDEPENDENT(q)
+c$OPENAD DEPENDENT(lift)
+#endif
+c
        dx = x1(1) - x2(1)
 c
        ri = 1.d0/q(1)
