@@ -11,6 +11,8 @@ c                                                                   c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c
         program air_adj
+        use OAD_active
+        use w2f__types
         implicit none
 c
 #include "const.inc"
@@ -33,6 +35,13 @@ c
           dum1(ipde) = 0.0d0
           dum2(ipde) = 0.0d0
         enddo
+
+c--------- BEGIN CHANGES TO ACCOMMODATE OPENAD >>>>>>>>>>
+c--------- BEGIN ORIGINAL CODE COMMENT >>>>>>>>>>
+
+c--------- END ORIGINAL CODE COMMENT <<<<<<<<<<
+c--------- END CHANGES TO ACCOMMODATE OPENAD <<<<<<<<<<
+
 c
 c------ read in grid and flow data
 c

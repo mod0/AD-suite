@@ -24,11 +24,13 @@ c
         integer*4 ecell(2,maxedge), boun(maxedge),
      &            edge(2,maxedge), cell(4,maxcell)
         real*8    x(2,maxnode), q(4,maxcell), qdold(4,maxcell)
+c--------- BEGIN CHANGES TO ACCOMMODATE OPENAD >>>>>>>>>>
 c--------- BEGIN ORIGINAL CODE COMMENT >>>>>>>>>>
 c     &           xd(2,maxnode), qd(4,maxcell),
 c     &            adt(maxcell), adtd(maxcell),
 c     &            resd(4,maxcell), resd2(4,maxcell)
 c--------- END ORIGINAL CODE COMMENT <<<<<<<<<<
+c--------- END CHANGES TO ACCOMMODATE OPENAD <<<<<<<<<<
 
         type(active) x_OAD(2,maxnode), q_OAD(4,maxcell),
      &               adt_OAD(maxcell), res1_OAD(4, maxcell),
@@ -78,8 +80,6 @@ c       Copy the values from q to q_OAD
         enddo
 c--------- END CHANGES TO ACCOMMODATE OPENAD <<<<<<<<<<
 
-
-c
 c------ define grid perturbation (simple rotation)
 c
         dalpha = datan(1.0d0)/45.0d0
@@ -127,7 +127,8 @@ c--------- END ORIGINAL CODE COMMENT <<<<<<<<<<
      &                      x_OAD(1,in2),
      &                      x_OAD(1,in3),
      &                      x_OAD(1,in4),
-     &                      q_OAD(1,ic), adt_OAD(ic))
+     &                      q_OAD(1,ic),
+     &                      adt_OAD(ic))
 c--------- END CHANGES TO ACCOMMODATE OPENAD <<<<<<<<<<
         enddo
 c
@@ -137,7 +138,7 @@ c--------- BEGIN ORIGINAL CODE COMMENT >>>>>>>>>>
 c        adt(ncell)  = 0.0d0
 c        adtd(ncell) = 0.0d0
 c--------- END ORIGINAL CODE COMMENT <<<<<<<<<<
-        adt_OAD(ncell)%v  = 0.0d0
+        adt_OAD(ncell)%v = 0.0d0
         adt_OAD(ncell)%d = 0.0d0
 c--------- END CHANGES TO ACCOMMODATE OPENAD <<<<<<<<<<
 
