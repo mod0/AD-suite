@@ -11,6 +11,7 @@ c                                                                   c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c
         program air_lin
+        use print_active
         implicit none
 c
 #include "const.inc"
@@ -29,6 +30,62 @@ c
      &            iter,niter,k, nnode,ncell,nedge
         real*8    liftd, rms, dum1(4), dum2(4), dalpha
 c
+c--------- NO STATEMENTS before this -----------------
+
+#if DEBUG
+c---------- DECLARE Variables to hold filenumbers.
+        integer*4 :: x_OAD_v_filenum,
+     &            x_OAD_d_filenum, q_OAD_v_filenum,
+     &            q_OAD_d_filenum, adt_OAD_v_filenum, adt_OAD_d_filenum,
+     &            res1_OAD_d_filenum, res1_OAD_v_filenum,
+     &            res2_OAD_d_filenum, res2_OAD_v_filenum,
+     &            lift_OAD_d_filenum, lift_OAD_v_filenum, tmp_v1, tmp_v2
+
+        character(len=10) :: filename
+
+c---------- SET filenum values
+        x_OAD_v_filenum = 11
+        x_OAD_d_filenum = 12
+        q_OAD_v_filenum = 13
+        q_OAD_d_filenum = 14
+        adt_OAD_v_filenum = 15
+        adt_OAD_d_filenum = 16
+        res1_OAD_v_filenum = 17
+        res1_OAD_d_filenum = 18
+        res2_OAD_v_filenum = 19
+        res2_OAD_d_filenum = 20
+        lift_OAD_v_filenum = 21
+        lift_OAD_d_filenum = 22
+c---------- END SET filenum values
+
+c--------- Create filename from filenumber
+c---------- OPEN files
+        write(filename, '(A6, I2)') "output", x_OAD_v_filenum
+        open(unit = x_OAD_v_filenum, file = filename)
+        write(filename, '(A6, I2)') "output", x_OAD_d_filenum
+        open(unit = x_OAD_d_filenum, file = filename)
+        write(filename, '(A6, I2)') "output", q_OAD_v_filenum
+        open(unit = q_OAD_v_filenum, file = filename)
+        write(filename, '(A6, I2)') "output", q_OAD_d_filenum
+        open(unit = q_OAD_d_filenum, file = filename)
+        write(filename, '(A6, I2)') "output", adt_OAD_v_filenum
+        open(unit = adt_OAD_v_filenum, file = filename)
+        write(filename, '(A6, I2)') "output", adt_OAD_d_filenum
+        open(unit = adt_OAD_d_filenum, file = filename)
+        write(filename, '(A6, I2)') "output", res1_OAD_v_filenum
+        open(unit = res1_OAD_v_filenum, file = filename)
+        write(filename, '(A6, I2)') "output", res1_OAD_d_filenum
+        open(unit = res1_OAD_d_filenum, file = filename)
+        write(filename, '(A6, I2)') "output", res2_OAD_v_filenum
+        open(unit = res2_OAD_v_filenum, file = filename)
+        write(filename, '(A6, I2)') "output", res2_OAD_d_filenum
+        open(unit = res2_OAD_d_filenum, file = filename)
+        write(filename, '(A6, I2)') "output", lift_OAD_v_filenum
+        open(unit = lift_OAD_v_filenum, file = filename)
+        write(filename, '(A6, I2)') "output", lift_OAD_d_filenum
+        open(unit = lift_OAD_d_filenum, file = filename)
+#endif
+
         do ipde = 1, 4
           dum1(ipde) = 0.0d0
           dum2(ipde) = 0.0d0
@@ -68,6 +125,38 @@ c
      &                      x(1,in4),xd(1,in4),
      &                      q(1,ic),qd(1,ic), adt(ic),adtd(ic))
         enddo
+
+#if DEBUG
+c--------- Write to files
+        tmp_v1 = 0
+        call write_array(adt, 1, tmp_v1,
+     &     adt_OAD_v_filenum)
+
+        tmp_v1 = 0
+        call write_array(adtd, 1, tmp_v1,
+     &     adt_OAD_d_filenum)
+
+        tmp_v1 = 0
+        tmp_v2 = 0
+        call write_array(x, 1, tmp_v1, 1, tmp_v2,
+     &     x_OAD_v_filenum)
+
+        tmp_v1 = 0
+        tmp_v2 = 0
+        call write_array(xd, 1, tmp_v1, 1, tmp_v2,
+     &     x_OAD_d_filenum)
+
+        tmp_v1 = 0
+        tmp_v2 = 0
+        call write_array(q, 1, tmp_v1, 1, tmp_v2,
+     &     q_OAD_v_filenum)
+
+        tmp_v1 = 0
+        tmp_v2 = 0
+        call write_array(qd, 1, tmp_v1, 1, tmp_v2,
+     &     q_OAD_d_filenum)
+#endif
+
 c
         adt(ncell)  = 0.0d0
         adtd(ncell) = 0.0d0
@@ -92,10 +181,47 @@ c
      &                        q(1,ic2),qd(1,ic2), dum2,resd2(1,ic2))
           endif
         enddo
+
+#if DEBUG
+c--------- Write to files
+        tmp_v1 = 0
+        call write_array(adt, 1, tmp_v1,
+     &     adt_OAD_v_filenum)
+
+        tmp_v1 = 0
+        call write_array(adtd, 1, tmp_v1,
+     &     adt_OAD_d_filenum)
+
+        tmp_v1 = 0
+        tmp_v2 = 0
+        call write_array(resd2, 1, tmp_v1, 1, tmp_v2,
+     &     res2_OAD_d_filenum)
+
+        tmp_v1 = 0
+        tmp_v2 = 0
+        call write_array(x, 1, tmp_v1, 1, tmp_v2,
+     &     x_OAD_v_filenum)
+
+        tmp_v1 = 0
+        tmp_v2 = 0
+        call write_array(xd, 1, tmp_v1, 1, tmp_v2,
+     &     x_OAD_d_filenum)
+
+        tmp_v1 = 0
+        tmp_v2 = 0
+        call write_array(q, 1, tmp_v1, 1, tmp_v2,
+     &     q_OAD_v_filenum)
+
+        tmp_v1 = 0
+        tmp_v2 = 0
+        call write_array(qd, 1, tmp_v1, 1, tmp_v2,
+     &     q_OAD_d_filenum)
+#endif
+
 c
 c------ main time-marching loop
 c
-        niter = 20000
+        niter = 2
 c
         do iter = 1, niter
 c
@@ -127,6 +253,37 @@ c
      &                         q(1,ic),qd(1,ic), adt(ic),adtd(ic))
             enddo
 c
+#if DEBUG
+c--------- Write to files
+            tmp_v1 = 0
+            call write_array(adt, 1, tmp_v1,
+     &       adt_OAD_v_filenum)
+
+            tmp_v1 = 0
+            call write_array(adtd, 1, tmp_v1,
+     &      adt_OAD_d_filenum)
+
+            tmp_v1 = 0
+            tmp_v2 = 0
+            call write_array(x, 1, tmp_v1, 1, tmp_v2,
+     &       x_OAD_v_filenum)
+
+            tmp_v1 = 0
+            tmp_v2 = 0
+            call write_array(xd, 1, tmp_v1, 1, tmp_v2,
+     &       x_OAD_d_filenum)
+
+            tmp_v1 = 0
+            tmp_v2 = 0
+            call write_array(q, 1, tmp_v1, 1, tmp_v2,
+     &       q_OAD_v_filenum)
+
+            tmp_v1 = 0
+            tmp_v2 = 0
+            call write_array(qd, 1, tmp_v1, 1, tmp_v2,
+     &       q_OAD_d_filenum)
+#endif
+
             adt(ncell)  = 0.0d0
             adtd(ncell) = 0.0d0
 c 
@@ -150,10 +307,48 @@ c
      &                           q(1,ic2),qd(1,ic2), dum2,resd(1,ic2))
               endif
             enddo
+
+#if DEBUG
+c--------- Write to files
+          tmp_v1 = 0
+          call write_array(adt, 1, tmp_v1,
+     &     adt_OAD_v_filenum)
+
+          tmp_v1 = 0
+          call write_array(adtd, 1, tmp_v1,
+     &     adt_OAD_d_filenum)
+
+          tmp_v1 = 0
+          tmp_v2 = 0
+          call write_array(resd, 1, tmp_v1, 1, tmp_v2,
+     &     res1_OAD_d_filenum)
+
+          tmp_v1 = 0
+          tmp_v2 = 0
+          call write_array(x, 1, tmp_v1, 1, tmp_v2,
+     &     x_OAD_v_filenum)
+
+          tmp_v1 = 0
+          tmp_v2 = 0
+          call write_array(xd, 1, tmp_v1, 1, tmp_v2,
+     &     x_OAD_d_filenum)
+
+          tmp_v1 = 0
+          tmp_v2 = 0
+          call write_array(q, 1, tmp_v1, 1, tmp_v2,
+     &     q_OAD_v_filenum)
+
+          tmp_v1 = 0
+          tmp_v2 = 0
+          call write_array(qd, 1, tmp_v1, 1, tmp_v2,
+     &     q_OAD_d_filenum)
+#endif
+
 c
 c---------- flow field update
 c
             rms = 0.0d0
+
 c
             do ic = 1, ncell-1
               do ipde = 1, 4
@@ -162,9 +357,48 @@ c
                 rms = rms + resd(ipde,ic)**2
               enddo
             enddo
+
+#if DEBUG
+c--------- Write to files
+          tmp_v1 = 0
+          call write_array(adt, 1, tmp_v1,
+     &     adt_OAD_v_filenum)
+
+          tmp_v1 = 0
+          call write_array(adtd, 1, tmp_v1,
+     &     adt_OAD_d_filenum)
+
+          tmp_v1 = 0
+          tmp_v2 = 0
+          call write_array(resd, 1, tmp_v1, 1, tmp_v2,
+     &     res1_OAD_d_filenum)
+
+          tmp_v1 = 0
+          tmp_v2 = 0
+          call write_array(x, 1, tmp_v1, 1, tmp_v2,
+     &     x_OAD_v_filenum)
+
+          tmp_v1 = 0
+          tmp_v2 = 0
+          call write_array(xd, 1, tmp_v1, 1, tmp_v2,
+     &     x_OAD_d_filenum)
+
+          tmp_v1 = 0
+          tmp_v2 = 0
+          call write_array(q, 1, tmp_v1, 1, tmp_v2,
+     &     q_OAD_v_filenum)
+
+          tmp_v1 = 0
+          tmp_v2 = 0
+          call write_array(qd, 1, tmp_v1, 1, tmp_v2,
+     &     q_OAD_d_filenum)
+#endif
+
           enddo
 c
           rms = dsqrt(rms/ncell)
+c          print *, rms
+
 c
 c-------- print iteration history, including lift calculation
 c
@@ -186,5 +420,20 @@ c
           endif
         enddo
 c 
+
+#if DEBUG
+        close(x_OAD_v_filenum)
+        close(x_OAD_d_filenum)
+        close(q_OAD_v_filenum)
+        close(q_OAD_d_filenum)
+        close(adt_OAD_v_filenum)
+        close(adt_OAD_d_filenum)
+        close(res1_OAD_v_filenum)
+        close(res1_OAD_d_filenum)
+        close(res2_OAD_v_filenum)
+        close(res2_OAD_d_filenum)
+        close(lift_OAD_v_filenum)
+        close(lift_OAD_d_filenum)
+#endif
         stop
         end

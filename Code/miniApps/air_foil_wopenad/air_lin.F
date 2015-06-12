@@ -13,6 +13,7 @@ c
         program air_lin
         use OAD_active
         use w2f__types
+        use print_active
         implicit none
 
 c
@@ -42,7 +43,63 @@ c--------- END CHANGES TO ACCOMMODATE OPENAD <<<<<<<<<<
 c--------- BEGIN ORIGINAL CODE COMMENT >>>>>>>>>>
 c     &    ,liftd, dum1(4), dum2(4)
 c--------- END ORIGINAL CODE COMMENT <<<<<<<<<<
-c
+
+c--------- NO STATEMENTS before this -----------------
+
+#if DEBUG
+c---------- DECLARE Variables to hold filenumbers.
+        integer*4 :: x_OAD_v_filenum,
+     &            x_OAD_d_filenum, q_OAD_v_filenum,
+     &            q_OAD_d_filenum, adt_OAD_v_filenum, adt_OAD_d_filenum,
+     &            res1_OAD_d_filenum, res1_OAD_v_filenum,
+     &            res2_OAD_d_filenum, res2_OAD_v_filenum,
+     &            lift_OAD_d_filenum, lift_OAD_v_filenum, tmp_v1, tmp_v2
+
+        character(len=10) :: filename
+
+c---------- SET filenum values
+        x_OAD_v_filenum = 11
+        x_OAD_d_filenum = 12
+        q_OAD_v_filenum = 13
+        q_OAD_d_filenum = 14
+        adt_OAD_v_filenum = 15
+        adt_OAD_d_filenum = 16
+        res1_OAD_v_filenum = 17
+        res1_OAD_d_filenum = 18
+        res2_OAD_v_filenum = 19
+        res2_OAD_d_filenum = 20
+        lift_OAD_v_filenum = 21
+        lift_OAD_d_filenum = 22
+c---------- END SET filenum values
+
+c--------- Create filename from filenumber
+c---------- OPEN files
+        write(filename, '(A6, I2)') "output", x_OAD_v_filenum
+        open(unit = x_OAD_v_filenum, file = filename)
+        write(filename, '(A6, I2)') "output", x_OAD_d_filenum
+        open(unit = x_OAD_d_filenum, file = filename)
+        write(filename, '(A6, I2)') "output", q_OAD_v_filenum
+        open(unit = q_OAD_v_filenum, file = filename)
+        write(filename, '(A6, I2)') "output", q_OAD_d_filenum
+        open(unit = q_OAD_d_filenum, file = filename)
+        write(filename, '(A6, I2)') "output", adt_OAD_v_filenum
+        open(unit = adt_OAD_v_filenum, file = filename)
+        write(filename, '(A6, I2)') "output", adt_OAD_d_filenum
+        open(unit = adt_OAD_d_filenum, file = filename)
+        write(filename, '(A6, I2)') "output", res1_OAD_v_filenum
+        open(unit = res1_OAD_v_filenum, file = filename)
+        write(filename, '(A6, I2)') "output", res1_OAD_d_filenum
+        open(unit = res1_OAD_d_filenum, file = filename)
+        write(filename, '(A6, I2)') "output", res2_OAD_v_filenum
+        open(unit = res2_OAD_v_filenum, file = filename)
+        write(filename, '(A6, I2)') "output", res2_OAD_d_filenum
+        open(unit = res2_OAD_d_filenum, file = filename)
+        write(filename, '(A6, I2)') "output", lift_OAD_v_filenum
+        open(unit = lift_OAD_v_filenum, file = filename)
+        write(filename, '(A6, I2)') "output", lift_OAD_d_filenum
+        open(unit = lift_OAD_d_filenum, file = filename)
+#endif
+
         do ipde = 1, 4
 c--------- BEGIN CHANGES TO ACCOMMODATE OPENAD >>>>>>>>>>
 c--------- BEGIN ORIGINAL CODE COMMENT >>>>>>>>>>
@@ -132,6 +189,42 @@ c--------- END ORIGINAL CODE COMMENT <<<<<<<<<<
 c--------- END CHANGES TO ACCOMMODATE OPENAD <<<<<<<<<<
         enddo
 c
+#if DEBUG
+c--------- Write to files
+        tmp_v1 = 0
+        print *, "Writing ADT%V"
+        call write_active_array(adt_OAD, 0, 1, tmp_v1,
+     &     adt_OAD_v_filenum)
+
+        tmp_v1 = 0
+        print *, "Writing ADT%D"
+        call write_active_array(adt_OAD, 1, 1, tmp_v1,
+     &     adt_OAD_d_filenum)
+
+        tmp_v1 = 0
+        tmp_v2 = 0
+        print *, "Writing X%V"
+        call write_active_array(x_OAD, 0, 1, tmp_v1, 1, tmp_v2,
+     &     x_OAD_v_filenum)
+
+        tmp_v1 = 0
+        tmp_v2 = 0
+        print *, "Writing X%D"
+        call write_active_array(x_OAD, 1, 1, tmp_v1, 1, tmp_v2,
+     &     x_OAD_d_filenum)
+
+        tmp_v1 = 0
+        tmp_v2 = 0
+        print *, "Writing Q%V"
+        call write_active_array(q_OAD, 0, 1, tmp_v1, 1, tmp_v2,
+     &     q_OAD_v_filenum)
+
+        tmp_v1 = 0
+        tmp_v2 = 0
+        print *, "Writing Q%D"
+        call write_active_array(q_OAD, 1, 1, tmp_v1, 1, tmp_v2,
+     &     q_OAD_d_filenum)
+#endif
 
 c--------- BEGIN CHANGES TO ACCOMMODATE OPENAD >>>>>>>>>>
 c--------- BEGIN ORIGINAL CODE COMMENT >>>>>>>>>>
@@ -183,10 +276,57 @@ c--------- END ORIGINAL CODE COMMENT <<<<<<<<<<
 c--------- END CHANGES TO ACCOMMODATE OPENAD <<<<<<<<<<
           endif
         enddo
+
+#if DEBUG
+c--------- Write to files
+        tmp_v1 = 0
+        print *, "Writing ADT%V"
+        call write_active_array(adt_OAD, 0, 1, tmp_v1,
+     &     adt_OAD_v_filenum)
+
+        tmp_v1 = 0
+        print *, "Writing ADT%D"
+        call write_active_array(adt_OAD, 1, 1, tmp_v1,
+     &     adt_OAD_d_filenum)
+
+        tmp_v1 = 0
+        tmp_v2 = 0
+        print *, "Writing RES2%V"
+        call write_active_array(res2_OAD, 0, 1, tmp_v1, 1, tmp_v2,
+     &     res2_OAD_v_filenum)
+
+        tmp_v1 = 0
+        tmp_v2 = 0
+        print *, "Writing RES2%D"
+        call write_active_array(res2_OAD, 1, 1, tmp_v1, 1, tmp_v2,
+     &     res2_OAD_d_filenum)
+
+        tmp_v1 = 0
+        tmp_v2 = 0
+        print *, "Writing X%V"
+        call write_active_array(x_OAD, 0, 1, tmp_v1, 1, tmp_v2,
+     &     x_OAD_v_filenum)
+
+        tmp_v1 = 0
+        tmp_v2 = 0
+        call write_active_array(x_OAD, 1, 1, tmp_v1, 1, tmp_v2,
+     &     x_OAD_d_filenum)
+
+        tmp_v1 = 0
+        tmp_v2 = 0
+        call write_active_array(q_OAD, 0, 1, tmp_v1, 1, tmp_v2,
+     &     q_OAD_v_filenum)
+
+        tmp_v1 = 0
+        tmp_v2 = 0
+        call write_active_array(q_OAD, 1, 1, tmp_v1, 1, tmp_v2,
+     &     q_OAD_d_filenum)
+#endif
+
 c
 c------ main time-marching loop
 c
-        niter = 20000
+        niter = 2
 c
         do iter = 1, niter
 c
@@ -237,14 +377,46 @@ c--------- END ORIGINAL CODE COMMENT <<<<<<<<<<
      &                          adt_OAD(ic))
 c--------- END CHANGES TO ACCOMMODATE OPENAD <<<<<<<<<<
             enddo
+
+#if DEBUG
+c--------- Write to files
+            tmp_v1 = 0
+            call write_active_array(adt_OAD, 0, 1, tmp_v1,
+     &       adt_OAD_v_filenum)
+
+            tmp_v1 = 0
+            call write_active_array(adt_OAD, 1, 1, tmp_v1,
+     &      adt_OAD_d_filenum)
+
+            tmp_v1 = 0
+            tmp_v2 = 0
+            call write_active_array(x_OAD, 0, 1, tmp_v1, 1, tmp_v2,
+     &       x_OAD_v_filenum)
+
+            tmp_v1 = 0
+            tmp_v2 = 0
+            call write_active_array(x_OAD, 1, 1, tmp_v1, 1, tmp_v2,
+     &       x_OAD_d_filenum)
+
+            tmp_v1 = 0
+            tmp_v2 = 0
+            call write_active_array(q_OAD, 0, 1, tmp_v1, 1, tmp_v2,
+     &       q_OAD_v_filenum)
+
+            tmp_v1 = 0
+            tmp_v2 = 0
+            call write_active_array(q_OAD, 1, 1, tmp_v1, 1, tmp_v2,
+     &       q_OAD_d_filenum)
+#endif
+
 c
 c--------- BEGIN CHANGES TO ACCOMMODATE OPENAD >>>>>>>>>>
 c--------- BEGIN ORIGINAL CODE COMMENT >>>>>>>>>>
 c        adt(ncell)  = 0.0d0
 c        adtd(ncell) = 0.0d0
 c--------- END ORIGINAL CODE COMMENT <<<<<<<<<<
-        adt_OAD(ncell)%v  = 0.0d0
-        adt_OAD(ncell)%d = 0.0d0
+            adt_OAD(ncell)%v  = 0.0d0
+            adt_OAD(ncell)%d = 0.0d0
 c--------- END CHANGES TO ACCOMMODATE OPENAD <<<<<<<<<<
 c 
 c---------- flux evaluation loop 
@@ -266,6 +438,7 @@ c     &                           adt(ic2),adtd(ic2),
 c     &                           dum1,resd(1,ic1), dum2,resd(1,ic2))
 c--------- END ORIGINAL CODE COMMENT <<<<<<<<<<
                 call flux_face_d(x_OAD(1,in1),
+     &                           x_OAD(1,in2),
      &                           q_OAD(1,ic1),
      &                           q_OAD(1,ic2),
      &                           adt_OAD(ic1),
@@ -286,11 +459,55 @@ c--------- END ORIGINAL CODE COMMENT <<<<<<<<<<
 c--------- END CHANGES TO ACCOMMODATE OPENAD <<<<<<<<<<
               endif
             enddo
+
+#if DEBUG
+c--------- Write to files
+          tmp_v1 = 0
+          call write_active_array(adt_OAD, 0, 1, tmp_v1,
+     &     adt_OAD_v_filenum)
+
+          tmp_v1 = 0
+          call write_active_array(adt_OAD, 1, 1, tmp_v1,
+     &     adt_OAD_d_filenum)
+
+          tmp_v1 = 0
+          tmp_v2 = 0
+          call write_active_array(res1_OAD, 0, 1, tmp_v1, 1, tmp_v2,
+     &     res1_OAD_v_filenum)
+
+          tmp_v1 = 0
+          tmp_v2 = 0
+          call write_active_array(res1_OAD, 1, 1, tmp_v1, 1, tmp_v2,
+     &     res1_OAD_d_filenum)
+
+          tmp_v1 = 0
+          tmp_v2 = 0
+          call write_active_array(x_OAD, 0, 1, tmp_v1, 1, tmp_v2,
+     &     x_OAD_v_filenum)
+
+          tmp_v1 = 0
+          tmp_v2 = 0
+          call write_active_array(x_OAD, 1, 1, tmp_v1, 1, tmp_v2,
+     &     x_OAD_d_filenum)
+
+          tmp_v1 = 0
+          tmp_v2 = 0
+          call write_active_array(q_OAD, 0, 1, tmp_v1, 1, tmp_v2,
+     &     q_OAD_v_filenum)
+
+          tmp_v1 = 0
+          tmp_v2 = 0
+          call write_active_array(q_OAD, 1, 1, tmp_v1, 1, tmp_v2,
+     &     q_OAD_d_filenum)
+#endif
+
 c
 c---------- flow field update
 c
             rms = 0.0d0
 c
+c            call print_active_array(res2_OAD, 1, 1, 4, 1, 50)
+
             do ic = 1, ncell-1
               do ipde = 1, 4
 c--------- BEGIN CHANGES TO ACCOMMODATE OPENAD >>>>>>>>>>
@@ -300,16 +517,61 @@ c                qd(ipde,ic)   = qdold(ipde,ic) - resd(ipde,ic)/adt(ic)
 c                rms = rms + resd(ipde,ic)**2
 c--------- END ORIGINAL CODE COMMENT <<<<<<<<<<
                 res1_OAD(ipde,ic)%d = res1_OAD(ipde,ic)%d
-     &                                + res1_OAD(ipde,ic)%d
+     &                                + res2_OAD(ipde,ic)%d
                 q_OAD(ipde,ic)%d = qdold(ipde,ic)
      &                           - (res1_OAD(ipde,ic)%d)/(adt_OAD(ic)%v)
                 rms = rms + (res1_OAD(ipde,ic)%d)**2
 c--------- END CHANGES TO ACCOMMODATE OPENAD <<<<<<<<<<
               enddo
             enddo
+
+#if DEBUG
+c--------- Write to files
+        tmp_v1 = 0
+        call write_active_array(adt_OAD, 0, 1, tmp_v1,
+     &     adt_OAD_v_filenum)
+
+        tmp_v1 = 0
+        call write_active_array(adt_OAD, 1, 1, tmp_v1,
+     &     adt_OAD_d_filenum)
+
+        tmp_v1 = 0
+        tmp_v2 = 0
+        call write_active_array(res1_OAD, 0, 1, tmp_v1, 1, tmp_v2,
+     &     res1_OAD_v_filenum)
+
+        tmp_v1 = 0
+        tmp_v2 = 0
+        call write_active_array(res1_OAD, 1, 1, tmp_v1, 1, tmp_v2,
+     &     res1_OAD_d_filenum)
+
+        tmp_v1 = 0
+        tmp_v2 = 0
+        call write_active_array(x_OAD, 0, 1, tmp_v1, 1, tmp_v2,
+     &     x_OAD_v_filenum)
+
+        tmp_v1 = 0
+        tmp_v2 = 0
+        call write_active_array(x_OAD, 1, 1, tmp_v1, 1, tmp_v2,
+     &     x_OAD_d_filenum)
+
+        tmp_v1 = 0
+        tmp_v2 = 0
+        call write_active_array(q_OAD, 0, 1, tmp_v1, 1, tmp_v2,
+     &     q_OAD_v_filenum)
+
+        tmp_v1 = 0
+        tmp_v2 = 0
+        call write_active_array(q_OAD, 1, 1, tmp_v1, 1, tmp_v2,
+     &     q_OAD_d_filenum)
+#endif
+
           enddo
 c
+
           rms = dsqrt(rms/ncell)
+
+c          print *, rms
 c
 c-------- print iteration history, including lift calculation
 c
@@ -348,6 +610,21 @@ c--------- END ORIGINAL CODE COMMENT <<<<<<<<<<
 c--------- END CHANGES TO ACCOMMODATE OPENAD <<<<<<<<<<
           endif
         enddo
-c 
+c
+
+#if DEBUG
+        close(x_OAD_v_filenum)
+        close(x_OAD_d_filenum)
+        close(q_OAD_v_filenum)
+        close(q_OAD_d_filenum)
+        close(adt_OAD_v_filenum)
+        close(adt_OAD_d_filenum)
+        close(res1_OAD_v_filenum)
+        close(res1_OAD_d_filenum)
+        close(res2_OAD_v_filenum)
+        close(res2_OAD_d_filenum)
+        close(lift_OAD_v_filenum)
+        close(lift_OAD_d_filenum)
+#endif
         stop
         end

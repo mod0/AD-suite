@@ -27,11 +27,13 @@ LFLAGS   = -Vaxlib -lm -static-libcxa
 FC = gfortran
 CC = gcc
 
-FFLAGS   = 
-FFLAGS2  = -DCOMPLEX
-CFLAGS   =
-CPPFLAGS = 
+FFLAGS   = -g -DDEBUG  -O0
+FFLAGS2  = -DCOMPLEX -g
+CFLAGS   = -g
+CPPFLAGS = -g
 LFLAGS   = -lm -static-libgcc
+
+RTSUPP  =	w2f__types OAD_active
 
 TARGETS =  airfoil air_lin air_adj testlinadj
 
@@ -46,23 +48,38 @@ TARGETS =  airfoil air_lin air_adj testlinadj
 # program dependencies
 #
 
-AIRFOIL = airfoil.o input.o routines.o
+AIRFOIL = input.o routines.o airfoil.o 
 
-AIR_LIN = air_lin.o input.o \
+AIR_LIN = input.o \
           flux_face_d.o  flux_wall_d.o  time_cell_d.o  lift_wall_d.o \
-          flux_face_dx.o flux_wall_dx.o time_cell_dx.o lift_wall_dx.o
-
-AIR_ADJ = air_adj.o input.o routines.o \
+          flux_face_dx.o flux_wall_dx.o time_cell_dx.o lift_wall_dx.o \
+    			$(addsuffix .o, $(RTSUPP))\
+          print_active.o \
+    			air_lin.o 
+          
+AIR_ADJ = input.o routines.o \
           flux_face_b.o  flux_wall_b.o  time_cell_b.o  lift_wall_b.o \
           flux_face_bx.o flux_wall_bx.o time_cell_bx.o lift_wall_bx.o \
-          adStack.o adBuffer.o
+          adStack.o adBuffer.o print_active.o air_adj.o 
 
-TESTLINADJ = testlinadj.o routines.o Croutines.o \
+TESTLINADJ =  routines.o Croutines.o \
           flux_face_d.o  flux_wall_d.o  time_cell_d.o  lift_wall_d.o \
           flux_face_b.o  flux_wall_b.o  time_cell_b.o  lift_wall_b.o \
           flux_face_dx.o flux_wall_dx.o time_cell_dx.o lift_wall_dx.o \
           flux_face_bx.o flux_wall_bx.o time_cell_bx.o lift_wall_bx.o \
-          adStack.o adBuffer.o
+          adStack.o adBuffer.o testlinadj.o
+
+%.o : %.F
+	${FC} ${FFLAGS} -o $@ -c $<
+
+%.o : %.f90
+	${FC} ${F90FLAGS} -o $@ -c $< 
+
+%.o : %.f
+	${FC} ${F90FLAGS} -o $@ -c $< 
+
+%.o : %.c
+	${CC} -o $@ -c $< 
 
 #
 # programs
