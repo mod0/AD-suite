@@ -21,8 +21,8 @@ LFLAGS   = -Vaxlib -lm -static-libcxa
 FC = gfortran
 CC = gcc
 
-FFLAGS   = -g -DDEBUG -O0
-F90FLAGS = -g 
+FFLAGS   = -O0
+F90FLAGS =  
 FFLAGS2  = -DCOMPLEX
 CFLAGS   = -g 
 CPPFLAGS = 

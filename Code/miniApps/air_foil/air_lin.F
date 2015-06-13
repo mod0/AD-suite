@@ -126,6 +126,11 @@ c
      &                      q(1,ic),qd(1,ic), adt(ic),adtd(ic))
         enddo
 
+c
+        adt(ncell)  = 0.0d0
+        adtd(ncell) = 0.0d0
+c
+        
 #if DEBUG
 c--------- Write to files
         tmp_v1 = 0
@@ -157,10 +162,6 @@ c--------- Write to files
      &     q_OAD_d_filenum)
 #endif
 
-c
-        adt(ncell)  = 0.0d0
-        adtd(ncell) = 0.0d0
-c
         do ie = 1, nedge
           in1 = edge(1,ie)
           in2 = edge(2,ie)
@@ -221,7 +222,7 @@ c--------- Write to files
 c
 c------ main time-marching loop
 c
-        niter = 2
+        niter = 20000
 c
         do iter = 1, niter
 c
