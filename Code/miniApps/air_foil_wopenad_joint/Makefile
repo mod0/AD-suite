@@ -1,16 +1,11 @@
-
 #
-# TAPENADE executable
+# OpenAD executable
 #
-
-#TPN  = ~giles/bin/tapenade
-
-TPN  = ${TAPENADE_HOME}/bin/tapenade
+OAD = openad 
 
 #
 # Intel 8.0 flags
 #
- 
 FC = ifort 
 CC = icc
 
@@ -23,276 +18,316 @@ LFLAGS   = -Vaxlib -lm -static-libcxa
 #
 # gfortran flags
 #
- 
 FC = gfortran
 CC = gcc
 
-FFLAGS   = 
+FFLAGS   = -O0 -g
+F90FLAGS =  -O0 -g
 FFLAGS2  = -DCOMPLEX
-CFLAGS   =
+CFLAGS   = -g 
 CPPFLAGS = 
 LFLAGS   = -lm -static-libgcc
 
-TARGETS =  airfoil air_lin air_adj testlinadj
+RTSUPP  =	w2f__types OAD_active
 
-#
-# transformation rules
-#
+RTSUPP_ADJ = OAD_cp OAD_tape OAD_rev 
 
-.F.o:     ; /bin/rm -f $*.o; ${FC} ${FFLAGS} -c $*.F ; /bin/rm -f $*.cpp
-.c.o:     ; /bin/rm -f $*.o; ${CC} ${CFLAGS} -c $*.c ; /bin/rm -f $*.cpp
+TARGETS =  airfoil air_lin air_adj #testlinadj
 
-#
-# program dependencies
-#
+AIRFOIL = airfoil.o input.o routines.o flux_face.o flux_wall.o time_cell.o lift_wall.o 
 
-AIRFOIL = airfoil.o input.o routines.o
+AIR_LIN = 	time_cell_d.o  time_cell_dx.o\
+			flux_face_d.o  flux_face_dx.o \
+			flux_wall_d.o flux_wall_dx.o \
+			lift_wall_d.o  lift_wall_dx.o\
+			input.o print_active.o\
+			$(addsuffix .o, $(RTSUPP))\
+			air_lin.o
 
-AIR_LIN = air_lin.o input.o \
-          flux_face_d.o  flux_wall_d.o  time_cell_d.o  lift_wall_d.o \
-          flux_face_dx.o flux_wall_dx.o time_cell_dx.o lift_wall_dx.o
+AIR_ADJ = 	time_cell.o time_cell_b.o  time_cell_bx.o \
+			flux_face_b.o flux_face_bx.o \
+			flux_wall_b.o flux_wall_bx.o \
+			lift_wall_b.o lift_wall_bx.o \
+			input.o print_active.o\
+			$(addsuffix .o, $(RTSUPP))\
+			$(addsuffix .o, $(RTSUPP_ADJ))\
+			air_adj.o
 
-AIR_ADJ = air_adj.o input.o routines.o adStack.o \
-          flux_face_b.o  flux_wall_b.o  time_cell_b.o  lift_wall_b.o \
-          flux_face_bx.o flux_wall_bx.o time_cell_bx.o lift_wall_bx.o
-
-TESTLINADJ = testlinadj.o routines.o Croutines.o adStack.o \
-          flux_face_d.o  flux_wall_d.o  time_cell_d.o  lift_wall_d.o \
-          flux_face_b.o  flux_wall_b.o  time_cell_b.o  lift_wall_b.o \
-          flux_face_dx.o flux_wall_dx.o time_cell_dx.o lift_wall_dx.o \
-          flux_face_bx.o flux_wall_bx.o time_cell_bx.o lift_wall_bx.o
-
-#
-# programs
-#
-
-ALL:		$(TARGETS)
+all: $(TARGETS)
 
 airfoil:	                           ${AIRFOIL}
+		@echo Compiling Airfoil;
 		${FC} ${FFLAGS} -o airfoil ${AIRFOIL} ${LFLAGS}
 
 air_lin:	                           ${AIR_LIN}
+		@echo Compiling Airfoil Linear;
 		${FC} ${FFLAGS} -o air_lin ${AIR_LIN} ${LFLAGS}
 
 air_adj:	                           ${AIR_ADJ}
+		@echo Compiling Airfoil Adjoint;
 		${FC} ${FFLAGS} -o air_adj ${AIR_ADJ} ${LFLAGS}
 
-testlinadj:	                              ${TESTLINADJ}
-		${FC} ${FFLAGS} -o testlinadj ${TESTLINADJ} ${LFLAGS}
+%.o : %.F
+	${FC} ${FFLAGS} -o $@ -c $<
 
-#
-# Complex version of nonlinear routines
-#
+%.o : %.f90
+	${FC} ${F90FLAGS} -o $@ -c $< 
 
-Croutines.o:	                                   routines.F
-		${FC} ${FFLAGS2} -c -o Croutines.o routines.F
+%.o : %.f
+	${FC} ${F90FLAGS} -o $@ -c $< 
 
-#
-# Linear versions of nonlinear routines
-#
+%.o : %.c
+	${CC} -o $@ -c $< 
 
-time_cell_d.o:	routines.F
-		${CC} -E -C -P routines.F > routines.f;
-		${TPN} -forward              \
-		       -head       time_cell \
-		       -output     time_cell \
-		       -vars       "q"       \
-		       -outvars    "q adt"   \
-		        routines.f;
-		${FC} ${FFLAGS} -c time_cell_d.f;
-	/bin/rm routines.f time_cell_d.f *.msg
+#---------------------------------------------------------------------------
+# Linear versions of the routines
+#---------------------------------------------------------------------------
+#---------------------------------------------------------------------------	
+# Time Cell
+#---------------------------------------------------------------------------
+time_cell_d.o:	time_cell.F
+	${CC} -E -C -P -DOPENAD_D time_cell.F > time_cell.f;
+	${OAD} -c -m f time_cell.f
+	@echo Rename function name in place
+	@sed -i'' "s/time_cell/time_cell_d/" time_cell.pre.xb.x2w.w2f.post.f  
+	@echo Rename file to time_cell_d.f
+	@mv time_cell.pre.xb.x2w.w2f.post.f time_cell_d.f 
+	${CC} -c iaddr.c
+	${FC} -c w2f__types.f90
+	${FC} -c OAD_active.f90
+	${FC} ${FFLAGS} -c time_cell_d.f
 
-time_cell_dx.o:	routines.F
-		${CC} -E -C -P routines.F > routines.f;
-		${TPN} -forward                          \
-		       -head         time_cell           \
-		       -output       time_cell           \
-		       -vars         "x1 x2 x3 x4 q"     \
-		       -outvars      "x1 x2 x3 x4 q adt" \
-		       -difffuncname "_dx"               \
-		        routines.f;
-		${FC} ${FFLAGS} -c time_cell_dx.f;
-		/bin/rm routines.f time_cell_dx.f *.msg
+time_cell_dx.o:	time_cell.F
+	${CC} -E -C -P -DOPENAD_DX time_cell.F > time_cell.f;
+	${OAD} -c -m f time_cell.f
+	@echo Rename function name in place
+	@sed -i'' "s/time_cell/time_cell_dx/" time_cell.pre.xb.x2w.w2f.post.f  
+	@echo Rename file to time_cell_dx.f
+	@mv time_cell.pre.xb.x2w.w2f.post.f time_cell_dx.f 
+	${CC} -c iaddr.c
+	${FC} -c w2f__types.f90
+	${FC} -c OAD_active.f90
+	${FC} ${FFLAGS} -c time_cell_dx.f
 
-flux_face_d.o:	routines.F
-		${CC} -E -C -P routines.F > routines.f;
-		${TPN} -forward                                \
-		       -head       flux_face                   \
-		       -output     flux_face                   \
-		       -vars       "q1 q2 adt1 adt2 res1 res2" \
-		       -outvars    "q1 q2 adt1 adt2 res1 res2" \
-		        routines.f;
-		${FC} ${FFLAGS} -c flux_face_d.f;
-		/bin/rm routines.f flux_face_d.f *.msg
+#---------------------------------------------------------------------------	
+# Flux Face
+#---------------------------------------------------------------------------
 
-flux_face_dx.o:	routines.F
-		${CC} -E -C -P routines.F > routines.f;
-		${TPN} -forward                                        \
-		       -head         flux_face                         \
-		       -output       flux_face                         \
-		       -vars         "x1 x2 q1 q2 adt1 adt2 res1 res2" \
-		       -outvars      "x1 x2 q1 q2 adt1 adt2 res1 res2" \
-		       -difffuncname "_dx"                             \
-		        routines.f;
-		${FC} ${FFLAGS} -c flux_face_dx.f;
-		/bin/rm routines.f flux_face_dx.f *.msg
+flux_face_d.o:	flux_face.F
+	${CC} -E -C -P -DOPENAD_D flux_face.F > flux_face.f;
+	${OAD} -c -m f flux_face.f
+	@echo Rename function name in place
+	@sed -i'' "s/flux_face/flux_face_d/" flux_face.pre.xb.x2w.w2f.post.f  
+	@echo Rename file to flux_face_d.f
+	@mv flux_face.pre.xb.x2w.w2f.post.f flux_face_d.f 
+	${CC} -c iaddr.c
+	${FC} -c w2f__types.f90
+	${FC} -c OAD_active.f90
+	${FC} ${FFLAGS} -c flux_face_d.f
 
-flux_wall_d.o:	routines.F
-		${CC} -E -C -P routines.F > routines.f;
-		${TPN} -forward              \
-		       -head       flux_wall \
-		       -output     flux_wall \
-		       -vars       "q res"   \
-		       -outvars    "q res"   \
-		        routines.f;
-		${FC} ${FFLAGS} -c flux_wall_d.f;
-		/bin/rm routines.f flux_wall_d.f *.msg
+flux_face_dx.o:	flux_face.F
+	@${CC} -E -C -P -DOPENAD_DX flux_face.F > flux_face.f;
+	@${OAD} -c -m f flux_face.f
+	@echo Rename function name in place
+	@sed -i'' "s/flux_face/flux_face_dx/" flux_face.pre.xb.x2w.w2f.post.f  
+	@echo Rename file to flux_face_dx.f
+	@mv flux_face.pre.xb.x2w.w2f.post.f flux_face_dx.f
+	${CC} -c iaddr.c
+	${FC} -c w2f__types.f90
+	${FC} -c OAD_active.f90
+	${FC} ${FFLAGS} -c flux_face_dx.f
 
-flux_wall_dx.o:	routines.F
-		${CC} -E -C -P routines.F > routines.f;
-		${TPN} -forward                    \
-		       -vars         "x1 x2 q res" \
-		       -outvars      "x1 x2 q res" \
-		       -head         flux_wall     \
-		       -output       flux_wall     \
-		       -difffuncname "_dx"         \
-		        routines.f;
-		${FC} ${FFLAGS} -c flux_wall_dx.f;
-		/bin/rm routines.f flux_wall_dx.f *.msg
+#---------------------------------------------------------------------------	
+# Flux Wall
+#---------------------------------------------------------------------------
+flux_wall_d.o:	flux_wall.F
+	${CC} -E -C -P -DOPENAD_D flux_wall.F > flux_wall.f;
+	${OAD} -c -m f flux_wall.f
+	@echo Rename function name in place
+	@sed -i'' "s/flux_wall/flux_wall_d/" flux_wall.pre.xb.x2w.w2f.post.f  
+	@echo Rename file to flux_wall_d.f
+	@mv flux_wall.pre.xb.x2w.w2f.post.f flux_wall_d.f 
+	${CC} -c iaddr.c
+	${FC} -c w2f__types.f90
+	${FC} -c OAD_active.f90
+	${FC} ${FFLAGS} -c flux_wall_d.f
 
-lift_wall_d.o:	routines.F
-		${CC} -E -C -P routines.F > routines.f;
-		${TPN} -forward              \
-		       -head       lift_wall \
-		       -output     lift_wall \
-		       -vars       "q lift"  \
-		       -outvars    "q lift"  \
-		        routines.f;
-		${FC} ${FFLAGS} -c lift_wall_d.f;
-		/bin/rm routines.f lift_wall_d.f *.msg
+flux_wall_dx.o:	flux_wall.F
+	@${CC} -E -C -P -DOPENAD_DX flux_wall.F > flux_wall.f;
+	@${OAD} -c -m f flux_wall.f
+	@echo Rename function name in place
+	@sed -i'' "s/flux_wall/flux_wall_dx/" flux_wall.pre.xb.x2w.w2f.post.f  
+	@echo Rename file to flux_wall_dx.f
+	@mv flux_wall.pre.xb.x2w.w2f.post.f flux_wall_dx.f
+	${CC} -c iaddr.c
+	${FC} -c w2f__types.f90
+	${FC} -c OAD_active.f90
+	${FC} ${FFLAGS} -c flux_wall_dx.f
 
-lift_wall_dx.o:	routines.F
-		${CC} -E -C -P routines.F > routines.f;
-		${TPN} -forward                     \
-		       -head         lift_wall      \
-		       -output       lift_wall      \
-		       -vars         "x1 x2 q lift" \
-		       -outvars      "x1 x2 q lift" \
-		       -difffuncname "_dx"          \
-		        routines.f;
-		${FC} ${FFLAGS} -c lift_wall_dx.f;
-		/bin/rm routines.f lift_wall_dx.f *.msg
+#---------------------------------------------------------------------------	
+# Lift Wall
+#---------------------------------------------------------------------------
+lift_wall_d.o:	lift_wall.F
+	${CC} -E -C -P -DOPENAD_D lift_wall.F > lift_wall.f;
+	${OAD} -c -m f lift_wall.f
+	@echo Rename function name in place
+	@sed -i'' "s/lift_wall/lift_wall_d/" lift_wall.pre.xb.x2w.w2f.post.f  
+	@echo Rename file to lift_wall_d.f
+	@mv lift_wall.pre.xb.x2w.w2f.post.f lift_wall_d.f 
+	${CC} -c iaddr.c
+	${FC} -c w2f__types.f90
+	${FC} -c OAD_active.f90
+	${FC} ${FFLAGS} -c lift_wall_d.f
 
-#
-# Adjoint versions of nonlinear routines
-#
+lift_wall_dx.o:	lift_wall.F
+	@${CC} -E -C -P -DOPENAD_DX lift_wall.F > lift_wall.f;
+	@${OAD} -c -m f lift_wall.f
+	@echo Rename function name in place
+	@sed -i'' "s/lift_wall/lift_wall_dx/" lift_wall.pre.xb.x2w.w2f.post.f  
+	@echo Rename file to lift_wall_dx.f
+	@mv lift_wall.pre.xb.x2w.w2f.post.f lift_wall_dx.f
+	${CC} -c iaddr.c
+	${FC} -c w2f__types.f90
+	${FC} -c OAD_active.f90
+	${FC} ${FFLAGS} -c lift_wall_dx.f
 
-time_cell_b.o:	routines.F
-		${CC} -E -C -P routines.F > routines.f;
-		${TPN} -backward             \
-		       -head       time_cell \
-		       -output     time_cell \
-		       -vars       "q"       \
-		       -outvars    "q adt"   \
-		        routines.f;
-		${FC} ${FFLAGS} -c time_cell_b.f;
-		/bin/rm routines.f time_cell_b.f *.msg
+#---------------------------------------------------------------------------
+# Adjoint versions of the routines
+#---------------------------------------------------------------------------
+#---------------------------------------------------------------------------	
+# Time Cell
+#---------------------------------------------------------------------------
+time_cell_b.o:	time_cell.F
+	${CC} -E -C -P -DOPENAD_D time_cell.F > time_cell.f;
+	${OAD} -c -m rs time_cell.f
+	@echo Rename function name in place
+	@sed -i'' "s/time_cell/time_cell_b/" time_cell.pre.xb.x2w.w2f.post.f  
+	@echo Rename file to time_cell_b.f
+	@mv time_cell.pre.xb.x2w.w2f.post.f time_cell_b.f 
+	${CC} -c iaddr.c
+	${FC} -c w2f__types.f90
+	${FC} -c OAD_active.f90
+	${FC} -c OAD_cp.f90  
+	${FC} -c OAD_tape.f90
+	${FC} -c OAD_rev.f90
+	${FC} -c ad_inline.f
+	${FC} ${FFLAGS} -c time_cell_b.f
 
-time_cell_bx.o:	routines.F
-		${CC} -E -C -P routines.F > routines.f;
-		${TPN} -backward                         \
-		       -head         time_cell           \
-		       -output       time_cell           \
-		       -vars         "x1 x2 x3 x4 q"     \
-		       -outvars      "x1 x2 x3 x4 q adt" \
-		       -difffuncname "_bx"               \
-		        routines.f;
-		${FC} ${FFLAGS} -c time_cell_bx.f;
-		/bin/rm routines.f time_cell_bx.f *.msg
+time_cell_bx.o:	time_cell.F
+	${CC} -E -C -P -DOPENAD_DX time_cell.F > time_cell.f;
+	${OAD} -c -m rs time_cell.f
+	@echo Rename function name in place
+	@sed -i'' "s/time_cell/time_cell_bx/" time_cell.pre.xb.x2w.w2f.post.f  
+	@echo Rename file to time_cell_bx.f
+	@mv time_cell.pre.xb.x2w.w2f.post.f time_cell_bx.f 
+	${CC} -c iaddr.c
+	${FC} -c w2f__types.f90
+	${FC} -c OAD_active.f90
+	${FC} -c OAD_cp.f90  
+	${FC} -c OAD_tape.f90
+	${FC} -c OAD_rev.f90
+	${FC} -c ad_inline.f
+	${FC} ${FFLAGS} -c time_cell_bx.f
 
-flux_face_b.o:	routines.F
-		${CC} -E -C -P routines.F > routines.f;
-		${TPN} -backward                               \
-		       -head       flux_face                   \
-		       -output     flux_face                   \
-		       -vars       "q1 q2 adt1 adt2 res1 res2" \
-		       -outvars    "q1 q2 adt1 adt2 res1 res2" \
-		        routines.f;
-		${FC} ${FFLAGS} -c flux_face_b.f;
-		/bin/rm routines.f flux_face_b.f *.msg
+#---------------------------------------------------------------------------	
+# Flux Face
+#---------------------------------------------------------------------------
+flux_face_b.o:	flux_face.F
+	${CC} -E -C -P -DOPENAD_D flux_face.F > flux_face.f;
+	${OAD} -c -m rs flux_face.f
+	@echo Rename function name in place
+	@sed -i'' "s/flux_face/flux_face_b/" flux_face.pre.xb.x2w.w2f.post.f  
+	@echo Rename file to flux_face_b.f
+	@mv flux_face.pre.xb.x2w.w2f.post.f flux_face_b.f 
+	${CC} -c iaddr.c
+	${FC} -c w2f__types.f90
+	${FC} -c OAD_active.f90
+	${FC} ${FFLAGS} -c flux_face_b.f
 
-flux_face_bx.o:	routines.F
-		${CC} -E -C -P routines.F > routines.f;
-		${TPN} -backward                                       \
-		       -head         flux_face                         \
-		       -output       flux_face                         \
-		       -vars         "x1 x2 q1 q2 adt1 adt2 res1 res2" \
-		       -outvars      "x1 x2 q1 q2 adt1 adt2 res1 res2" \
-		       -difffuncname "_bx"                             \
-		        routines.f;
-		${FC} ${FFLAGS} -c flux_face_bx.f;
-		/bin/rm routines.f flux_face_bx.f *.msg
+flux_face_bx.o:	flux_face.F
+	${CC} -E -C -P -DOPENAD_DX flux_face.F > flux_face.f;
+	${OAD} -c -m rs flux_face.f
+	@echo Rename function name in place
+	@sed -i'' "s/flux_face/flux_face_bx/" flux_face.pre.xb.x2w.w2f.post.f  
+	@echo Rename file to flux_face_bx.f
+	@mv flux_face.pre.xb.x2w.w2f.post.f flux_face_bx.f 
+	${CC} -c iaddr.c
+	${FC} -c w2f__types.f90
+	${FC} -c OAD_active.f90
+	${FC} ${FFLAGS} -c flux_face_bx.f
 
-flux_wall_b.o:	routines.F
-		${CC} -E -C -P routines.F > routines.f;
-		${TPN} -backward             \
-		       -head       flux_wall \
-		       -output     flux_wall \
-		       -vars       "q res"   \
-		       -outvars    "q res"   \
-		        routines.f;
-		${FC} ${FFLAGS} -c flux_wall_b.f;
-		/bin/rm routines.f flux_wall_b.f *.msg
+#---------------------------------------------------------------------------	
+# Flux Wall
+#---------------------------------------------------------------------------
+flux_wall_b.o:	flux_wall.F
+	${CC} -E -C -P -DOPENAD_D flux_wall.F > flux_wall.f;
+	${OAD} -c -m rs flux_wall.f
+	@echo Rename function name in place
+	@sed -i'' "s/flux_wall/flux_wall_b/" flux_wall.pre.xb.x2w.w2f.post.f  
+	@echo Rename file to flux_wall_b.f
+	@mv flux_wall.pre.xb.x2w.w2f.post.f flux_wall_b.f 
+	${CC} -c iaddr.c
+	${FC} -c w2f__types.f90
+	${FC} -c OAD_active.f90
+	${FC} -c OAD_cp.f90  
+	${FC} -c OAD_tape.f90
+	${FC} -c OAD_rev.f90
+	${FC} -c ad_inline.f
+	${FC} ${FFLAGS} -c flux_wall_b.f
 
-flux_wall_bx.o:	routines.F
-		${CC} -E -C -P routines.F > routines.f;
-		${TPN} -backward                   \
-		       -head         flux_wall     \
-		       -output       flux_wall     \
-		       -vars         "x1 x2 q res" \
-		       -outvars      "x1 x2 q res" \
-		       -difffuncname "_bx"         \
-		        routines.f;
-		${FC} ${FFLAGS} -c flux_wall_bx.f;
-		/bin/rm routines.f flux_wall_bx.f *.msg
+flux_wall_bx.o:	flux_wall.F
+	${CC} -E -C -P -DOPENAD_DX flux_wall.F > flux_wall.f;
+	${OAD} -c -m rs flux_wall.f
+	@echo Rename function name in place
+	@sed -i'' "s/flux_wall/flux_wall_bx/" flux_wall.pre.xb.x2w.w2f.post.f  
+	@echo Rename file to flux_wall_bx.f
+	@mv flux_wall.pre.xb.x2w.w2f.post.f flux_wall_bx.f 
+	${CC} -c iaddr.c
+	${FC} -c w2f__types.f90
+	${FC} -c OAD_active.f90
+	${FC} -c OAD_cp.f90  
+	${FC} -c OAD_tape.f90
+	${FC} -c OAD_rev.f90
+	${FC} -c ad_inline.f
+	${FC} ${FFLAGS} -c flux_wall_bx.f
 
-lift_wall_b.o:	routines.F
-		${CC} -E -C -P routines.F > routines.f;
-		${TPN} -backward             \
-		       -head       lift_wall \
-		       -output     lift_wall \
-		       -vars       "q lift"  \
-		       -outvars    "q lift"  \
-		        routines.f;
-		${FC} ${FFLAGS} -c lift_wall_b.f;
-		/bin/rm routines.f lift_wall_b.f *.msg
+#---------------------------------------------------------------------------	
+# Lift Wall
+#---------------------------------------------------------------------------
+lift_wall_b.o:	lift_wall.F
+	${CC} -E -C -P -DOPENAD_D lift_wall.F > lift_wall.f;
+	${OAD} -c -m rs lift_wall.f
+	@echo Rename function name in place
+	@sed -i'' "s/lift_wall/lift_wall_b/" lift_wall.pre.xb.x2w.w2f.post.f  
+	@echo Rename file to lift_wall_b.f
+	@mv lift_wall.pre.xb.x2w.w2f.post.f lift_wall_b.f 
+	${CC} -c iaddr.c
+	${FC} -c w2f__types.f90
+	${FC} -c OAD_active.f90
+	${FC} -c OAD_cp.f90  
+	${FC} -c OAD_tape.f90
+	${FC} -c OAD_rev.f90
+	${FC} -c ad_inline.f
+	${FC} ${FFLAGS} -c lift_wall_b.f
 
-lift_wall_bx.o:	routines.F
-		${CC} -E -C -P routines.F > routines.f;
-		${TPN} -backward                    \
-		       -head         lift_wall      \
-		       -output       lift_wall      \
-		       -vars         "x1 x2 q lift" \
-		       -outvars      "x1 x2 q lift" \
-		       -difffuncname "_bx"          \
-		        routines.f;
-		${FC} ${FFLAGS} -c lift_wall_bx.f;
-		/bin/rm routines.f lift_wall_bx.f *.msg
+lift_wall_bx.o:	lift_wall.F
+	${CC} -E -C -P -DOPENAD_DX lift_wall.F > lift_wall.f;
+	${OAD} -c -m rs lift_wall.f
+	@echo Rename function name in place
+	@sed -i'' "s/lift_wall/lift_wall_bx/" lift_wall.pre.xb.x2w.w2f.post.f  
+	@echo Rename file to lift_wall_bx.f
+	@mv lift_wall.pre.xb.x2w.w2f.post.f lift_wall_bx.f 
+	${CC} -c iaddr.c
+	${FC} -c w2f__types.f90
+	${FC} -c OAD_active.f90
+	${FC} -c OAD_cp.f90  
+	${FC} -c OAD_tape.f90
+	${FC} -c OAD_rev.f90
+	${FC} -c ad_inline.f
+	${FC} ${FFLAGS} -c lift_wall_bx.f
 
-#
-# clean things up
-#
+clean:
+	rm -f *.o *.f *.B *.xaif *.s *.log~ *.f90 *.mod-whirl *.mod airfoil air_lin air_adj
 
-clean:	
-	/bin/rm -f *.o *.cpp *.f *.msg
 
-realclean:	
-	/bin/rm -f *.o *.cpp *.f *.msg $(TARGETS)
-
-#
-# create tar file
-#
-
-tar:	
-	tar cvf airfoil.tar README *.F *.c *.inc Makefile *.dat
 
