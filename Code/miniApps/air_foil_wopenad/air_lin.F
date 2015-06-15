@@ -129,7 +129,7 @@ c       Copy the values from x to x_OAD
         enddo
 
 c       Copy the values from q to q_OAD
-        do ic = 1, maxcell
+        do ic = 1, ncell
             q_OAD(1, ic)%v = q(1, ic)
             q_OAD(2, ic)%v = q(2, ic)
             q_OAD(3, ic)%v = q(3, ic)

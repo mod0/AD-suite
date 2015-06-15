@@ -303,10 +303,10 @@ lift_wall_bx.o:	routines.F
 #
 
 clean:	
-	/bin/rm -f *.o *.cpp *.msg
+	/bin/rm -f *.o *.cpp *.msg *.mod
 
-realclean:	
-	/bin/rm -f *.o *.cpp *.msg $(TARGETS)
+realclean: clean	
+	/bin/rm -f $(TARGETS)
 
 #
 # create tar file
