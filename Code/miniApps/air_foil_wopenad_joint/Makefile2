@@ -199,7 +199,7 @@ lift_wall_dx.o:	lift_wall.F
 #---------------------------------------------------------------------------
 time_cell_b.o:	time_cell.F
 	${CC} -E -C -P -DOPENAD_D time_cell.F > time_cell.f;
-	${OAD} -c -m rj time_cell.f
+	${OAD} -c -m rs time_cell.f
 	@echo Rename function name in place
 	@sed -i'' "s/time_cell/time_cell_b/" time_cell.pre.xb.x2w.w2f.post.f  
 	@echo Rename file to time_cell_b.f
@@ -215,7 +215,7 @@ time_cell_b.o:	time_cell.F
 
 time_cell_bx.o:	time_cell.F
 	${CC} -E -C -P -DOPENAD_DX time_cell.F > time_cell.f;
-	${OAD} -c -m rj time_cell.f
+	${OAD} -c -m rs time_cell.f
 	@echo Rename function name in place
 	@sed -i'' "s/time_cell/time_cell_bx/" time_cell.pre.xb.x2w.w2f.post.f  
 	@echo Rename file to time_cell_bx.f
@@ -234,7 +234,7 @@ time_cell_bx.o:	time_cell.F
 #---------------------------------------------------------------------------
 flux_face_b.o:	flux_face.F
 	${CC} -E -C -P -DOPENAD_D flux_face.F > flux_face.f;
-	${OAD} -c -m rj flux_face.f
+	${OAD} -c -m rs flux_face.f
 	@echo Rename function name in place
 	@sed -i'' "s/flux_face/flux_face_b/" flux_face.pre.xb.x2w.w2f.post.f  
 	@echo Rename file to flux_face_b.f
@@ -246,7 +246,7 @@ flux_face_b.o:	flux_face.F
 
 flux_face_bx.o:	flux_face.F
 	${CC} -E -C -P -DOPENAD_DX flux_face.F > flux_face.f;
-	${OAD} -c -m rj flux_face.f
+	${OAD} -c -m rs flux_face.f
 	@echo Rename function name in place
 	@sed -i'' "s/flux_face/flux_face_bx/" flux_face.pre.xb.x2w.w2f.post.f  
 	@echo Rename file to flux_face_bx.f
@@ -261,7 +261,7 @@ flux_face_bx.o:	flux_face.F
 #---------------------------------------------------------------------------
 flux_wall_b.o:	flux_wall.F
 	${CC} -E -C -P -DOPENAD_D flux_wall.F > flux_wall.f;
-	${OAD} -c -m rj flux_wall.f
+	${OAD} -c -m rs flux_wall.f
 	@echo Rename function name in place
 	@sed -i'' "s/flux_wall/flux_wall_b/" flux_wall.pre.xb.x2w.w2f.post.f  
 	@echo Rename file to flux_wall_b.f
@@ -277,7 +277,7 @@ flux_wall_b.o:	flux_wall.F
 
 flux_wall_bx.o:	flux_wall.F
 	${CC} -E -C -P -DOPENAD_DX flux_wall.F > flux_wall.f;
-	${OAD} -c -m rj flux_wall.f
+	${OAD} -c -m rs flux_wall.f
 	@echo Rename function name in place
 	@sed -i'' "s/flux_wall/flux_wall_bx/" flux_wall.pre.xb.x2w.w2f.post.f  
 	@echo Rename file to flux_wall_bx.f
@@ -296,7 +296,7 @@ flux_wall_bx.o:	flux_wall.F
 #---------------------------------------------------------------------------
 lift_wall_b.o:	lift_wall.F
 	${CC} -E -C -P -DOPENAD_D lift_wall.F > lift_wall.f;
-	${OAD} -c -m rj lift_wall.f
+	${OAD} -c -m rs lift_wall.f
 	@echo Rename function name in place
 	@sed -i'' "s/lift_wall/lift_wall_b/" lift_wall.pre.xb.x2w.w2f.post.f  
 	@echo Rename file to lift_wall_b.f
@@ -312,7 +312,7 @@ lift_wall_b.o:	lift_wall.F
 
 lift_wall_bx.o:	lift_wall.F
 	${CC} -E -C -P -DOPENAD_DX lift_wall.F > lift_wall.f;
-	${OAD} -c -m rj lift_wall.f
+	${OAD} -c -m rs lift_wall.f
 	@echo Rename function name in place
 	@sed -i'' "s/lift_wall/lift_wall_bx/" lift_wall.pre.xb.x2w.w2f.post.f  
 	@echo Rename file to lift_wall_bx.f
