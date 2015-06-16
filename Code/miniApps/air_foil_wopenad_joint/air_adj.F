@@ -14,6 +14,7 @@ c
         use OAD_active
         use w2f__types
         use OAD_rev
+        use OAD_tape
         implicit none
 c
 #include "const.inc"
@@ -55,6 +56,8 @@ c
      &             x, q,cell, edge,ecell,boun)
 
 c--------- BEGIN CHANGES TO ACCOMMODATE OPENAD >>>>>>>>>>
+c       Call Tape initialization routine
+        call tape_init()
 c       Copy the values from x to x1_OAD, x2_OAD
         do in = 1, nnode
             x1_OAD(1, in)%v = x(1, in)
@@ -141,31 +144,18 @@ c--------- END ORIGINAL CODE COMMENT <<<<<<<<<<
             in2 = edge(2,ie)
             ic2 = ecell(2,ie)
             
-c-----------Turn Tape On            
+c-----------Call function in Tape and Adjoint mode            
             our_rev_mode%arg_store=.FALSE.
             our_rev_mode%arg_restore=.FALSE.
             our_rev_mode%res_store=.FALSE.
             our_rev_mode%res_restore=.FALSE.
             our_rev_mode%plain=.FALSE.
             our_rev_mode%tape=.TRUE.
-            our_rev_mode%adjoint=.FALSE.
-            call lift_wall_bx(x2_OAD(1,in1),
-     &                        x2_OAD(1,in2),
-     &                        q2_OAD(1,ic2),
-     &                        lift_OAD)
-c-----------Now compute the adjoint            
-            our_rev_mode%arg_store=.FALSE.
-            our_rev_mode%arg_restore=.FALSE.
-            our_rev_mode%res_store=.FALSE.
-            our_rev_mode%res_restore=.FALSE.
-            our_rev_mode%plain=.FALSE.
-            our_rev_mode%tape=.FALSE.
             our_rev_mode%adjoint=.TRUE.
             call lift_wall_bx(x2_OAD(1,in1),
      &                        x2_OAD(1,in2),
      &                        q2_OAD(1,ic2),
      &                        lift_OAD)
-            
           endif
         enddo
 c--------- END CHANGES TO ACCOMMODATE OPENAD <<<<<<<<<<
@@ -266,28 +256,13 @@ c--------- BEGIN ORIGINAL CODE COMMENT >>>>>>>>>>
 !     &                           adt(ic2),adtb(ic2),
 !     &                           dum1,resb(1,ic1), dum2,resb(1,ic2))
 c--------- END ORIGINAL CODE COMMENT <<<<<<<<<<
-c-----------Turn Tape On            
+c-----------Call function in Tape and Adjoint mode            
                 our_rev_mode%arg_store=.FALSE.
                 our_rev_mode%arg_restore=.FALSE.
                 our_rev_mode%res_store=.FALSE.
                 our_rev_mode%res_restore=.FALSE.
                 our_rev_mode%plain=.FALSE.
                 our_rev_mode%tape=.TRUE.
-                our_rev_mode%adjoint=.FALSE.
-                call flux_face_b(x(1,in1),
-     &                           x(1,in2),
-     &                           q1_OAD(1,ic1),
-     &                           q1_OAD(1,ic2),
-     &                           adt_OAD(ic1),
-     &                           adt_OAD(ic2),
-     &                           res_OAD(1,ic1), res_OAD(1,ic2))
-c-----------Now compute the adjoint            
-                our_rev_mode%arg_store=.FALSE.
-                our_rev_mode%arg_restore=.FALSE.
-                our_rev_mode%res_store=.FALSE.
-                our_rev_mode%res_restore=.FALSE.
-                our_rev_mode%plain=.FALSE.
-                our_rev_mode%tape=.FALSE.
                 our_rev_mode%adjoint=.TRUE.
                 call flux_face_b(x(1,in1),
      &                           x(1,in2),
@@ -295,7 +270,7 @@ c-----------Now compute the adjoint
      &                           q1_OAD(1,ic2),
      &                           adt_OAD(ic1),
      &                           adt_OAD(ic2),
-     &                           res_OAD(1,ic1), res_OAD(1,ic2))                
+     &                           res_OAD(1,ic1), res_OAD(1,ic2))             
 c--------- END CHANGES TO ACCOMMODATE OPENAD <<<<<<<<<<
               elseif (boun(ie).eq.1) then
 c--------- BEGIN CHANGES TO ACCOMMODATE OPENAD >>>>>>>>>>
@@ -303,24 +278,13 @@ c--------- BEGIN ORIGINAL CODE COMMENT >>>>>>>>>>
 !                call flux_wall_b(x(1,in1),x(1,in2),
 !     &                           q(1,ic2),qb(1,ic2), dum2,resb(1,ic2))
 c--------- END ORIGINAL CODE COMMENT <<<<<<<<<<
-c-----------Turn Tape On            
+c-----------Call function in Tape and Adjoint mode            
                 our_rev_mode%arg_store=.FALSE.
                 our_rev_mode%arg_restore=.FALSE.
                 our_rev_mode%res_store=.FALSE.
                 our_rev_mode%res_restore=.FALSE.
                 our_rev_mode%plain=.FALSE.
                 our_rev_mode%tape=.TRUE.
-                our_rev_mode%adjoint=.FALSE.
-                call flux_wall_b(x(1,in1),
-     &                           x(1,in2),
-     &                           q1_OAD(1,ic2),res_OAD(1,ic2))
-c-----------Now compute the adjoint            
-                our_rev_mode%arg_store=.FALSE.
-                our_rev_mode%arg_restore=.FALSE.
-                our_rev_mode%res_store=.FALSE.
-                our_rev_mode%res_restore=.FALSE.
-                our_rev_mode%plain=.FALSE.
-                our_rev_mode%tape=.FALSE.
                 our_rev_mode%adjoint=.TRUE.
                 call flux_wall_b(x(1,in1),
      &                           x(1,in2),
@@ -345,26 +309,16 @@ c--------- BEGIN ORIGINAL CODE COMMENT >>>>>>>>>>
 !              call time_cell_b(x(1,in1),x(1,in2),x(1,in3),x(1,in4),
 !     &                         q(1,ic),qb(1,ic),adt(ic),adtb(ic))
 c--------- END ORIGINAL CODE COMMENT <<<<<<<<<<
-c-----------Turn Tape On            
+c-----------Call function in Tape and Adjoint mode            
               our_rev_mode%arg_store=.FALSE.
               our_rev_mode%arg_restore=.FALSE.
               our_rev_mode%res_store=.FALSE.
               our_rev_mode%res_restore=.FALSE.
               our_rev_mode%plain=.FALSE.
               our_rev_mode%tape=.TRUE.
-              our_rev_mode%adjoint=.FALSE.
-              call time_cell_b(x(1,in1),x(1,in2),x(1,in3),x(1,in4),
-     &                         q1_OAD(1,ic),adt_OAD(ic))
-c-----------Now compute the adjoint            
-              our_rev_mode%arg_store=.FALSE.
-              our_rev_mode%arg_restore=.FALSE.
-              our_rev_mode%res_store=.FALSE.
-              our_rev_mode%res_restore=.FALSE.
-              our_rev_mode%plain=.FALSE.
-              our_rev_mode%tape=.FALSE.
               our_rev_mode%adjoint=.TRUE.
               call time_cell_b(x(1,in1),x(1,in2),x(1,in3),x(1,in4),
-     &                         q1_OAD(1,ic),adt_OAD(ic))                
+     &                         q1_OAD(1,ic),adt_OAD(ic))           
 c--------- END CHANGES TO ACCOMMODATE OPENAD <<<<<<<<<<
             enddo
 c
@@ -428,28 +382,13 @@ c--------- BEGIN ORIGINAL CODE COMMENT >>>>>>>>>>
 !     &                            adt(ic2),adtb(ic2),
 !     &                            dum1,resb(1,ic1), dum2,resb(1,ic2))
 c--------- END ORIGINAL CODE COMMENT <<<<<<<<<<
-c-----------Turn Tape On            
+c-----------Call function in Tape and Adjoint mode            
                 our_rev_mode%arg_store=.FALSE.
                 our_rev_mode%arg_restore=.FALSE.
                 our_rev_mode%res_store=.FALSE.
                 our_rev_mode%res_restore=.FALSE.
                 our_rev_mode%plain=.FALSE.
                 our_rev_mode%tape=.TRUE.
-                our_rev_mode%adjoint=.FALSE.
-                call flux_face_bx(x1_OAD(1,in1),
-     &                            x1_OAD(1,in2),
-     &                            q1_OAD(1,ic1),
-     &                            q1_OAD(1,ic2),
-     &                            adt_OAD(ic1),
-     &                            adt_OAD(ic2),
-     &                            res_OAD(1,ic1), res_OAD(1,ic2))
-c-----------Now compute the adjoint            
-                our_rev_mode%arg_store=.FALSE.
-                our_rev_mode%arg_restore=.FALSE.
-                our_rev_mode%res_store=.FALSE.
-                our_rev_mode%res_restore=.FALSE.
-                our_rev_mode%plain=.FALSE.
-                our_rev_mode%tape=.FALSE.
                 our_rev_mode%adjoint=.TRUE.
                 call flux_face_bx(x1_OAD(1,in1),
      &                            x1_OAD(1,in2),
@@ -457,7 +396,7 @@ c-----------Now compute the adjoint
      &                            q1_OAD(1,ic2),
      &                            adt_OAD(ic1),
      &                            adt_OAD(ic2),
-     &                            res_OAD(1,ic1), res_OAD(1,ic2))              
+     &                            res_OAD(1,ic1), res_OAD(1,ic2))          
 c--------- END CHANGES TO ACCOMMODATE OPENAD <<<<<<<<<<
               elseif (boun(ie).eq.1) then
 c--------- BEGIN CHANGES TO ACCOMMODATE OPENAD >>>>>>>>>>
@@ -466,24 +405,13 @@ c--------- BEGIN ORIGINAL CODE COMMENT >>>>>>>>>>
 !     &                            x(1,in2),xb(1,in2),
 !     &                            q(1,ic2),qb(1,ic2), dum2,resb(1,ic2))
 c--------- END ORIGINAL CODE COMMENT <<<<<<<<<<
-c-----------Turn Tape On            
+c-----------Call function in Tape and Adjoint mode            
                 our_rev_mode%arg_store=.FALSE.
                 our_rev_mode%arg_restore=.FALSE.
                 our_rev_mode%res_store=.FALSE.
                 our_rev_mode%res_restore=.FALSE.
                 our_rev_mode%plain=.FALSE.
                 our_rev_mode%tape=.TRUE.
-                our_rev_mode%adjoint=.FALSE.
-                call flux_wall_bx(x1_OAD(1,in1),
-     &                            x1_OAD(1,in2),
-     &                            q1_OAD(1,ic2), res_OAD(1,ic2))
-c-----------Now compute the adjoint            
-                our_rev_mode%arg_store=.FALSE.
-                our_rev_mode%arg_restore=.FALSE.
-                our_rev_mode%res_store=.FALSE.
-                our_rev_mode%res_restore=.FALSE.
-                our_rev_mode%plain=.FALSE.
-                our_rev_mode%tape=.FALSE.
                 our_rev_mode%adjoint=.TRUE.
                 call flux_wall_bx(x1_OAD(1,in1),
      &                            x1_OAD(1,in2),
@@ -507,27 +435,14 @@ c--------- BEGIN ORIGINAL CODE COMMENT >>>>>>>>>>
 !     &                          x(1,in4),xb(1,in4),
 !     &                          q(1,ic),qb(1,ic), dum2,adtb(ic))
 c--------- END ORIGINAL CODE COMMENT <<<<<<<<<<
-c-----------Turn Tape On            
+c-----------Call function in Tape and Adjoint mode            
               our_rev_mode%arg_store=.FALSE.
               our_rev_mode%arg_restore=.FALSE.
               our_rev_mode%res_store=.FALSE.
               our_rev_mode%res_restore=.FALSE.
               our_rev_mode%plain=.FALSE.
               our_rev_mode%tape=.TRUE.
-              our_rev_mode%adjoint=.FALSE.
-              call time_cell_bx(x1_OAD(1,in1),
-     &                          x1_OAD(1,in2),
-     &                          x1_OAD(1,in3),
-     &                          x1_OAD(1,in4),
-     &                          q1_OAD(1,ic), adt_OAD(ic))
-c-----------Now compute the adjoint                 
-              our_rev_mode%arg_store=.FALSE.
-              our_rev_mode%arg_restore=.FALSE.
-              our_rev_mode%res_store=.FALSE.
-              our_rev_mode%res_restore=.FALSE.
-              our_rev_mode%plain=.FALSE.
-              our_rev_mode%tape=.FALSE.
-              our_rev_mode%adjoint=.TRUE.    
+              our_rev_mode%adjoint=.TRUE.
               call time_cell_bx(x1_OAD(1,in1),
      &                          x1_OAD(1,in2),
      &                          x1_OAD(1,in3),
