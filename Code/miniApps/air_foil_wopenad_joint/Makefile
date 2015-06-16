@@ -22,7 +22,7 @@ FC = gfortran
 CC = gcc
 
 FFLAGS   = -O0 -g
-F90FLAGS =  -O0 -g
+F90FLAGS = -O0 -g
 FFLAGS2  = -DCOMPLEX
 CFLAGS   = -g 
 CPPFLAGS = 
@@ -31,6 +31,7 @@ LFLAGS   = -lm -static-libgcc
 RTSUPP  =	w2f__types OAD_active
 
 RTSUPP_ADJ = OAD_cp OAD_tape OAD_rev 
+
 
 TARGETS =  airfoil air_lin air_adj #testlinadj
 
@@ -93,8 +94,8 @@ time_cell_d.o:	time_cell.F
 	@echo Rename file to time_cell_d.f
 	@mv time_cell.pre.xb.x2w.w2f.post.f time_cell_d.f 
 	${CC} -c iaddr.c
-	${FC} -c w2f__types.f90
-	${FC} -c OAD_active.f90
+	${FC} ${FFLAGS} -c w2f__types.f90
+	${FC} ${FFLAGS} -c OAD_active.f90
 	${FC} ${FFLAGS} -c time_cell_d.f
 
 time_cell_dx.o:	time_cell.F
@@ -105,8 +106,8 @@ time_cell_dx.o:	time_cell.F
 	@echo Rename file to time_cell_dx.f
 	@mv time_cell.pre.xb.x2w.w2f.post.f time_cell_dx.f 
 	${CC} -c iaddr.c
-	${FC} -c w2f__types.f90
-	${FC} -c OAD_active.f90
+	${FC} ${FFLAGS} -c w2f__types.f90
+	${FC} ${FFLAGS} -c OAD_active.f90
 	${FC} ${FFLAGS} -c time_cell_dx.f
 
 #---------------------------------------------------------------------------	
@@ -121,8 +122,8 @@ flux_face_d.o:	flux_face.F
 	@echo Rename file to flux_face_d.f
 	@mv flux_face.pre.xb.x2w.w2f.post.f flux_face_d.f 
 	${CC} -c iaddr.c
-	${FC} -c w2f__types.f90
-	${FC} -c OAD_active.f90
+	${FC} ${FFLAGS} -c w2f__types.f90
+	${FC} ${FFLAGS} -c OAD_active.f90
 	${FC} ${FFLAGS} -c flux_face_d.f
 
 flux_face_dx.o:	flux_face.F
@@ -148,8 +149,8 @@ flux_wall_d.o:	flux_wall.F
 	@echo Rename file to flux_wall_d.f
 	@mv flux_wall.pre.xb.x2w.w2f.post.f flux_wall_d.f 
 	${CC} -c iaddr.c
-	${FC} -c w2f__types.f90
-	${FC} -c OAD_active.f90
+	${FC} ${FFLAGS}  -c w2f__types.f90
+	${FC} ${FFLAGS}  -c OAD_active.f90
 	${FC} ${FFLAGS} -c flux_wall_d.f
 
 flux_wall_dx.o:	flux_wall.F
@@ -160,8 +161,8 @@ flux_wall_dx.o:	flux_wall.F
 	@echo Rename file to flux_wall_dx.f
 	@mv flux_wall.pre.xb.x2w.w2f.post.f flux_wall_dx.f
 	${CC} -c iaddr.c
-	${FC} -c w2f__types.f90
-	${FC} -c OAD_active.f90
+	${FC} ${FFLAGS}  -c w2f__types.f90
+	${FC} ${FFLAGS}  -c OAD_active.f90
 	${FC} ${FFLAGS} -c flux_wall_dx.f
 
 #---------------------------------------------------------------------------	
@@ -175,8 +176,8 @@ lift_wall_d.o:	lift_wall.F
 	@echo Rename file to lift_wall_d.f
 	@mv lift_wall.pre.xb.x2w.w2f.post.f lift_wall_d.f 
 	${CC} -c iaddr.c
-	${FC} -c w2f__types.f90
-	${FC} -c OAD_active.f90
+	${FC} ${FFLAGS}  -c w2f__types.f90
+	${FC} ${FFLAGS}  -c OAD_active.f90
 	${FC} ${FFLAGS} -c lift_wall_d.f
 
 lift_wall_dx.o:	lift_wall.F
@@ -187,8 +188,8 @@ lift_wall_dx.o:	lift_wall.F
 	@echo Rename file to lift_wall_dx.f
 	@mv lift_wall.pre.xb.x2w.w2f.post.f lift_wall_dx.f
 	${CC} -c iaddr.c
-	${FC} -c w2f__types.f90
-	${FC} -c OAD_active.f90
+	${FC} ${FFLAGS}  -c w2f__types.f90
+	${FC} ${FFLAGS}  -c OAD_active.f90
 	${FC} ${FFLAGS} -c lift_wall_dx.f
 
 #---------------------------------------------------------------------------
@@ -199,34 +200,34 @@ lift_wall_dx.o:	lift_wall.F
 #---------------------------------------------------------------------------
 time_cell_b.o:	time_cell.F
 	${CC} -E -C -P -DOPENAD_D time_cell.F > time_cell.f;
-	${OAD} -c -m rs time_cell.f
+	${OAD} -c -m rj time_cell.f
 	@echo Rename function name in place
 	@sed -i'' "s/time_cell/time_cell_b/" time_cell.pre.xb.x2w.w2f.post.f  
 	@echo Rename file to time_cell_b.f
 	@mv time_cell.pre.xb.x2w.w2f.post.f time_cell_b.f 
 	${CC} -c iaddr.c
-	${FC} -c w2f__types.f90
-	${FC} -c OAD_active.f90
-	${FC} -c OAD_cp.f90  
-	${FC} -c OAD_tape.f90
-	${FC} -c OAD_rev.f90
-	${FC} -c ad_inline.f
+	${FC} ${FFLAGS}  -c w2f__types.f90
+	${FC} ${FFLAGS}  -c OAD_active.f90
+	${FC} ${FFLAGS}  -c OAD_cp.f90  
+	${FC} ${FFLAGS}  -c OAD_tape.f90
+	${FC} ${FFLAGS}  -c OAD_rev.f90
+	${FC} ${FFLAGS}  -c ad_inline.f
 	${FC} ${FFLAGS} -c time_cell_b.f
 
 time_cell_bx.o:	time_cell.F
 	${CC} -E -C -P -DOPENAD_DX time_cell.F > time_cell.f;
-	${OAD} -c -m rs time_cell.f
+	${OAD} -c -m rj time_cell.f
 	@echo Rename function name in place
 	@sed -i'' "s/time_cell/time_cell_bx/" time_cell.pre.xb.x2w.w2f.post.f  
 	@echo Rename file to time_cell_bx.f
 	@mv time_cell.pre.xb.x2w.w2f.post.f time_cell_bx.f 
 	${CC} -c iaddr.c
-	${FC} -c w2f__types.f90
-	${FC} -c OAD_active.f90
-	${FC} -c OAD_cp.f90  
-	${FC} -c OAD_tape.f90
-	${FC} -c OAD_rev.f90
-	${FC} -c ad_inline.f
+	${FC} ${FFLAGS}  -c w2f__types.f90
+	${FC} ${FFLAGS}  -c OAD_active.f90
+	${FC} ${FFLAGS}  -c OAD_cp.f90  
+	${FC} ${FFLAGS}  -c OAD_tape.f90
+	${FC} ${FFLAGS}  -c OAD_rev.f90
+	${FC} ${FFLAGS}  -c ad_inline.f
 	${FC} ${FFLAGS} -c time_cell_bx.f
 
 #---------------------------------------------------------------------------	
@@ -234,26 +235,26 @@ time_cell_bx.o:	time_cell.F
 #---------------------------------------------------------------------------
 flux_face_b.o:	flux_face.F
 	${CC} -E -C -P -DOPENAD_D flux_face.F > flux_face.f;
-	${OAD} -c -m rs flux_face.f
+	${OAD} -c -m rj flux_face.f
 	@echo Rename function name in place
 	@sed -i'' "s/flux_face/flux_face_b/" flux_face.pre.xb.x2w.w2f.post.f  
 	@echo Rename file to flux_face_b.f
 	@mv flux_face.pre.xb.x2w.w2f.post.f flux_face_b.f 
 	${CC} -c iaddr.c
-	${FC} -c w2f__types.f90
-	${FC} -c OAD_active.f90
+	${FC} ${FFLAGS}  -c w2f__types.f90
+	${FC} ${FFLAGS}  -c OAD_active.f90
 	${FC} ${FFLAGS} -c flux_face_b.f
 
 flux_face_bx.o:	flux_face.F
 	${CC} -E -C -P -DOPENAD_DX flux_face.F > flux_face.f;
-	${OAD} -c -m rs flux_face.f
+	${OAD} -c -m rj flux_face.f
 	@echo Rename function name in place
 	@sed -i'' "s/flux_face/flux_face_bx/" flux_face.pre.xb.x2w.w2f.post.f  
 	@echo Rename file to flux_face_bx.f
 	@mv flux_face.pre.xb.x2w.w2f.post.f flux_face_bx.f 
 	${CC} -c iaddr.c
-	${FC} -c w2f__types.f90
-	${FC} -c OAD_active.f90
+	${FC} ${FFLAGS}  -c w2f__types.f90
+	${FC} ${FFLAGS}  -c OAD_active.f90
 	${FC} ${FFLAGS} -c flux_face_bx.f
 
 #---------------------------------------------------------------------------	
@@ -261,34 +262,34 @@ flux_face_bx.o:	flux_face.F
 #---------------------------------------------------------------------------
 flux_wall_b.o:	flux_wall.F
 	${CC} -E -C -P -DOPENAD_D flux_wall.F > flux_wall.f;
-	${OAD} -c -m rs flux_wall.f
+	${OAD} -c -m rj flux_wall.f
 	@echo Rename function name in place
 	@sed -i'' "s/flux_wall/flux_wall_b/" flux_wall.pre.xb.x2w.w2f.post.f  
 	@echo Rename file to flux_wall_b.f
 	@mv flux_wall.pre.xb.x2w.w2f.post.f flux_wall_b.f 
 	${CC} -c iaddr.c
-	${FC} -c w2f__types.f90
-	${FC} -c OAD_active.f90
-	${FC} -c OAD_cp.f90  
-	${FC} -c OAD_tape.f90
-	${FC} -c OAD_rev.f90
-	${FC} -c ad_inline.f
+	${FC} ${FFLAGS}  -c w2f__types.f90
+	${FC} ${FFLAGS}  -c OAD_active.f90
+	${FC} ${FFLAGS}  -c OAD_cp.f90  
+	${FC} ${FFLAGS}  -c OAD_tape.f90
+	${FC} ${FFLAGS}  -c OAD_rev.f90
+	${FC} ${FFLAGS}  -c ad_inline.f
 	${FC} ${FFLAGS} -c flux_wall_b.f
 
 flux_wall_bx.o:	flux_wall.F
 	${CC} -E -C -P -DOPENAD_DX flux_wall.F > flux_wall.f;
-	${OAD} -c -m rs flux_wall.f
+	${OAD} -c -m rj flux_wall.f
 	@echo Rename function name in place
 	@sed -i'' "s/flux_wall/flux_wall_bx/" flux_wall.pre.xb.x2w.w2f.post.f  
 	@echo Rename file to flux_wall_bx.f
 	@mv flux_wall.pre.xb.x2w.w2f.post.f flux_wall_bx.f 
 	${CC} -c iaddr.c
-	${FC} -c w2f__types.f90
-	${FC} -c OAD_active.f90
-	${FC} -c OAD_cp.f90  
-	${FC} -c OAD_tape.f90
-	${FC} -c OAD_rev.f90
-	${FC} -c ad_inline.f
+	${FC} ${FFLAGS}  -c w2f__types.f90
+	${FC} ${FFLAGS}  -c OAD_active.f90
+	${FC} ${FFLAGS}  -c OAD_cp.f90  
+	${FC} ${FFLAGS}  -c OAD_tape.f90
+	${FC} ${FFLAGS}  -c OAD_rev.f90
+	${FC} ${FFLAGS}  -c ad_inline.f
 	${FC} ${FFLAGS} -c flux_wall_bx.f
 
 #---------------------------------------------------------------------------	
@@ -296,34 +297,34 @@ flux_wall_bx.o:	flux_wall.F
 #---------------------------------------------------------------------------
 lift_wall_b.o:	lift_wall.F
 	${CC} -E -C -P -DOPENAD_D lift_wall.F > lift_wall.f;
-	${OAD} -c -m rs lift_wall.f
+	${OAD} -c -m rj lift_wall.f
 	@echo Rename function name in place
 	@sed -i'' "s/lift_wall/lift_wall_b/" lift_wall.pre.xb.x2w.w2f.post.f  
 	@echo Rename file to lift_wall_b.f
 	@mv lift_wall.pre.xb.x2w.w2f.post.f lift_wall_b.f 
 	${CC} -c iaddr.c
-	${FC} -c w2f__types.f90
-	${FC} -c OAD_active.f90
-	${FC} -c OAD_cp.f90  
-	${FC} -c OAD_tape.f90
-	${FC} -c OAD_rev.f90
-	${FC} -c ad_inline.f
+	${FC} ${FFLAGS}  -c w2f__types.f90
+	${FC} ${FFLAGS}  -c OAD_active.f90
+	${FC} ${FFLAGS}  -c OAD_cp.f90  
+	${FC} ${FFLAGS}  -c OAD_tape.f90
+	${FC} ${FFLAGS}  -c OAD_rev.f90
+	${FC} ${FFLAGS}  -c ad_inline.f
 	${FC} ${FFLAGS} -c lift_wall_b.f
 
 lift_wall_bx.o:	lift_wall.F
 	${CC} -E -C -P -DOPENAD_DX lift_wall.F > lift_wall.f;
-	${OAD} -c -m rs lift_wall.f
+	${OAD} -c -m rj lift_wall.f
 	@echo Rename function name in place
 	@sed -i'' "s/lift_wall/lift_wall_bx/" lift_wall.pre.xb.x2w.w2f.post.f  
 	@echo Rename file to lift_wall_bx.f
 	@mv lift_wall.pre.xb.x2w.w2f.post.f lift_wall_bx.f 
 	${CC} -c iaddr.c
-	${FC} -c w2f__types.f90
-	${FC} -c OAD_active.f90
-	${FC} -c OAD_cp.f90  
-	${FC} -c OAD_tape.f90
-	${FC} -c OAD_rev.f90
-	${FC} -c ad_inline.f
+	${FC} ${FFLAGS}  -c w2f__types.f90
+	${FC} ${FFLAGS}  -c OAD_active.f90
+	${FC} ${FFLAGS}  -c OAD_cp.f90  
+	${FC} ${FFLAGS}  -c OAD_tape.f90
+	${FC} ${FFLAGS}  -c OAD_rev.f90
+	${FC} ${FFLAGS}  -c ad_inline.f
 	${FC} ${FFLAGS} -c lift_wall_bx.f
 
 clean:
