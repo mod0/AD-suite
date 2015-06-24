@@ -3,7 +3,7 @@ module power_grid_constants
     save
 
     double precision :: pi, pmax, omegaB, omegaS, H, D, phiS, beta, c, t0, &
-                        tend, tf, tcl, dt, perturb, pm
+                        tend, tf, tcl, dt, perturb
 
     ! Set the parameter values
     parameter(                      &
