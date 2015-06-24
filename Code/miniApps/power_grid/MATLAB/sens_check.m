@@ -3,7 +3,6 @@ function [costfunction,adjsens] = sens_check(pm,tend)
   global  pmax omegaB omegaS H D thetaS t0 tf tcl beta c
   global g dg dt adjsens tempder epsilon
 
-
   pmax = 2.0877;
   omegaB = 120*pi;
   omegaS = 1;
@@ -19,14 +18,12 @@ function [costfunction,adjsens] = sens_check(pm,tend)
   dt = 0.01;
 
   perturb = 1.0; %% initial condition perturbation (this has nothing to do with any numerical scheme)
-
   epsilon = 1e-8; %% Finite difference perturbation
 
   g = 0;
   dg = 0;
   adjsens = 0;
   tempder = 0;
-
 
   int_method = @CrankNicholson;
   %pm = 1.2;
@@ -35,9 +32,11 @@ function [costfunction,adjsens] = sens_check(pm,tend)
   tspan = t0:dt:tend;
 
   mass = eye(2);
-  options = odeset('Mass',mass,'MassSingular','no','Jacobian',@(t,x)ForwardOdeRHSJacobian(t,x,pm),'OutputFcn',@ForwardOdeOutputFcn);
+  options = odeset('Mass',mass,'MassSingular','no','Jacobian',...
+                   @(t,x)ForwardOdeRHSJacobian(t,x,pm),'OutputFcn',@ForwardOdeOutputFcn);
+  [tout, yout] = int_method(@(t,x)ForwardOdeRhs(t,x,pm),tspan, ...
+                            xinit,options);
 
-  [tout, yout] = int_method(@(t,x)ForwardOdeRhs(t,x,pm),tspan,xinit,options);
 
   figure(1);
   plot(tout,yout(:,1))
@@ -64,7 +63,9 @@ function [costfunction,adjsens] = sens_check(pm,tend)
   %% Sensitivitity calculation using adjoints
   xinit = [0;0];
   tspan = fliplr(tspan);
-  options = odeset('Mass',mass,'MassSingular','no','Jacobian',@(t,x)AdjointOdeRHSJacobian(t,x,pm,tout,yout),'OutputFcn',@(t,x,flag)AdjointOdeOutputFcn(t,x,flag,pm,tout,yout,perturb));
+  options = odeset('Mass',mass,'MassSingular','no','Jacobian', ...
+                   @(t,x)AdjointOdeRHSJacobian(t,x,pm,tout,yout),...
+                   'OutputFcn',@(t,x,flag)AdjointOdeOutputFcn(t,x,flag,pm,tout,yout,perturb));
   [tb, yb] = int_method(@(t,x)AdjointOdeRhs(t,x,pm,tout,yout),tspan,xinit,options);
   %%%%%%%
 
@@ -82,7 +83,9 @@ function [costfunction,adjsens] = sens_check(pm,tend)
 end
 
 
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Crank Nicholson Integration  %%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function [tout,yout] = CrankNicholson(odefun,tspan,x0,options)
   tout = zeros(length(tspan),1);
   yout = zeros(length(tspan),length(x0));
@@ -177,7 +180,7 @@ function [J] = ForwardOdeRHSJacobian(t,x,pm)
   end
 
   J = [0                                omegaB;
-      -omegaS*pmax1*cos(delta)/(2*H)    -D/(2*H)];
+      -omegaS*pmax1*cos(delta)/(2*H)    -D/(2*H)];  % Check the jacobian - missing omegaS in 2,2
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -243,7 +246,8 @@ function [terminate] = AdjointOdeOutputFcn(t,x,flag,pm,tout,yout,perturb)
 
   global thetaS g dg dt H adjsens tempder pmax epsilon beta c
 
-  idx = t == tout;
+  idx = find(t == tout);
+  
   if isempty(flag)
       
       adjsens = adjsens + 0.5*dt*(tempder + [0,1/(2*H)]*x);
@@ -257,7 +261,6 @@ function [terminate] = AdjointOdeOutputFcn(t,x,flag,pm,tout,yout,perturb)
       %tempder = 0;
       return;
   elseif flag == 'done'
-      idx = t == tout;
       % pm = pm + epsilon;
       xinit = [asin(perturb*pm/pmax);perturb*1.0]; %% Perturb initial conditions so we can see a transient
       % dx0_dp = (xinit-yout(idx,:)')/epsilon;
@@ -265,4 +268,3 @@ function [terminate] = AdjointOdeOutputFcn(t,x,flag,pm,tout,yout,perturb)
       adjsens = -1+adjsens + dx0_dp'*x;
   end
 end
-
