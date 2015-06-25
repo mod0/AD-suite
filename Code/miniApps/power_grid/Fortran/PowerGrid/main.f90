@@ -201,18 +201,28 @@ contains
         use power_grid_constants
         implicit none
 
-        integer :: max_conv_iter, iter
         logical :: converged
-        double precision :: dh, t
+        integer :: max_conv_iter, iter
+        double precision :: dh, t, rcond
         double precision, dimension(:), intent(in) :: x0
-        double precision, dimension(size(x0, 1)) :: x_n_1, x_n, &
-                                                    f_n_1, f_n
-        double precision, dimension(size(x0, 1), size(x0, 1)) :: J_n
+        integer, dimension(size(x0, 1)) :: ipvt
+        double precision, dimension(size(x0, 1)) :: x_n, dx_n, &
+                                                    f_n_1, f_n, wz
+        double precision, dimension(size(x0, 1), size(x0, 1)) :: J_n, I_n
         double precision, dimension(:), intent(in) :: tout
         double precision, dimension(:, :), intent(out) :: yout
         double precision, dimension(:), intent(in), optional :: tout_traj
         double precision, dimension(:, :), intent(in), optional :: yout_traj
         character(len=3) :: mode
+
+        ! add reference to external dnrm2 function
+        interface
+            function dnrm2(n,x,incx)
+                integer :: dnrm2
+                integer :: n,incx
+                double precision :: x(n)
+            end function dnrm2
+        end interface
 
         ! set the maximum number of iterations (newton) before convergence.
         max_conv_iter = 10
@@ -243,7 +253,10 @@ contains
         endif
 
         ! read the previous time instant x value
-        x_n_1 = x0
+        x_n = x0
+
+        ! have an identity matrix handy
+        call identity_matrix(I_n)
 
         ! compute all the other x values based on
         ! solving the nonlinear system (semi-implicit)
@@ -251,17 +264,13 @@ contains
         do i = 2, size(tout)
             ! compute the f value at the previous time instant
             if (mode == "FWD") then
-                call forward_ode_rhs(t, x_n_1, f_n_1)
+                call forward_ode_rhs(t, x_n, f_n_1)
             elseif (mode == "ADJ") then
-                call adjoint_ode_rhs(t, x_n_1, tout_traj, yout_traj, f_n_1)
+                call adjoint_ode_rhs(t, x_n, tout_traj, yout_traj, f_n_1)
             endif
 
             ! get the new t value
             t = tout(i)
-
-            ! initialize the newton iteration with the previous time
-            ! instant x value.
-            x_n = x_n_1
 
             ! set converged to false.
             converged = .false.
@@ -284,11 +293,37 @@ contains
                     call adjoint_ode_jac(t, tout_traj, yout_traj, J_n)
                 endif
 
+                ! construct the left hand side matrix
+                J_n =  (I_n - dh/2 * J_n)
 
+                ! construct the right hand side vector
+                dx_n = x_n - dh/2 * (f_n + f_n_1)
 
-                !if () then
-                !endif
+                ! check whether the right hand side vector with
+                ! new iterate has converged
+                if (dnrm2(size(x0, 1),dx_n, 1) < 1.0e-8) then
+                    print *, "Converged at t = ", t
+                    exit
+                endif
+
+                ! solve the system for dx_n
+                ! first factorize the matrix
+                call dgeco(J_n, size(x0, 1), size(x0, 1), ipvt, rcond, wz)
+
+                ! check the conditioning of the matrix
+                if (1.0d0 + rcond .eq. 1.0d0) then
+                    stop "Matrix is badly conditioned."
+                endif
+
+                ! solve the system
+                call dgesl(J_n, size(x0, 1), size(x0, 1), ipvt, dx_n, 0)
+
+                ! update the iterate
+                x_n = x_n - dx_n
             enddo
+
+            ! update the new value in the solution trajectory
+            yout(i, :) = x_n
 
             ! Perform quadrature along
             if (mode == "FWD") then
@@ -310,6 +345,26 @@ contains
         endif
 
     end subroutine crank_nicolson
+
+    !
+    ! Subroutine initializes the values of I to
+    ! be a square/non-square (meaningless) identity
+    ! matrix.
+    !
+    subroutine identity_matrix(I_n)
+        integer :: i, j
+        double precision, dimension(:,:), intent(out) :: I_n
+
+        do i = 1, size(I_n,1)
+            do j = 1, size(I_n, 2)
+                if (i == j) then
+                    I_n(i,j) = 1
+                else
+                    I_n(i,j) = 0
+                endif
+            enddo
+        enddo
+    end subroutine identity_matrix
 
     !
     ! The RHS function of the forward ODE
