@@ -1,8 +1,8 @@
-c                                                                                      
-c  L-BFGS-B is released under the “New BSD License” (aka “Modified BSD License”        
-c  or “3-clause license”)                                                              
-c  Please read attached file License.txt                                               
-c                                        
+c
+c  L-BFGS-B is released under the “New BSD License” (aka “Modified BSD License”
+c  or “3-clause license”)
+c  Please read attached file License.txt
+c
 
       double precision function dnrm2(n,x,incx)
       integer n,incx
@@ -24,7 +24,7 @@ c       n is a positive integer input variable.
 c
 c       x is an input array of length n.
 c
-c       incx is a positive integer variable that specifies the 
+c       incx is a positive integer variable that specifies the
 c         stride of the vector.
 c
 c     Subprograms called
@@ -54,11 +54,11 @@ c     **********
 
       dnrm2 = scale*sqrt(dnrm2)
 
- 
+
       return
 
       end
-      
+
 c====================== The end of dnrm2 ===============================
 
       subroutine daxpy(n,da,dx,incx,dy,incy)
@@ -108,7 +108,7 @@ c
    50 continue
       return
       end
-      
+
 c====================== The end of daxpy ===============================
 
       subroutine dcopy(n,dx,incx,dy,incy)
@@ -160,7 +160,7 @@ c
    50 continue
       return
       end
-      
+
 c====================== The end of dcopy ===============================
 
       double precision function ddot(n,dx,incx,dy,incy)
@@ -211,7 +211,7 @@ c
    60 ddot = dtemp
       return
       end
-      
+
 c====================== The end of ddot ================================
 
       subroutine  dscal(n,da,dx,incx)
@@ -256,6 +256,137 @@ c
    50 continue
       return
       end
-      
+
 c====================== The end of dscal ===============================
+
+      DOUBLE PRECISION FUNCTION DASUM(N,DX,INCX)
+*     .. Scalar Arguments ..
+      INTEGER INCX,N
+*     ..
+*     .. Array Arguments ..
+      DOUBLE PRECISION DX(*)
+*     ..
+*
+*  Purpose
+*  =======
+*
+*     DASUM takes the sum of the absolute values.
+*
+*  Further Details
+*  ===============
+*
+*     jack dongarra, linpack, 3/11/78.
+*     modified 3/93 to return if incx .le. 0.
+*     modified 12/3/93, array(1) declarations changed to array(*)
+*
+*  =====================================================================
+*
+*     .. Local Scalars ..
+      DOUBLE PRECISION DTEMP
+      INTEGER I,M,MP1,NINCX
+*     ..
+*     .. Intrinsic Functions ..
+      INTRINSIC DABS,MOD
+*     ..
+      DASUM = 0.0d0
+      DTEMP = 0.0d0
+      IF (N.LE.0 .OR. INCX.LE.0) RETURN
+      IF (INCX.EQ.1) THEN
+*        code for increment equal to 1
+*
+*
+*        clean-up loop
+*
+         M = MOD(N,6)
+         IF (M.NE.0) THEN
+            DO I = 1,M
+               DTEMP = DTEMP + DABS(DX(I))
+            END DO
+            IF (N.LT.6) THEN
+               DASUM = DTEMP
+               RETURN
+            END IF
+         END IF
+         MP1 = M + 1
+         DO I = MP1,N,6
+            DTEMP = DTEMP + DABS(DX(I)) + DABS(DX(I+1)) +
+     $              DABS(DX(I+2)) + DABS(DX(I+3)) +
+     $              DABS(DX(I+4)) + DABS(DX(I+5))
+         END DO
+      ELSE
+*
+*        code for increment not equal to 1
+*
+         NINCX = N*INCX
+         DO I = 1,NINCX,INCX
+            DTEMP = DTEMP + DABS(DX(I))
+         END DO
+      END IF
+      DASUM = DTEMP
+      RETURN
+      END
+c====================== The end of dasum ===============================
+
+      INTEGER FUNCTION IDAMAX(N,DX,INCX)
+*     .. Scalar Arguments ..
+      INTEGER INCX,N
+*     ..
+*     .. Array Arguments ..
+      DOUBLE PRECISION DX(*)
+*     ..
+*
+*  Purpose
+*  =======
+*
+*     IDAMAX finds the index of element having max. absolute value.
+*
+*  Further Details
+*  ===============
+*
+*     jack dongarra, linpack, 3/11/78.
+*     modified 3/93 to return if incx .le. 0.
+*     modified 12/3/93, array(1) declarations changed to array(*)
+*
+*  =====================================================================
+*
+*     .. Local Scalars ..
+      DOUBLE PRECISION DMAX
+      INTEGER I,IX
+*     ..
+*     .. Intrinsic Functions ..
+      INTRINSIC DABS
+*     ..
+      IDAMAX = 0
+      IF (N.LT.1 .OR. INCX.LE.0) RETURN
+      IDAMAX = 1
+      IF (N.EQ.1) RETURN
+      IF (INCX.EQ.1) THEN
+*
+*        code for increment equal to 1
+*
+         DMAX = DABS(DX(1))
+         DO I = 2,N
+            IF (DABS(DX(I)).GT.DMAX) THEN
+               IDAMAX = I
+               DMAX = DABS(DX(I))
+            END IF
+         END DO
+      ELSE
+*
+*        code for increment not equal to 1
+*
+         IX = 1
+         DMAX = DABS(DX(1))
+         IX = IX + INCX
+         DO I = 2,N
+            IF (DABS(DX(IX)).GT.DMAX) THEN
+               IDAMAX = I
+               DMAX = DABS(DX(IX))
+            END IF
+            IX = IX + INCX
+         END DO
+      END IF
+      RETURN
+      END
+c====================== The end of idamax ===============================
 

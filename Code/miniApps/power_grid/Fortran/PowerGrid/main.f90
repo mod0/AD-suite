@@ -16,8 +16,8 @@ program power_grid
 
     ! n is the number of parameters - pm
     ! m is the maximum number of limited memory corrections.
-    integer :: np, nx, node, m, maxiter, tlen, alloc_state
-    parameter (np = 1, nx = 2, node = 2, m = 5, maxiter = 5)
+    integer :: np, nx, node, m, max_opt_iter, tlen, alloc_state
+    parameter (np = 1, nx = 2, node = 2, m = 5, max_opt_iter = 5)
 
     ! Declare the variables needed by the code.
     ! Some of these variables are from LBFGS-B,
@@ -91,14 +91,14 @@ program power_grid
     pm = 0.4
 
     ! Set the task variable
-    task = 'START'
+    task = "START"
 
     ! Iterate maximum number of iterations calling the optimization routine.
-    do i = 1, maxiter
+    do i = 1, max_opt_iter
         call setulb(np, m, pm, l, u, nbd, f, g, factr, pgtol, wa, iwa, task, &
                     iprint, csave,lsave,isave,dsave)
 
-        if (task(1:2) == 'FG') then
+        if (task(1:2) == "FG") then
             ! Initialize the x value
             x = (/asin(perturb*pm/pmax), perturb*1.0/)
 
@@ -112,14 +112,14 @@ program power_grid
             ! call the function that computes the sensitivites using
             ! continuous adjoints.
 
-            ! Initialize the lambda value
+            ! Initialize the lambda value for the adjoint integration
             lm = (/0.0d0, 0.0d0/)
 
             ! Compute the gradient value.
-            call power_grid_cost_gradient(x, tout_b, yout_b, tout_f, yout_f, g)
+            call power_grid_cost_gradient(lm, tout_b, yout_b, tout_f, yout_f, g)
 #endif
-        elseif (task(1:5) == 'NEW_X') then
-            if (i < maxiter) then
+        elseif (task(1:5) == "NEW_X") then
+            if (i < max_opt_iter) then
                 ! continue the iteration at the new point
                 print *, "Continuing with new starting value. pm is ", pm
                 cycle
@@ -128,16 +128,16 @@ program power_grid
                 print *, "The value of pm is ", pm
                 exit
             endif
-        elseif (task(1:4) == 'CONV') then
+        elseif (task(1:4) == "CONV") then
             ! stop the iteration. print current values
             print *, "Convergence to within tolerance achieved pm is ", pm
             exit
-        elseif (task(1:4) == 'ABNO') then
+        elseif (task(1:4) == "ABNO") then
             ! stop the iteration. print the current values
             ! also print the reason for abnormal termination
             print *, "Optimization terminated abnormally. pm is ", pm
             exit
-        elseif (task(1:5) == 'ERROR') then
+        elseif (task(1:5) == "ERROR") then
             ! stop the iteration. print the current values
             ! also print the reason for abnormal termination
             print *, "Optimization encountered an error. pm is ", pm
@@ -152,7 +152,7 @@ contains
     ! The subroutine computes power grid cost function
     ! This subroutine should call the time integrator
     ! in the forward mode along with the mode being
-    ! set to 'FWD'.
+    ! set to "FWD".
     !
     subroutine power_grid_cost_function(x, tout_f, yout_f, f)
         use power_grid_constants
@@ -163,7 +163,7 @@ contains
         double precision, dimension(:,:), intent(out) :: yout_f
         double precision, intent(out) :: f
 
-        call crank_nicolson(x, tout_f, yout_f, 'FWD')
+        call crank_nicolson(x, tout_f, yout_f, "FWD")
 
         f = -pm + quad_f
     end subroutine power_grid_cost_function
@@ -171,6 +171,9 @@ contains
     !
     ! The subroutine computes the sensitivity of cost
     ! function with respect to the parameter p
+    ! This subroutine should call the time integrator
+    ! in the adjoint mode along with the mode being
+    ! set to "ADJ".
     !
     subroutine power_grid_cost_gradient(x, tout_b, yout_b, tout_f, yout_f, g)
         use power_grid_constants
@@ -185,10 +188,10 @@ contains
         double precision, dimension(:,:), intent(out) :: yout_f
         double precision, dimension(np), intent(out) :: g
 
-        call crank_nicolson(x, tout_b, yout_b, 'ADJ', tout_f, yout_f)
+        call crank_nicolson(x, tout_b, yout_b, "ADJ", tout_f, yout_f)
 
         g(1) = -1 + quad_b + dot_product( (/1/sqrt(pmax**2 - pm**2) , 0.0d0/), &
-                            yout_b(ubound(yout_b, 1), :))
+                            yout_b(size(yout_b, 1), :))
     end subroutine power_grid_cost_gradient
 
     !
@@ -198,18 +201,114 @@ contains
         use power_grid_constants
         implicit none
 
+        integer :: max_conv_iter, iter
+        logical :: converged
+        double precision :: dh, t
         double precision, dimension(:), intent(in) :: x0
+        double precision, dimension(size(x0, 1)) :: x_n_1, x_n, &
+                                                    f_n_1, f_n
+        double precision, dimension(size(x0, 1), size(x0, 1)) :: J_n
         double precision, dimension(:), intent(in) :: tout
         double precision, dimension(:, :), intent(out) :: yout
         double precision, dimension(:), intent(in), optional :: tout_traj
         double precision, dimension(:, :), intent(in), optional :: yout_traj
         character(len=3) :: mode
 
-        if (mode == 'FWD') then
-            ! Call ForwardODERHS, ForwardODEJac, ForwardODEQuad
-        elseif (mode == 'ADJ') then
-            ! Call AdjointODERHS, AdjointODEJac, AdjointODEQuad
+        ! set the maximum number of iterations (newton) before convergence.
+        max_conv_iter = 10
+
+        ! get the first time step.
+        t = tout(1)
+
+        if (mode == "FWD") then
+            ! get the step size depending on whether we are going forward or
+            ! backward. (FWD)
+            dh = dt
+
+            ! Initialize the forward quadrature value
+            call forward_ode_quad(t, x0, "INIT")
+        elseif (mode == "ADJ") then
+            ! Check whether optional arguments are present
+            if(.not.(present(tout_traj) .and. present(yout_traj))) then
+                stop "The solution trajectories are not present for &
+                &the adjoint mode"
+            endif
+
+            ! get the step size depending on whether we are going forward or
+            ! backward. (FWD)
+            dh = -dt
+
+            ! Initialize the backward quadrature value
+            call adjoint_ode_quad(t, x0, "INIT")
         endif
+
+        ! read the previous time instant x value
+        x_n_1 = x0
+
+        ! compute all the other x values based on
+        ! solving the nonlinear system (semi-implicit)
+        ! using newton iteration.
+        do i = 2, size(tout)
+            ! compute the f value at the previous time instant
+            if (mode == "FWD") then
+                call forward_ode_rhs(t, x_n_1, f_n_1)
+            elseif (mode == "ADJ") then
+                call adjoint_ode_rhs(t, x_n_1, tout_traj, yout_traj, f_n_1)
+            endif
+
+            ! get the new t value
+            t = tout(i)
+
+            ! initialize the newton iteration with the previous time
+            ! instant x value.
+            x_n = x_n_1
+
+            ! set converged to false.
+            converged = .false.
+
+            ! try to converge within max_conv_iter
+            do iter = 1, max_conv_iter
+                ! get the function value and the jacobian
+                ! at the unconverged x and new t
+                if (mode == "FWD") then
+                    call forward_ode_rhs(t, x_n, f_n)
+                    call forward_ode_jac(t, x_n, J_n)
+                elseif (mode == "ADJ") then
+                    call adjoint_ode_rhs(t, x_n, tout_traj, yout_traj, f_n)
+                    ! Note that the jacobian in the adjoint mode is
+                    ! independent of the current iterate. However,
+                    ! to keep things symmetric between fwd and adj,
+                    ! we are recomputing the jacobian each time.
+                    ! This is wasteful, yes. But its a 2x2 system
+                    ! in this particular case.
+                    call adjoint_ode_jac(t, tout_traj, yout_traj, J_n)
+                endif
+
+
+
+                !if () then
+                !endif
+            enddo
+
+            ! Perform quadrature along
+            if (mode == "FWD") then
+                ! Iterate the forward quadrature value
+                call forward_ode_quad(t, x_n, "ITER")
+            elseif (mode == "ADJ") then
+                ! Iterate the backward quadrature value
+                call adjoint_ode_quad(t, x_n, "ITER")
+            endif
+        enddo
+
+        ! Finalize the quadrature term.
+        if (mode == "FWD") then
+            ! Finalize the forward quadrature value
+            call forward_ode_quad(t, x_n, "DONE")
+        elseif (mode == "ADJ") then
+            ! Finalize the backward quadrature value
+            call adjoint_ode_quad(t, x_n, "DONE")
+        endif
+
     end subroutine crank_nicolson
 
     !
@@ -316,7 +415,7 @@ contains
         double precision, dimension(2) :: forcing
         double precision, dimension(2), intent(in) :: x
         double precision, dimension(:), intent(in) :: tout_f
-        double precision, dimension(:, :), intent(out) :: yout_f
+        double precision, dimension(:, :), intent(in) :: yout_f
         double precision, dimension(2), intent(out) :: y
 
         ! find the index of the current t
@@ -327,7 +426,6 @@ contains
 
         ! get phi at the given time instant
         phi = yout_f(i, 1)
-
 
         ! compute the forcing term
         forcing = (/ c * beta * max(0.0d0, (phi - phiS))**(beta - 1), 0.0d0 /)
@@ -349,7 +447,7 @@ contains
         double precision, intent(in) :: t
         double precision, dimension(2,2), intent(out) :: J
         double precision, dimension(:), intent(in) :: tout_f
-        double precision, dimension(:, :), intent(out) :: yout_f
+        double precision, dimension(:, :), intent(in) :: yout_f
 
         ! find the index of the current t
         i = findindex(t, tout_f)
@@ -365,17 +463,14 @@ contains
     ! Uses the trajectory of the forward solution to compute
     ! the quadrature term
     !
-    subroutine adjoint_ode_quad(t, x, tout_f, yout_f, state)
+    subroutine adjoint_ode_quad(t, x, state)
         use power_grid_constants
         implicit none
 
         character(len = 4), intent(in) :: state
         double precision, intent(in) :: t
         double precision, dimension(2), intent(in) :: x
-        double precision, dimension(:), intent(in) :: tout_f
-        double precision, dimension(:, :), intent(out) :: yout_f
         double precision :: phi, omega, new_h
-
         double precision,save :: prev_h
 
         phi = x(1)
