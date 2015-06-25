@@ -16,8 +16,8 @@ program power_grid
 
     ! n is the number of parameters - pm
     ! m is the maximum number of limited memory corrections.
-    integer :: np, nx, m, maxiter, tlen, alloc_state
-    parameter (np = 1, nx = 2, m = 5, maxiter = 5)
+    integer :: np, nx, node, m, maxiter, tlen, alloc_state
+    parameter (np = 1, nx = 2, node = 2, m = 5, maxiter = 5)
 
     ! Declare the variables needed by the code.
     ! Some of these variables are from LBFGS-B,
@@ -36,6 +36,7 @@ program power_grid
     ! declare variables for the integration scheme - use fixed time stepping
     ! -------------------------------------------------------------------------
     double precision, dimension(nx) :: x
+    double precision, dimension(node) :: lm
     double precision, dimension(:), allocatable :: tout_f
     double precision, dimension(:), allocatable :: tout_b
     double precision, dimension(:,:), allocatable :: yout_f
@@ -94,47 +95,55 @@ program power_grid
 
     ! Iterate maximum number of iterations calling the optimization routine.
     do i = 1, maxiter
-
-        ! Initialize the x value
-        x = (/asin(perturb*pm/pmax), perturb*1.0/)
-
         call setulb(np, m, pm, l, u, nbd, f, g, factr, pgtol, wa, iwa, task, &
                     iprint, csave,lsave,isave,dsave)
 
         if (task(1:2) == 'FG') then
+            ! Initialize the x value
+            x = (/asin(perturb*pm/pmax), perturb*1.0/)
+
             ! Compute the function value.
             call power_grid_cost_function(x, tout_f, yout_f, f)
 
-            ! Compute the gradient value.
 #ifdef USE_OPENAD
             ! call the OPENAD generated discrete adjoint to get the
             ! gradient used for optimization.
 #else
             ! call the function that computes the sensitivites using
             ! continuous adjoints.
-#endif
 
+            ! Initialize the lambda value
+            lm = (/0.0d0, 0.0d0/)
+
+            ! Compute the gradient value.
+            call power_grid_cost_gradient(x, tout_b, yout_b, tout_f, yout_f, g)
+#endif
         elseif (task(1:5) == 'NEW_X') then
             if (i < maxiter) then
                 ! continue the iteration at the new point
-
+                print *, "Continuing with new starting value. pm is ", pm
+                cycle
             else
                 ! stop the iteration. print current values
-
+                print *, "The value of pm is ", pm
+                exit
             endif
         elseif (task(1:4) == 'CONV') then
             ! stop the iteration. print current values
-
+            print *, "Convergence to within tolerance achieved pm is ", pm
+            exit
         elseif (task(1:4) == 'ABNO') then
             ! stop the iteration. print the current values
             ! also print the reason for abnormal termination
-
+            print *, "Optimization terminated abnormally. pm is ", pm
+            exit
         elseif (task(1:5) == 'ERROR') then
             ! stop the iteration. print the current values
             ! also print the reason for abnormal termination
-
+            print *, "Optimization encountered an error. pm is ", pm
+            exit
         else
-
+            print *, "The task is ", task
         endif
     enddo
 contains
@@ -163,24 +172,37 @@ contains
     ! The subroutine computes the sensitivity of cost
     ! function with respect to the parameter p
     !
-    subroutine power_grid_cost_gradient()
+    subroutine power_grid_cost_gradient(x, tout_b, yout_b, tout_f, yout_f, g)
         use power_grid_constants
         implicit none
         ! The gradient can be computed using continuous adjoints
         ! or by discrete adjoints
 
+        double precision, dimension(2), intent(in) :: x
+        double precision, dimension(:), intent(in) :: tout_b
+        double precision, dimension(:,:), intent(out) :: yout_b
+        double precision, dimension(:), intent(in) :: tout_f
+        double precision, dimension(:,:), intent(out) :: yout_f
+        double precision, dimension(np), intent(out) :: g
+
+        call crank_nicolson(x, tout_b, yout_b, 'ADJ', tout_f, yout_f)
+
+        g(1) = -1 + quad_b + dot_product( (/1/sqrt(pmax**2 - pm**2) , 0.0d0/), &
+                            yout_b(ubound(yout_b, 1), :))
     end subroutine power_grid_cost_gradient
 
     !
     ! Perform time integration by Crank Nicolson scheme.
     !
-    subroutine crank_nicolson(x0, tout, yout, mode)
+    subroutine crank_nicolson(x0, tout, yout, mode, tout_traj, yout_traj)
         use power_grid_constants
         implicit none
 
         double precision, dimension(:), intent(in) :: x0
         double precision, dimension(:), intent(in) :: tout
         double precision, dimension(:, :), intent(out) :: yout
+        double precision, dimension(:), intent(in), optional :: tout_traj
+        double precision, dimension(:, :), intent(in), optional :: yout_traj
         character(len=3) :: mode
 
         if (mode == 'FWD') then
@@ -253,27 +275,26 @@ contains
         use power_grid_constants
         implicit none
 
+        character(len = 4), intent(in) :: state
         double precision, intent(in) :: t
         double precision, dimension(2), intent(in) :: x
-        character(len = 4), intent(in) :: state
-        double precision :: phi
-        double precision :: omega
-
-        double precision,save :: d_quad_f
+        double precision :: phi, omega, new_h
+        double precision,save :: prev_h
 
         phi = x(1)
         omega = x(2)
 
         if (state == "ITER") then
             ! perform trapezoidal integration using previous height
-            ! and current height.
-            quad_f = quad_f + 0.5 * dt * (d_quad_f + &
-                       c * max(0.0d0, (phi - phiS))**beta)
-            ! update the current height.
-            d_quad_f = c * max(0.0d0, (phi - phiS))**beta
+            ! and new height.
+            new_h =  c * max(0.0d0, (phi - phiS))**beta
+            quad_f = quad_f + 0.5 * dt * (prev_h + &
+                       new_h)
+            ! update the prev height.
+            prev_h = new_h
         elseif (state == "INIT") then
             quad_f = 0
-            d_quad_f = c * max(0.0d0, (phi - phiS))**beta
+            prev_h = c * max(0.0d0, (phi - phiS))**beta
         elseif (state == "DONE") then
             print *, "The forward quadrature value is ", quad_f
         endif
@@ -281,6 +302,8 @@ contains
 
     !
     ! The RHS function of the adjoint ODE
+    ! Uses the trajectory of the forward solution to
+    ! compute adjoint RHS function
     !
     subroutine adjoint_ode_rhs(t, x, tout_f, yout_f, y)
         use power_grid_constants
@@ -315,14 +338,15 @@ contains
 
     !
     ! The jacobian of the adjoint ODE
+    ! Uses the trajectory of the forward solution to
+    ! compute the jacobian at a given `t`
     !
-    subroutine adjoint_ode_jac(t, x, tout_f, yout_f, J)
+    subroutine adjoint_ode_jac(t, tout_f, yout_f, J)
         use power_grid_constants
         implicit none
 
         integer :: i
         double precision, intent(in) :: t
-        double precision, dimension(2), intent(in) :: x
         double precision, dimension(2,2), intent(out) :: J
         double precision, dimension(:), intent(in) :: tout_f
         double precision, dimension(:, :), intent(out) :: yout_f
@@ -335,6 +359,43 @@ contains
 
         J = transpose(-J)
     end subroutine
+
+    !
+    ! The subroutine to compute the quadrature in ADJ mode
+    ! Uses the trajectory of the forward solution to compute
+    ! the quadrature term
+    !
+    subroutine adjoint_ode_quad(t, x, tout_f, yout_f, state)
+        use power_grid_constants
+        implicit none
+
+        character(len = 4), intent(in) :: state
+        double precision, intent(in) :: t
+        double precision, dimension(2), intent(in) :: x
+        double precision, dimension(:), intent(in) :: tout_f
+        double precision, dimension(:, :), intent(out) :: yout_f
+        double precision :: phi, omega, new_h
+
+        double precision,save :: prev_h
+
+        phi = x(1)
+        omega = x(2)
+
+        if (state == "ITER") then
+            ! perform trapezoidal integration using previous height
+            ! and new height.
+            new_h = dot_product((/0.0d0, omegaS/(2*H)/), x)
+            quad_b = quad_b + 0.5 * dt * (prev_h + &
+                       new_h)
+            ! update the previous height.
+            prev_h = new_h
+        elseif (state == "INIT") then
+            quad_b = 0
+            prev_h = dot_product((/0.0d0, omegaS/(2*H)/), x)
+        elseif (state == "DONE") then
+            print *, "The adjoint quadrature value is ", quad_b
+        endif
+    end subroutine adjoint_ode_quad
 
     !
     ! Function returns the first index when traversing

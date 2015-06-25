@@ -250,9 +250,9 @@ function [terminate] = AdjointOdeOutputFcn(t,x,flag,pm,tout,yout,perturb)
   
   if isempty(flag)
       
-      adjsens = adjsens + 0.5*dt*(tempder + [0,1/(2*H)]*x);
+      adjsens = adjsens + 0.5*dt*(tempder + [0,omegaS/(2*H)]*x);
       
-      tempder = [0,1/(2*H)]*x;
+      tempder = [0,omegaS/(2*H)]*x;
       
   elseif flag == 'init'
       adjsens = 0;
