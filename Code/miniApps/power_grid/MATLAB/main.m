@@ -1,4 +1,4 @@
-clear all;
+clear;
 pm=0.4;
 options = optimset('MaxIter',10,'TolX',1e-3,'TolFun', 1e-3,'Display','iter','GradObj','on','MaxFunEvals',30,'LargeScale','on');
 A=[1];

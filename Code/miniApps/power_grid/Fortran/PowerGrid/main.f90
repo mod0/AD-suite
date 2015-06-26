@@ -11,7 +11,7 @@ program power_grid
     ! n is the number of parameters - pm
     ! m is the maximum number of limited memory corrections.
     integer :: np, nx, node, m, max_opt_iter, tlen, alloc_state
-    parameter (np = 1, nx = 2, node = 2, m = 10, max_opt_iter = 20)
+    parameter (np = 1, nx = 2, node = 2, m = 10, max_opt_iter = 40)
 
     ! Declare the variables needed by the code.
     ! Some of these variables are from LBFGS-B,
@@ -55,7 +55,7 @@ program power_grid
     iprint = 1
 
     ! We specify the tolerances in the stopping criteria.
-    factr = 1.0d+1
+    factr = 1.0d+3
     pgtol = 0.0d0
 
     ! Set the bound on the parameter p
@@ -112,10 +112,6 @@ program power_grid
         open(unit = tout_b_filenum, file = filename)
         write(filename, '(A6, I2.2, I2.2)') "output", yout_b_filenum, i
         open(unit = yout_b_filenum, file = filename)
-
-        print *, "pm ", pm
-        print *, "pmax ", pmax
-        print *, "perturb ", perturb
 
         call setulb(np, m, pm, l, u, nbd, f, g, factr, pgtol, wa, iwa, task, &
                     iprint, csave,lsave,isave,dsave)
@@ -181,6 +177,9 @@ program power_grid
         close(yout_f_filenum)
         close(yout_b_filenum)
     enddo
+
+    ! stop the iteration. print current values
+    print *, "Maximum number of iterations reached. The value of pm is ", pm
 contains
 
     !
@@ -240,7 +239,7 @@ contains
         implicit none
 
         integer :: max_conv_iter, iter, idx
-        double precision :: dh, t, rcond, dnrm
+        double precision :: dh, t, rcond
         double precision, dimension(:), intent(in) :: x0
         integer, dimension(2) :: ipvt
         double precision, dimension(2) :: x_n_1, x_n, dx_n, &
@@ -266,7 +265,6 @@ contains
 
         ! get the first time step.
         t = tout(1)
-        print *, "t ", t
 
         if (mode == "FWD") then
             ! get the step size depending on whether we are going forward or
@@ -290,19 +288,17 @@ contains
             call adjoint_ode_quad(t, x0, "INIT")
         endif
 
-        print *, "dh ", dh
-
         ! read the first time instant x value
         x_n_1 = x0
 
-        print *, "x_n_1 :"
-        call print_array1(x_n_1, 1, 0)
+        ! start newton iteration with previous time instant value
+        ! this assignment was initially inside the newton iteration
+        ! loop. It has however been pulled out as it is duplicating
+        ! the work done inside the norm check if-block
+        x_n = x_n_1
 
         ! have an identity matrix handy
         call identity_matrix(I_n)
-
-        print *, "I_n: "
-        call print_array2(I_n, 1, 0, 1, 0)
 
         ! compute all the other x values based on
         ! solving the nonlinear system (semi-implicit)
@@ -316,20 +312,8 @@ contains
                 call adjoint_ode_rhs(t, x_n_1, tout_traj, yout_traj, f_n_1)
             endif
 
-            print *, "f_n_1 :"
-            call print_array1(f_n_1, 1, 0)
-
             ! get the new t value
             t = tout(idx)
-            print *, "t ", t
-
-            ! start newton iteration with previous time instant value
-            ! this assignment is not needed - it can be pulled out
-            ! of the loop.
-            x_n = x_n_1
-
-            print *, "x_n :"
-            call print_array1(x_n, 1, 0)
 
             ! try to converge within max_conv_iter
             do iter = 1, max_conv_iter
@@ -349,32 +333,18 @@ contains
                     call adjoint_ode_jac(t, tout_traj, yout_traj, J_n)
                 endif
 
-                print *, "f_n :"
-                call print_array1(f_n, 1, 0)
-
-                print *, "J_n: "
-                call print_array2(J_n, 1, 0, 1, 0)
-
                 ! construct the left hand side matrix
                 J_n =  (I_n - dh/2 * J_n)
 
-                print *, "J_n: "
-                call print_array2(J_n, 1, 0, 1, 0)
-
                 ! construct the right hand side vector
                 dx_n = x_n - x_n_1 - dh/2 * (f_n + f_n_1)
-
-                print *, "dx_n :"
-                call print_array1(dx_n, 1, 0)
-
-                dnrm = dnrm2(2,dx_n, 1)
-                print *, "The computed norm value is ", dnrm
 
                 ! check whether the right hand side vector with
                 ! new iterate has converged
                 if (dnrm2(2,dx_n, 1) < 1.0d-8) then
                     ! print *, "Converged at t = ", t
                     x_n_1 = x_n
+                    f_n_1 = f_n
                     exit
                 endif
 
@@ -390,14 +360,8 @@ contains
                 ! solve the system
                 call dgesl(J_n, 2, 2, ipvt, dx_n, 0)
 
-                print *, "dx_n :"
-                call print_array1(dx_n, 1, 0)
-
                 ! update the iterate
                 x_n = x_n - dx_n
-
-                print *, "x_n :"
-                call print_array1(x_n, 1, 0)
             enddo
 
             ! update the new value in the solution trajectory

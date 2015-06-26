@@ -79,7 +79,7 @@ function [costfunction,adjsens] = sens_check(pm,tend)
   % ylabel('lambda_2');
 
   adjsens;
-  costfunction=-pm+g;
+  costfunction=-pm+g
 end
 
 
@@ -257,14 +257,16 @@ function [terminate] = AdjointOdeOutputFcn(t,x,flag,pm,tout,yout,perturb)
   elseif flag == 'init'
       adjsens = 0;
       delta = yout(idx,1);
-      tempder = [c*beta*max(0,delta - thetaS)^(beta-1)];
+      %tempder = [c*beta*max(0,delta - thetaS)^(beta-1)];
+      tempder = [0,omegaS/(2*H)]*x;
       %tempder = 0;
       return;
   elseif flag == 'done'
       % pm = pm + epsilon;
       xinit = [asin(perturb*pm/pmax);perturb*1.0]; %% Perturb initial conditions so we can see a transient
       % dx0_dp = (xinit-yout(idx,:)')/epsilon;
-      dx0_dp = [(1/pmax)*(1-(pm/pmax)^2)^(-0.5);0];
+      %dx0_dp = [(1/pmax)*(1-(pm/pmax)^2)^(-0.5);0];
+      dx0_dp = [(1/sqrt(pmax^2 - pm^2));0];
       adjsens = -1+adjsens + dx0_dp'*x;
   end
 end
