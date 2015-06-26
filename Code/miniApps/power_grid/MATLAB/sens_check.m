@@ -12,7 +12,7 @@ function [costfunction,adjsens] = sens_check(pm,tend)
   beta = 2;
   c=10000;
   t0 = 0;
-  tend = 10.0;
+  tend = 0.9;
   tf = 0.1;   % fault-on time
   tcl = 0.2; % fault-off time
   dt = 0.01;
@@ -27,7 +27,7 @@ function [costfunction,adjsens] = sens_check(pm,tend)
 
   int_method = @CrankNicholson;
   %pm = 1.2;
-  pm
+  pm;
   xinit = [asin(perturb*pm/pmax);perturb*1.0]; %% Perturb initial conditions so we can see a transient
   tspan = t0:dt:tend;
 
@@ -78,7 +78,7 @@ function [costfunction,adjsens] = sens_check(pm,tend)
   % xlabel('lambda_1');
   % ylabel('lambda_2');
 
-  adjsens
+  adjsens;
   costfunction=-pm+g;
 end
 
@@ -205,7 +205,7 @@ function [terminate] = ForwardOdeOutputFcn(t,x,flag)
       dg = c*max(0,(delta-thetaS))^beta;
       return;
   elseif flag == 'done'
-      g
+      g;
   end
 end
 
@@ -244,7 +244,7 @@ end
 function [terminate] = AdjointOdeOutputFcn(t,x,flag,pm,tout,yout,perturb)
   terminate = 0;
 
-  global thetaS g dg dt H adjsens tempder pmax epsilon beta c
+  global thetaS g dg dt H adjsens tempder pmax epsilon beta c omegaS
 
   idx = find(t == tout);
   
