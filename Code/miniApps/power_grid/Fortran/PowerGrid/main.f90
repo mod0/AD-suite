@@ -60,7 +60,7 @@ program power_grid
 
     ! Set the bound on the parameter p
     nbd(1) = 3
-    u(1) = 1.1
+    u(1) = 1.1d0
 
     ! -------------------------------------------------------------------------
     ! initialize variables/constants for time integration scheme - fixed t.step
@@ -96,7 +96,7 @@ program power_grid
     tout_b = tout_f(tlen:1:-1)
 
     ! Set the initial value of the parameter pm
-    pm = 0.4
+    pm = 0.4d0
 
     ! Set the task variable
     task = "START"
@@ -104,21 +104,25 @@ program power_grid
     ! Iterate maximum number of iterations calling the optimization routine.
     do i = 1, max_opt_iter
         ! Set filename to collect results.
-!        write(filename, '(A6, I2, I2)') "output", tout_f_filenum, i
-!        open(unit = tout_f_filenum, file = filename)
-        write(filename, '(A6, I2, I02)') "output", yout_f_filenum, i
+        write(filename, '(A6, I2.2, I2.2)') "output", tout_f_filenum, i
+        open(unit = tout_f_filenum, file = filename)
+        write(filename, '(A6, I2.2, I2.2)') "output", yout_f_filenum, i
         open(unit = yout_f_filenum, file = filename)
-!        write(filename, '(A6, I2, I2)') "output", tout_b_filenum, i
-!        open(unit = tout_b_filenum, file = filename)
-        write(filename, '(A6, I2, I02)') "output", yout_b_filenum, i
+        write(filename, '(A6, I2.2, I2.2)') "output", tout_b_filenum, i
+        open(unit = tout_b_filenum, file = filename)
+        write(filename, '(A6, I2.2, I2.2)') "output", yout_b_filenum, i
         open(unit = yout_b_filenum, file = filename)
+
+        print *, "pm ", pm
+        print *, "pmax ", pmax
+        print *, "perturb ", perturb
 
         call setulb(np, m, pm, l, u, nbd, f, g, factr, pgtol, wa, iwa, task, &
                     iprint, csave,lsave,isave,dsave)
 
         if (task(1:2) == "FG") then
             ! Initialize the x value
-            x = (/asin(perturb*pm/pmax), perturb*1.0/)
+            x = (/asin(perturb*pm/pmax), perturb*1.0d0/)
 
             ! Compute the function value.
             call power_grid_cost_function(x, tout_f, yout_f, f)
@@ -138,6 +142,8 @@ program power_grid
 #endif
 
             ! write the solutions to the file.
+            call write_array1(tout_f, 1, 0, tout_f_filenum)
+            call write_array1(tout_b, 1, 0, tout_b_filenum)
             call write_array2(yout_f, 1, 0, 1, &
                     0, yout_f_filenum)
             call write_array2(yout_b, 1, 0, 1, &
@@ -170,6 +176,8 @@ program power_grid
             print *, "The task is ", task
         endif
 
+        close(tout_f_filenum)
+        close(tout_b_filenum)
         close(yout_f_filenum)
         close(yout_b_filenum)
     enddo
@@ -213,12 +221,13 @@ contains
         double precision, dimension(:), intent(in) :: tout_b
         double precision, dimension(:,:), intent(out) :: yout_b
         double precision, dimension(:), intent(in) :: tout_f
-        double precision, dimension(:,:), intent(out) :: yout_f
+        double precision, dimension(:,:), intent(in) :: yout_f
         double precision, dimension(:), intent(out) :: g
 
         call crank_nicolson(x, tout_b, yout_b, "ADJ", tout_f, yout_f)
 
-        g(1) = -1 + quad_b + dot_product( (/1/sqrt(pmax**2 - pm**2) , 0.0d0/), &
+        g(1) = -1.0d0 + quad_b + &
+               dot_product( (/1.0d0/sqrt(pmax**2 - pm**2) , 0.0d0/), &
                             yout_b(size(yout_b, 1), :))
         print *, "The gradient is ", g(1)
     end subroutine power_grid_cost_gradient
@@ -231,7 +240,7 @@ contains
         implicit none
 
         integer :: max_conv_iter, iter, idx
-        double precision :: dh, t, rcond
+        double precision :: dh, t, rcond, dnrm
         double precision, dimension(:), intent(in) :: x0
         integer, dimension(2) :: ipvt
         double precision, dimension(2) :: x_n_1, x_n, dx_n, &
@@ -246,7 +255,7 @@ contains
         ! add reference to external dnrm2 function
         interface
             function dnrm2(n,x,incx)
-                integer :: dnrm2
+                double precision :: dnrm2
                 integer :: n,incx
                 double precision :: x(n)
             end function dnrm2
@@ -257,6 +266,7 @@ contains
 
         ! get the first time step.
         t = tout(1)
+        print *, "t ", t
 
         if (mode == "FWD") then
             ! get the step size depending on whether we are going forward or
@@ -280,11 +290,19 @@ contains
             call adjoint_ode_quad(t, x0, "INIT")
         endif
 
+        print *, "dh ", dh
+
         ! read the first time instant x value
         x_n_1 = x0
 
+        print *, "x_n_1 :"
+        call print_array1(x_n_1, 1, 0)
+
         ! have an identity matrix handy
         call identity_matrix(I_n)
+
+        print *, "I_n: "
+        call print_array2(I_n, 1, 0, 1, 0)
 
         ! compute all the other x values based on
         ! solving the nonlinear system (semi-implicit)
@@ -298,13 +316,20 @@ contains
                 call adjoint_ode_rhs(t, x_n_1, tout_traj, yout_traj, f_n_1)
             endif
 
+            print *, "f_n_1 :"
+            call print_array1(f_n_1, 1, 0)
+
             ! get the new t value
             t = tout(idx)
+            print *, "t ", t
 
             ! start newton iteration with previous time instant value
             ! this assignment is not needed - it can be pulled out
             ! of the loop.
             x_n = x_n_1
+
+            print *, "x_n :"
+            call print_array1(x_n, 1, 0)
 
             ! try to converge within max_conv_iter
             do iter = 1, max_conv_iter
@@ -324,15 +349,30 @@ contains
                     call adjoint_ode_jac(t, tout_traj, yout_traj, J_n)
                 endif
 
+                print *, "f_n :"
+                call print_array1(f_n, 1, 0)
+
+                print *, "J_n: "
+                call print_array2(J_n, 1, 0, 1, 0)
+
                 ! construct the left hand side matrix
                 J_n =  (I_n - dh/2 * J_n)
+
+                print *, "J_n: "
+                call print_array2(J_n, 1, 0, 1, 0)
 
                 ! construct the right hand side vector
                 dx_n = x_n - x_n_1 - dh/2 * (f_n + f_n_1)
 
+                print *, "dx_n :"
+                call print_array1(dx_n, 1, 0)
+
+                dnrm = dnrm2(2,dx_n, 1)
+                print *, "The computed norm value is ", dnrm
+
                 ! check whether the right hand side vector with
                 ! new iterate has converged
-                if (dnrm2(2,dx_n, 1) < 1.0e-8) then
+                if (dnrm2(2,dx_n, 1) < 1.0d-8) then
                     ! print *, "Converged at t = ", t
                     x_n_1 = x_n
                     exit
@@ -350,8 +390,14 @@ contains
                 ! solve the system
                 call dgesl(J_n, 2, 2, ipvt, dx_n, 0)
 
+                print *, "dx_n :"
+                call print_array1(dx_n, 1, 0)
+
                 ! update the iterate
                 x_n = x_n - dx_n
+
+                print *, "x_n :"
+                call print_array1(x_n, 1, 0)
             enddo
 
             ! update the new value in the solution trajectory
@@ -416,7 +462,7 @@ contains
         omega = x(2)
 
         if (t > tf .AND. t <= tcl) then
-            pmax_ = 0
+            pmax_ = 0.0d0
         else
             pmax_ = pmax
         endif
@@ -443,15 +489,15 @@ contains
         omega = x(2)
 
         if (t > tf .AND. t <= tcl) then
-            pmax_ = 0
+            pmax_ = 0.0d0
         else
             pmax_ = pmax
         endif
 
         J(1, 1) = 0.0d0
         J(1, 2) = omegaB
-        J(2, 1) = -omegaS * pmax_ * cos(phi) / (2 * H)
-        J(2, 2) = -D * omegaS / (2 * H)
+        J(2, 1) = -omegaS * pmax_ * cos(phi) / (2.0d0 * H)
+        J(2, 2) = -D * omegaS / (2.0d0 * H)
     end subroutine forward_ode_jac
 
     !
@@ -474,12 +520,12 @@ contains
             ! perform trapezoidal integration using previous height
             ! and new height.
             new_h =  c * max(0.0d0, (phi - phiS))**beta
-            quad_f = quad_f + 0.5 * dt * (prev_h + &
+            quad_f = quad_f + 0.5d0 * dt * (prev_h + &
                        new_h)
             ! update the prev height.
             prev_h = new_h
         elseif (state == "INIT") then
-            quad_f = 0
+            quad_f = 0.0d0
             prev_h = c * max(0.0d0, (phi - phiS))**beta
         elseif (state == "DONE") then
             print *, "The forward quadrature value is ", quad_f
@@ -515,7 +561,8 @@ contains
         phi = yout_f(idx, 1)
 
         ! compute the forcing term
-        forcing = (/ c * beta * max(0.0d0, (phi - phiS))**(beta - 1), 0.0d0 /)
+        forcing = (/ c * beta * max(0.0d0, &
+                    (phi - phiS))**(beta - 1.0d0), 0.0d0 /)
 
         ! now compute y
         y = matmul(transpose(-J), x) - forcing
@@ -566,14 +613,14 @@ contains
         if (state == "ITER") then
             ! perform trapezoidal integration using previous height
             ! and new height.
-            new_h = dot_product((/0.0d0, omegaS/(2*H)/), x)
-            quad_b = quad_b + 0.5 * dt * (prev_h + &
+            new_h = dot_product((/0.0d0, omegaS/(2.0d0*H)/), x)
+            quad_b = quad_b + 0.5d0 * dt * (prev_h + &
                        new_h)
             ! update the previous height.
             prev_h = new_h
         elseif (state == "INIT") then
-            quad_b = 0
-            prev_h = dot_product((/0.0d0, omegaS/(2*H)/), x)
+            quad_b = 0.0d0
+            prev_h = dot_product((/0.0d0, omegaS/(2.0d0*H)/), x)
         elseif (state == "DONE") then
             print *, "The adjoint quadrature value is ", quad_b
         endif

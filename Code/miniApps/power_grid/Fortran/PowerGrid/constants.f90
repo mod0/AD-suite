@@ -11,7 +11,7 @@ module power_grid_constants_and_shared
 
     ! Set the parameter values
     parameter(                          &
-        pi = 3.14159265358979323d0,     &
+        pi = 3.141592653589793d0,       &
         pmax = 2.0877d0,                &
         omegaB = 120.0d0 * pi,          &
         omegaS = 1d0,                   &
