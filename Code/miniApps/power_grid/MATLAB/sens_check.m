@@ -12,7 +12,7 @@ function [costfunction,adjsens] = sens_check(pm,tend)
   beta = 2;
   c=10000;
   t0 = 0;
-  tend = 0.9;
+  tend = 10.0;
   tf = 0.1;   % fault-on time
   tcl = 0.2; % fault-off time
   dt = 0.01;
@@ -40,17 +40,19 @@ function [costfunction,adjsens] = sens_check(pm,tend)
 
   figure(1);
   plot(tout,yout(:,1))
-  hold on
-  plot(tout,thetaS);
+  figure(2);
+  plot(tout,yout(:,2))
+  %hold on
+  %plot(tout,thetaS);
 
   % figure(2);
   % plot(yout(:,1),yout(:,2));
   % xlabel('delta (rad)');
   % ylabel('omega (pu)');
 
-  %% Sensitivity calculation using finite differencing
-  %% Uncomment this part when you want to check the accuracy of the gradient calculated
-  %% by adjoints. dg_dp is the gradient
+  % Sensitivity calculation using finite differencing
+  % Uncomment this part when you want to check the accuracy of the gradient calculated
+  % by adjoints. dg_dp is the gradient
   %g1 = g;
   %g = 0;
   %dg = 0;
@@ -60,7 +62,7 @@ function [costfunction,adjsens] = sens_check(pm,tend)
   %[tout,yout] = int_method(@(t,x)ForwardOdeRhs(t,x,pm1),tspan,xinit,options);
   %dg_dp = -1 + (g-g1)/epsilon;
 
-  %% Sensitivitity calculation using adjoints
+  % Sensitivitity calculation using adjoints
   xinit = [0;0];
   tspan = fliplr(tspan);
   options = odeset('Mass',mass,'MassSingular','no','Jacobian', ...
@@ -70,6 +72,11 @@ function [costfunction,adjsens] = sens_check(pm,tend)
   %%%%%%%
 
 
+  figure(3);
+  plot(tout,yb(:,1))
+  figure(4);
+  plot(tout,yb(:,2))
+  
   % figure(3);
   % plot(tb,yb);
   %
@@ -79,7 +86,7 @@ function [costfunction,adjsens] = sens_check(pm,tend)
   % ylabel('lambda_2');
 
   adjsens;
-  costfunction=-pm+g
+  costfunction=-pm+g;
 end
 
 

@@ -1,6 +1,7 @@
 program power_grid
     use power_grid_constants_and_shared
     use print_active
+    use gnufor2
     implicit none
 
     ! -------------------------------------------------------------------------
@@ -180,6 +181,17 @@ program power_grid
 
     ! stop the iteration. print current values
     print *, "Maximum number of iterations reached. The value of pm is ", pm
+
+    !---------------------------------------------------------------------------
+    ! Call GNUPLOT through the interface module.
+    ! Uncomment these plot calls after verifying you have GNUPlot installed.
+    !---------------------------------------------------------------------------
+    ! Plot the final solution for the forward trajectory
+    !call plot(tout_f, yout_f(:,1))!, terminal='png', filename='yout_f_1')
+    !call plot(tout_f, yout_f(:,2))!, terminal='png', filename='yout_f_2')
+    ! Plot the final solution for the adjoint variables
+    !call plot(tout_b, yout_b(:,1))!, terminal='png', filename='yout_b_1')
+    !call plot(tout_b, yout_b(:,2))!, terminal='png', filename='yout_b_2')
 contains
 
     !

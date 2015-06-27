@@ -21,7 +21,7 @@ module power_grid_constants_and_shared
         beta = 2.0d0,                   &
         c = 10000.0d0,                  &
         t0 = 0.0d0,                     &
-        tend = 0.9d0,                   &
+        tend = 10.0d0,                  &
         tf = 0.1d0,                     &
         tcl = 0.2d0,                    &
         dt = 0.01d0,                    &
