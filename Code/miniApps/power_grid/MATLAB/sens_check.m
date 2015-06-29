@@ -13,8 +13,8 @@ function [costfunction,adjsens] = sens_check(pm,tend)
   c=10000;
   t0 = 0;
   tend = 10.0;
-  tf = 0.1;   % fault-on time
-  tcl = 0.2; % fault-off time
+  tf = 0.095;   % fault-on time
+  tcl = 0.205; % fault-off time
   dt = 0.01;
 
   perturb = 1.0; %% initial condition perturbation (this has nothing to do with any numerical scheme)
@@ -37,11 +37,11 @@ function [costfunction,adjsens] = sens_check(pm,tend)
   [tout, yout] = int_method(@(t,x)ForwardOdeRhs(t,x,pm),tspan, ...
                             xinit,options);
 
-
-  figure(1);
-  plot(tout,yout(:,1))
-  figure(2);
-  plot(tout,yout(:,2))
+% 
+%   figure(1);
+%   plot(tout,yout(:,1))
+%   figure(2);
+%   plot(tout,yout(:,2))
   %hold on
   %plot(tout,thetaS);
 
@@ -71,11 +71,11 @@ function [costfunction,adjsens] = sens_check(pm,tend)
   [tb, yb] = int_method(@(t,x)AdjointOdeRhs(t,x,pm,tout,yout),tspan,xinit,options);
   %%%%%%%
 
-
-  figure(3);
-  plot(tout,yb(:,1))
-  figure(4);
-  plot(tout,yb(:,2))
+% 
+%   figure(3);
+%   plot(tout,yb(:,1))
+%   figure(4);
+%   plot(tout,yb(:,2))
   
   % figure(3);
   % plot(tb,yb);
@@ -84,9 +84,9 @@ function [costfunction,adjsens] = sens_check(pm,tend)
   % plot(yb(:,1),yb(:,2));
   % xlabel('lambda_1');
   % ylabel('lambda_2');
-
-  adjsens;
-  costfunction=-pm+g;
+  pm
+  adjsens
+  costfunction=-pm+g
 end
 
 

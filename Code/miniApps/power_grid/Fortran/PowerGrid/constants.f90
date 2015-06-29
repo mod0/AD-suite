@@ -22,8 +22,8 @@ module power_grid_constants_and_shared
         c = 10000.0d0,                  &
         t0 = 0.0d0,                     &
         tend = 10.0d0,                  &
-        tf = 0.1d0,                     &
-        tcl = 0.2d0,                    &
+        tf = 0.095d0,                   &  ! trying to evade floating pt issues
+        tcl = 0.205d0,                  &  ! trying to evade floating pt issues
         dt = 0.01d0,                    &
         perturb = 1.0d0)
 

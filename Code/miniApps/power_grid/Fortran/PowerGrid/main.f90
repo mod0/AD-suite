@@ -21,7 +21,7 @@ program power_grid
     ! Shared (globally accessible) : pm
     ! Passed: x, tout_f, tout_b, yout_f, yout_b
     character*60     :: task, csave
-    character*10      :: filename
+    character*10     :: filename
     logical          :: lsave(4)
     integer          :: i, iprint, nbd(np), iwa(3*np), isave(44)
     double precision :: f, factr, pgtol, &
@@ -56,19 +56,20 @@ program power_grid
     iprint = 1
 
     ! We specify the tolerances in the stopping criteria.
-    factr = 1.0d+3
-    pgtol = 0.0d0
+    ! Check the documentation of LBFGS for more information
+    ! about these parameters.
+    factr = 1.0d+3              ! factr higher -> looser, lower -> stricter
+    pgtol = 0.0d0               ! Projected gradient tolerance
 
     ! Set the bound on the parameter p
-    nbd(1) = 3
-    u(1) = 1.1d0
+    nbd(1) = 3                  ! only upper-bound on the variable
+    u(1) = 1.1d0                ! the value of the upper bound.
 
     ! -------------------------------------------------------------------------
     ! initialize variables/constants for time integration scheme - fixed t.step
     ! -------------------------------------------------------------------------
     tlen = int((tend - t0)/dt) + 1            ! Verify that the tlen is correct
                                               ! Number of endpoints of intervals
-
 
 
     ! Set the filename numbers
@@ -105,19 +106,22 @@ program power_grid
     ! Iterate maximum number of iterations calling the optimization routine.
     do i = 1, max_opt_iter
         ! Set filename to collect results.
-        write(filename, '(A6, I2.2, I2.2)') "output", tout_f_filenum, i
-        open(unit = tout_f_filenum, file = filename)
-        write(filename, '(A6, I2.2, I2.2)') "output", yout_f_filenum, i
-        open(unit = yout_f_filenum, file = filename)
-        write(filename, '(A6, I2.2, I2.2)') "output", tout_b_filenum, i
-        open(unit = tout_b_filenum, file = filename)
-        write(filename, '(A6, I2.2, I2.2)') "output", yout_b_filenum, i
-        open(unit = yout_b_filenum, file = filename)
+!        write(filename, '(A6, I2.2, I2.2)') "output", tout_f_filenum, i
+!        open(unit = tout_f_filenum, file = filename)
+!        write(filename, '(A6, I2.2, I2.2)') "output", yout_f_filenum, i
+!        open(unit = yout_f_filenum, file = filename)
+!        write(filename, '(A6, I2.2, I2.2)') "output", tout_b_filenum, i
+!        open(unit = tout_b_filenum, file = filename)
+!        write(filename, '(A6, I2.2, I2.2)') "output", yout_b_filenum, i
+!        open(unit = yout_b_filenum, file = filename)
 
         call setulb(np, m, pm, l, u, nbd, f, g, factr, pgtol, wa, iwa, task, &
                     iprint, csave,lsave,isave,dsave)
 
         if (task(1:2) == "FG") then
+            ! print the current parameter value
+            print *, "pm is ", pm
+
             ! Initialize the x value
             x = (/asin(perturb*pm/pmax), perturb*1.0d0/)
 
@@ -139,12 +143,12 @@ program power_grid
 #endif
 
             ! write the solutions to the file.
-            call write_array1(tout_f, 1, 0, tout_f_filenum)
-            call write_array1(tout_b, 1, 0, tout_b_filenum)
-            call write_array2(yout_f, 1, 0, 1, &
-                    0, yout_f_filenum)
-            call write_array2(yout_b, 1, 0, 1, &
-                    0, yout_b_filenum)
+!            call write_array1(tout_f, 1, 0, tout_f_filenum)
+!            call write_array1(tout_b, 1, 0, tout_b_filenum)
+!            call write_array2(yout_f, 1, 0, 1, &
+!                    0, yout_f_filenum)
+!            call write_array2(yout_b, 1, 0, 1, &
+!                    0, yout_b_filenum)
         elseif (task(1:5) == "NEW_X") then
             if (i < max_opt_iter) then
                 ! continue the iteration at the new point
@@ -173,10 +177,10 @@ program power_grid
             print *, "The task is ", task
         endif
 
-        close(tout_f_filenum)
-        close(tout_b_filenum)
-        close(yout_f_filenum)
-        close(yout_b_filenum)
+!        close(tout_f_filenum)
+!        close(tout_b_filenum)
+!        close(yout_f_filenum)
+!        close(yout_b_filenum)
     enddo
 
     ! stop the iteration. print current values
@@ -187,11 +191,11 @@ program power_grid
     ! Uncomment these plot calls after verifying you have GNUPlot installed.
     !---------------------------------------------------------------------------
     ! Plot the final solution for the forward trajectory
-    !call plot(tout_f, yout_f(:,1))!, terminal='png', filename='yout_f_1')
-    !call plot(tout_f, yout_f(:,2))!, terminal='png', filename='yout_f_2')
+    !call plot(tout_f, yout_f(:,1))!, terminal='png', filename='yout_f_1.png')
+    !call plot(tout_f, yout_f(:,2))!, terminal='png', filename='yout_f_2.png')
     ! Plot the final solution for the adjoint variables
-    !call plot(tout_b, yout_b(:,1))!, terminal='png', filename='yout_b_1')
-    !call plot(tout_b, yout_b(:,2))!, terminal='png', filename='yout_b_2')
+    !call plot(tout_b, yout_b(:,1))!, terminal='png', filename='yout_b_1.png')
+    !call plot(tout_b, yout_b(:,2))!, terminal='png', filename='yout_b_2.png')
 contains
 
     !
@@ -275,8 +279,11 @@ contains
         ! set the maximum number of iterations (newton) before convergence.
         max_conv_iter = 10
 
-        ! get the first time step.
+        ! get the first time step
         t = tout(1)
+
+        ! set the solution at the first time step as starting value
+        yout(1, :) = x0
 
         if (mode == "FWD") then
             ! get the step size depending on whether we are going forward or
