@@ -1,5 +1,5 @@
 FC = gfortran
-FFLAGS = -cpp
+FFLAGS = -g
 
 TARGET = powergrid
 DEPENDENCIES = blas.o linpack.o timer.o \
@@ -7,10 +7,10 @@ DEPENDENCIES = blas.o linpack.o timer.o \
 	       gnufor2.o main.o
 
 %.o : %.f
-	${FC} ${FFLAGS} -c $< -o $@
+	${FC} -cpp ${FFLAGS} -c $< -o $@
 
 %.o : %.f90
-	${FC} ${FFLAGS} -c $< -o $@
+	${FC} -cpp ${FFLAGS} -c $< -o $@
 
 all: ${TARGET}
 	@echo Compiling powergrid
