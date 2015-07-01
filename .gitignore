@@ -22,7 +22,7 @@
 OAD_*
 ad_*
 w2f__types.f90
-
+iaddr.c
 
 # Compiled Static libraries
 *.lai
@@ -37,3 +37,20 @@ w2f__types.f90
 
 #Tempfiles
 *~
+*#*
+
+#Project files
+*.depend
+*.cbp
+*kateproj*
+*.layout
+*bin/
+*.cproject
+
+#SVN Directories
+Code/MITgcm/
+Code/OP2/
+Code/OpenAD/
+Code/ToyModels/
+Code/helper_scripts/
+*stream_vel*
