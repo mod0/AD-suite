@@ -36,12 +36,11 @@ function [costfunction,adjsens] = sens_check(pm,tend)
                    @(t,x)ForwardOdeRHSJacobian(t,x,pm),'OutputFcn',@ForwardOdeOutputFcn);
   [tout, yout] = int_method(@(t,x)ForwardOdeRhs(t,x,pm),tspan, ...
                             xinit,options);
-
 % 
-%   figure(1);
-%   plot(tout,yout(:,1))
-%   figure(2);
-%   plot(tout,yout(:,2))
+  figure(1);
+  plot(tout,yout(:,1))
+  figure(2);
+  plot(tout,yout(:,2))
   %hold on
   %plot(tout,thetaS);
 
@@ -72,10 +71,10 @@ function [costfunction,adjsens] = sens_check(pm,tend)
   %%%%%%%
 
 % 
-%   figure(3);
-%   plot(tout,yb(:,1))
-%   figure(4);
-%   plot(tout,yb(:,2))
+  figure(3);
+  plot(tb,yb(:,1))
+  figure(4);
+  plot(tb,yb(:,2))
   
   % figure(3);
   % plot(tb,yb);
@@ -187,7 +186,7 @@ function [J] = ForwardOdeRHSJacobian(t,x,pm)
   end
 
   J = [0                                omegaB;
-      -omegaS*pmax1*cos(delta)/(2*H)    -D/(2*H)];  % Check the jacobian - missing omegaS in 2,2
+      -omegaS*pmax1*cos(delta)/(2*H)    -D * omegaS/(2*H)];  
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
