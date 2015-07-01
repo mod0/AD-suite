@@ -191,11 +191,11 @@ program power_grid
     ! Uncomment these plot calls after verifying you have GNUPlot installed.
     !---------------------------------------------------------------------------
     ! Plot the final solution for the forward trajectory
-    !call plot(tout_f, yout_f(:,1))!, terminal='png', filename='yout_f_1.png')
-    !call plot(tout_f, yout_f(:,2))!, terminal='png', filename='yout_f_2.png')
+    call plot(tout_f, yout_f(:,1), terminal='png', filename='phi_fwd_fortran.png')
+    call plot(tout_f, yout_f(:,2), terminal='png', filename='omega_fwd_fortran.png')
     ! Plot the final solution for the adjoint variables
-    !call plot(tout_b, yout_b(:,1))!, terminal='png', filename='yout_b_1.png')
-    !call plot(tout_b, yout_b(:,2))!, terminal='png', filename='yout_b_2.png')
+    call plot(tout_b, yout_b(:,1), terminal='png', filename='lambda1_adj_fortran.png')
+    call plot(tout_b, yout_b(:,2), terminal='png', filename='lambda2_adj_fortran.png')
 contains
 
     !
