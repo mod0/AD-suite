@@ -4,7 +4,7 @@ FFLAGS = -g
 TARGET = powergrid
 DEPENDENCIES = blas.o linpack.o timer.o \
 	       lbfgsb.o constants.o print_active.o \
-	       gnufor2.o main.o
+	       gnufor2.o numerics.o main.o
 
 %.o : %.f
 	${FC} -cpp ${FFLAGS} -c $< -o $@
