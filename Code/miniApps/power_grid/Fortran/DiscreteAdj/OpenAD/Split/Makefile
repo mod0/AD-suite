@@ -35,7 +35,7 @@ powergrid: $(addsuffix .o, $(RTSUPP) iaddr) ad_inline.o  ${DEPENDENCIES}
 numerics_openad.pre.xb.x2w.w2f.post.f90 $(addsuffix .f90, $(RTSUPP)) iaddr.c: toolChain
 
 toolChain: numerics_openad.f90
-	openad -c -m rj $<
+	openad -c -m rs $<
 
 numerics_openad.f90: numerics.f90
 	 gcc -cpp -E -C -P ${DEFINE_FLAG} numerics.f90 > numerics_openad.f90

@@ -84,9 +84,6 @@ program power_grid
     pm = 0.4d0
 #else
     pm%v = 0.4d0
-
-    ! initialize the tape
-    call tape_init()
 #endif
 
     ! Set the task variable
@@ -118,13 +115,22 @@ program power_grid
             pm%d = 0.0d0
             f_OAD%d = 1.0d0
 
-            !Call function in Tape and Adjoint mode
+            !Call function in Tape mode
             our_rev_mode%arg_store=.FALSE.
             our_rev_mode%arg_restore=.FALSE.
             our_rev_mode%res_store=.FALSE.
             our_rev_mode%res_restore=.FALSE.
             our_rev_mode%plain=.FALSE.
             our_rev_mode%tape=.TRUE.
+            our_rev_mode%adjoint=.FALSE.
+            call get_cost_function_and_gradient(f_OAD, g, tlen)
+            !Call function in Adjoint mode
+            our_rev_mode%arg_store=.FALSE.
+            our_rev_mode%arg_restore=.FALSE.
+            our_rev_mode%res_store=.FALSE.
+            our_rev_mode%res_restore=.FALSE.
+            our_rev_mode%plain=.FALSE.
+            our_rev_mode%tape=.FALSE.
             our_rev_mode%adjoint=.TRUE.
             call get_cost_function_and_gradient(f_OAD, g, tlen)
 #endif
