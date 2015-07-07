@@ -2,6 +2,12 @@ program power_grid
     use print_active
     use gnufor2
     use numerics
+#ifdef USE_OPENAD
+    use OAD_active
+    use w2f__types
+    use OAD_rev
+    use OAD_tape
+#endif
     implicit none
 
     ! -------------------------------------------------------------------------
@@ -12,7 +18,7 @@ program power_grid
     ! n is the number of parameters - pm
     ! m is the maximum number of limited memory corrections.
     integer :: np, m, max_opt_iter, tlen
-    parameter (np = 1, m = 10, max_opt_iter = 40)
+    parameter (np = 1, m = 10, max_opt_iter = 50)
 
     ! Declare the variables needed by the code.
     ! Some of these variables are from LBFGS-B,
@@ -27,6 +33,10 @@ program power_grid
     double precision :: f, factr, pgtol, &
                         l(np), u(np), g(np), dsave(29), &
                         wa(2*m*np + 5*np + 11*m*m + 8*m)
+
+#ifdef USE_OPENAD
+    type(active) :: f_OAD
+#endif
 
     ! -------------------------------------------------------------------------
     ! declare variables to hold file name numbers
@@ -70,7 +80,14 @@ program power_grid
                                               ! Number of endpoints of intervals
 
     ! Set the initial value of the parameter pm
+#if !defined(USE_OPENAD)
     pm = 0.4d0
+#else
+    pm%v = 0.4d0
+
+    ! initialize the tape
+    call tape_init()
+#endif
 
     ! Set the task variable
     task = "START"
@@ -87,12 +104,30 @@ program power_grid
 !        write(filename, '(A6, I2.2, I2.2)') "output", yout_b_filenum, i
 !        open(unit = yout_b_filenum, file = filename)
 
+#if !defined(USE_OPENAD)
         call setulb(np, m, pm, l, u, nbd, f, g, factr, pgtol, wa, iwa, task, &
                     iprint, csave,lsave,isave,dsave)
-
+#else
+        call setulb(np, m, pm, l, u, nbd, f_OAD%v, pm%d, factr, pgtol, wa, iwa, task, &
+                    iprint, csave,lsave,isave,dsave)
+#endif
         if (task(1:2) == "FG") then
-            call get_cost_function_and_gradient(pm, f, g, tlen)
+#if !defined(USE_OPENAD)
+            call get_cost_function_and_gradient(f, g, tlen)
+#else
+            pm%d = 0.0d0
+            f_OAD%d = 1.0d0
 
+            !Call function in Tape and Adjoint mode
+            our_rev_mode%arg_store=.FALSE.
+            our_rev_mode%arg_restore=.FALSE.
+            our_rev_mode%res_store=.FALSE.
+            our_rev_mode%res_restore=.FALSE.
+            our_rev_mode%plain=.FALSE.
+            our_rev_mode%tape=.TRUE.
+            our_rev_mode%adjoint=.TRUE.
+            call get_cost_function_and_gradient(f_OAD, g, tlen)
+#endif
             ! write the solutions to the file.
 !            call write_array1(tout_f, 1, 0, tout_f_filenum)
 !            call write_array1(tout_b, 1, 0, tout_b_filenum)
