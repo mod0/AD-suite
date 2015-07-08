@@ -1,7 +1,11 @@
 program power_grid
     use print_active
     use gnufor2
+#ifdef USE_TAPENADE
+    use numerics_b
+#else
     use numerics
+#endif
     implicit none
 
     ! -------------------------------------------------------------------------
@@ -12,7 +16,7 @@ program power_grid
     ! n is the number of parameters - pm
     ! m is the maximum number of limited memory corrections.
     integer :: np, m, max_opt_iter, tlen
-    parameter (np = 1, m = 10, max_opt_iter = 40)
+    parameter (np = 1, m = 10, max_opt_iter = 50)
 
     ! Declare the variables needed by the code.
     ! Some of these variables are from LBFGS-B,
@@ -27,6 +31,10 @@ program power_grid
     double precision :: f, factr, pgtol, &
                         l(np), u(np), g(np), dsave(29), &
                         wa(2*m*np + 5*np + 11*m*m + 8*m)
+
+#ifdef USE_TAPENADE
+    double precision :: fb
+#endif
 
     ! -------------------------------------------------------------------------
     ! declare variables to hold file name numbers
@@ -87,12 +95,22 @@ program power_grid
 !        write(filename, '(A6, I2.2, I2.2)') "output", yout_b_filenum, i
 !        open(unit = yout_b_filenum, file = filename)
 
+#if !defined(USE_TAPENADE)
         call setulb(np, m, pm, l, u, nbd, f, g, factr, pgtol, wa, iwa, task, &
                     iprint, csave,lsave,isave,dsave)
-
+#else
+        call setulb(np, m, pm, l, u, nbd, f, pmb, factr, pgtol, wa, iwa, task, &
+                    iprint, csave,lsave,isave,dsave)
+#endif
         if (task(1:2) == "FG") then
-            call get_cost_function_and_gradient(pm, f, g, tlen)
-
+#if !defined(USE_TAPENADE)
+            call get_cost_function_and_gradient(f, g, tlen)
+#else
+            fb = 1.0d0
+            pmb = 0.0d0
+            call get_cost_function_and_gradient(f, g, tlen)
+            call get_cost_function_and_gradient_b(f, fb, g, tlen)
+#endif
             ! write the solutions to the file.
 !            call write_array1(tout_f, 1, 0, tout_f_filenum)
 !            call write_array1(tout_b, 1, 0, tout_b_filenum)
