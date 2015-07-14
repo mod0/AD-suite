@@ -1,0 +1,212 @@
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# User: Set here the F90 compiler and options
+#       Pedefined compilers: INTEL, PGF, HPUX, LAHEY
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+#OpenAD executable
+OAD = openad
+
+#COMPILER = G95
+#COMPILER = LAHEY
+COMPILER = INTEL
+#COMPILER = PGF
+#COMPILER = HPUX
+#COMPILER = GFORTRAN
+
+FC_G95     = g95
+FOPT_G95   = -cpp -O -pg -fbounds-check -fimplicit-none  -Wall -ftrace=full
+
+FC_LAHEY   = lf95
+# More aggressive for production runs:
+#FOPT_LAHEY = -Cpp --pca -O
+# More checking for debugging:
+FOPT_LAHEY = -Cpp --chk a,e,s,u --pca --ap -O0 -g --trap --trace --chkglobal
+
+FC_INTEL   = ifort 
+# More aggressive for production runs:
+#FOPT_INTEL = -cpp -O -fp-model precise -pc80 -prec_div
+# More checking for debugging:
+FOPT_INTEL = -cpp -O0 -fp-model strict -implicitnone -ftrapuv \
+              -debug all -warn all # -check all
+
+CC_INTEL = icc
+COPT_INTEL = -O0 -g
+
+FC_PGF     = pgf90
+# More aggressive for production runs:
+FOPT_PGF   = -Mpreprocess -O -fast -pc 80 -Kieee
+# More checking for debugging:
+#FOPT_PGF   = -Mpreprocess -O0 -Mbounds -Mchkfpstk -Mchkptr -Mchkstk \
+#             -Ktrap=fp -pc 80 -Kieee
+
+FC_HPUX    = f90
+FOPT_HPUX  = -O -u +Oall +check=on
+
+FC_GFORTRAN     = gfortran
+FOPT_GFORTRAN   = -cpp -O
+
+# define FULL_ALGEBRA for non-sparse integration
+FC   = $(FC_$(COMPILER))
+FOPT = $(FOPT_$(COMPILER)) # -DFULL_ALGEBRA
+
+CC = $(CC_$(COMPILER))
+COPT = $(COPT_$(COMPILER))
+
+LIBS =
+#LIBS = -llapack -lblas
+
+# Command to create Matlab mex gateway routines 
+# Note: use $(FC) as the mex Fortran compiler
+MEX  = mex
+
+GENSRC = small_f90_Global.f90  # \
+	 small_f90_Parameters.f90     \
+	 small_f90_Precision.f90
+
+GENOBJ = small_f90_Global.o   # \
+	 small_f90_Parameters.o       \
+	 small_f90_Precision.o
+
+FUNSRC = small_f90_Function.f90 
+FUNOBJ = small_f90_Function.o 
+
+JACSRC = small_f90_JacobianSP.f90 #  small_f90_Jacobian.f90
+JACOBJ = small_f90_JacobianSP.o   # small_f90_Jacobian.o
+
+HESSRC = small_f90_HessianSP.f90   small_f90_Hessian.f90
+HESOBJ = small_f90_HessianSP.o     small_f90_Hessian.o
+
+STMSRC = small_f90_StoichiomSP.f90 small_f90_Stoichiom.f90 
+STMOBJ = small_f90_StoichiomSP.o   small_f90_Stoichiom.o
+
+UTLSRC = small_f90_Rates.f90 small_f90_Util.f90 small_f90_Monitor.f90
+UTLOBJ = small_f90_Rates.o   small_f90_Util.o   small_f90_Monitor.o
+
+LASRC  = small_f90_LinearAlgebra.f90 
+LAOBJ  = small_f90_LinearAlgebra.o   
+
+STOCHSRC = small_f90_Stochastic.f90 
+STOCHOBJ = small_f90_Stochastic.o 
+
+OADSRC = w2f__types.f90 OAD_active.f90 iaddr.c small_f90_Func_OpenAD.pre.xb.x2w.w2f.post.f90
+OADOBJ = w2f__types.o OAD_active.o iaddr.o small_f90_Func_OpenAD.pre.xb.x2w.w2f.post.o
+
+MAINSRC = small_f90_Main.f90   small_f90_Initialize.f90   small_f90_Integrator.f90 small_f90_Model.f90
+MAINOBJ = small_f90_Main.o     small_f90_Initialize.o     small_f90_Integrator.o   small_f90_Model.o 
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# User: modify the line below to include only the
+#       objects needed by your application
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ALLOBJ = $(OADOBJ) $(GENOBJ) $(JACOBJ) $(HESOBJ) $(STMOBJ) \
+	 $(UTLOBJ) $(LAOBJ)
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# User: modify the line below to include only the
+#       executables needed by your application
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+all:    exe
+
+$(OADSRC): small_f90_Precision.f90 small_f90_Parameters.f90 small_f90_Function.f90
+	cat small_f90_Precision.f90 small_f90_Parameters.f90 small_f90_Function.f90 > small_f90_Func_OpenAD.f90
+	sed -i'' 's/SUBROUTINE Fun/SUBROUTINE Fun_OAD/g' small_f90_Func_OpenAD.f90
+	$(OAD) -c -m fv small_f90_Func_OpenAD.f90
+
+exe:	$(ALLOBJ) $(MAINOBJ) 
+	$(FC) $(FOPT) $(ALLOBJ) $(MAINOBJ) $(LIBS) -o small_f90.exe
+
+stochastic:$(ALLOBJ) $(STOCHOBJ) $(MAINOBJ)
+	$(FC) $(FOPT) $(ALLOBJ) $(STOCHOBJ) $(MAINOBJ) $(LIBS) \
+	-o small_f90_stochastic.exe
+
+mex:    $(ALLOBJ)
+	$(MEX) FC#$(FC) -fortran -O small_f90_mex_Fun.f90     $(ALLOBJ)
+	$(MEX) FC#$(FC) -fortran -O small_f90_mex_Jac_SP.f90  $(ALLOBJ)
+	$(MEX) FC#$(FC) -fortran -O small_f90_mex_Hessian.f90 $(ALLOBJ)
+
+clean:
+	rm -f small_f90*.o small_f90*.mod \
+	small_f90*.dat small_f90.exe small_f90*.mexglx \
+	small_f90.map OAD_active.f90 w2f__types.f90 iaddr.c \
+	small_f90_Func_OpenAD.pre.* oad_active.mod \
+	oad_intrinsics.mod w2f__types.mod \
+	iaddr.o OAD_active.o w2f__types.o \
+	*.mod-whirl openad.*.log~ \
+	small_f90_Func_OpenAD.f90
+
+distclean:
+#	rm -f small_f90*.o small_f90*.mod \
+#	small_f90*.dat small_f90.exe small_f90.map \
+#	small_f90*.f90 small_f90_*.mexglx
+
+small_f90_Func_OpenAD.pre.xb.x2w.w2f.post.o: small_f90_Func_OpenAD.pre.xb.x2w.w2f.post.f90
+	$(FC) $(FOPT) -c $<
+
+OAD_active.o: OAD_active.f90
+	$(FC) $(FOPT) -c $<
+
+w2f__types.o: w2f__types.f90
+	$(FC) $(FOPT) -c $<
+
+iaddr.o: iaddr.c
+	$(CC) $(COPT) -c $<
+
+small_f90_Precision.o: small_f90_Precision.f90 
+	$(FC) $(FOPT) -c $<
+
+small_f90_Parameters.o: small_f90_Parameters.f90 \
+	            small_f90_Precision.o
+	$(FC) $(FOPT) -c $<
+
+small_f90_Monitor.o: small_f90_Monitor.f90 \
+	             small_f90_Precision.o
+	$(FC) $(FOPT) -c $<
+
+small_f90_Global.o: small_f90_Global.f90 \
+	            small_f90_Parameters.o small_f90_Precision.o
+	$(FC) $(FOPT) -c $<
+
+small_f90_Initialize.o: small_f90_Initialize.f90  $(GENOBJ) 
+	$(FC) $(FOPT) -c $<
+
+small_f90_Function.o: small_f90_Function.f90  $(GENOBJ) 
+	$(FC) $(FOPT) -c $<
+
+small_f90_Stochastic.o: small_f90_Stochastic.f90  $(GENOBJ) 
+	$(FC) $(FOPT) -c $<
+
+small_f90_JacobianSP.o: small_f90_JacobianSP.f90 $(GENOBJ)
+	$(FC) $(FOPT) -c $<
+
+small_f90_Jacobian.o: small_f90_Jacobian.f90  $(GENOBJ) small_f90_JacobianSP.o
+	$(FC) $(FOPT) -c $<
+
+small_f90_LinearAlgebra.o: small_f90_LinearAlgebra.f90 $(GENOBJ) small_f90_JacobianSP.o
+	$(FC) $(FOPT) -c $<
+
+small_f90_Rates.o: small_f90_Rates.f90  $(GENOBJ) 
+	$(FC) $(FOPT) -c $<
+
+small_f90_HessianSP.o: small_f90_HessianSP.f90  $(GENOBJ)
+	$(FC) $(FOPT) -c $<
+
+small_f90_Hessian.o:  small_f90_Hessian.f90 $(GENOBJ) small_f90_HessianSP.o
+	$(FC) $(FOPT) -c $<
+
+small_f90_StoichiomSP.o: small_f90_StoichiomSP.f90 $(GENOBJ)
+	$(FC) $(FOPT) -c $<
+
+small_f90_Stoichiom.o: small_f90_Stoichiom.f90  $(GENOBJ) small_f90_StoichiomSP.o
+	$(FC) $(FOPT) -c $<
+
+small_f90_Util.o: small_f90_Util.f90  $(GENOBJ) small_f90_Monitor.o
+	$(FC) $(FOPT) -c $<
+
+small_f90_Main.o: small_f90_Main.f90  $(ALLOBJ) small_f90_Initialize.o small_f90_Model.o small_f90_Integrator.o
+	$(FC) $(FOPT) -c $<
+
+small_f90_Model.o: small_f90_Model.f90  $(ALLOBJ) small_f90_Integrator.o
+	$(FC) $(FOPT) -c $<
+
+small_f90_Integrator.o: small_f90_Integrator.f90  $(ALLOBJ)
+	$(FC) $(FOPT) -c $<
