@@ -5,10 +5,10 @@
 
 #COMPILER = G95
 #COMPILER = LAHEY
-COMPILER = INTEL
+#COMPILER = INTEL
 #COMPILER = PGF
 #COMPILER = HPUX
-#COMPILER = GFORTRAN
+COMPILER = GFORTRAN
 
 FC_G95     = g95
 FOPT_G95   = -cpp -O -pg -fbounds-check -fimplicit-none  -Wall -ftrace=full
@@ -19,7 +19,7 @@ FC_LAHEY   = lf95
 # More checking for debugging:
 FOPT_LAHEY = -Cpp --chk a,e,s,u --pca --ap -O0 -g --trap --trace --chkglobal
 
-FC_INTEL   = ifort 
+FC_INTEL   = ifort
 # More aggressive for production runs:
 #FOPT_INTEL = -cpp -O -fp-model precise -pc80 -prec_div
 # More checking for debugging:
@@ -46,20 +46,20 @@ FOPT = $(FOPT_$(COMPILER)) # -DFULL_ALGEBRA
 LIBS =
 #LIBS = -llapack -lblas
 
-# Command to create Matlab mex gateway routines 
+# Command to create Matlab mex gateway routines
 # Note: use $(FC) as the mex Fortran compiler
 MEX  = mex
 
 GENSRC = small_f90_Precision.f90  \
 	 small_f90_Parameters.f90     \
-	 small_f90_Global.f90  
+	 small_f90_Global.f90
 
 GENOBJ = small_f90_Precision.o    \
 	 small_f90_Parameters.o       \
-	 small_f90_Global.o     
+	 small_f90_Global.o
 
-FUNSRC = small_f90_Function.f90 
-FUNOBJ = small_f90_Function.o 
+FUNSRC = small_f90_Function.f90
+FUNOBJ = small_f90_Function.o
 
 JACSRC = small_f90_JacobianSP.f90  small_f90_Jacobian.f90
 JACOBJ = small_f90_JacobianSP.o    small_f90_Jacobian.o
@@ -67,20 +67,20 @@ JACOBJ = small_f90_JacobianSP.o    small_f90_Jacobian.o
 HESSRC = small_f90_HessianSP.f90   small_f90_Hessian.f90
 HESOBJ = small_f90_HessianSP.o     small_f90_Hessian.o
 
-STMSRC = small_f90_StoichiomSP.f90 small_f90_Stoichiom.f90 
+STMSRC = small_f90_StoichiomSP.f90 small_f90_Stoichiom.f90
 STMOBJ = small_f90_StoichiomSP.o   small_f90_Stoichiom.o
 
 UTLSRC = small_f90_Rates.f90 small_f90_Util.f90 small_f90_Monitor.f90
 UTLOBJ = small_f90_Rates.o   small_f90_Util.o   small_f90_Monitor.o
 
-LASRC  = small_f90_LinearAlgebra.f90 
-LAOBJ  = small_f90_LinearAlgebra.o   
+LASRC  = small_f90_LinearAlgebra.f90
+LAOBJ  = small_f90_LinearAlgebra.o
 
-STOCHSRC = small_f90_Stochastic.f90 
-STOCHOBJ = small_f90_Stochastic.o 
+STOCHSRC = small_f90_Stochastic.f90
+STOCHOBJ = small_f90_Stochastic.o
 
 MAINSRC = small_f90_Main.f90   small_f90_Initialize.f90   small_f90_Integrator.f90 small_f90_Model.f90
-MAINOBJ = small_f90_Main.o     small_f90_Initialize.o     small_f90_Integrator.o   small_f90_Model.o 
+MAINOBJ = small_f90_Main.o     small_f90_Initialize.o     small_f90_Integrator.o   small_f90_Model.o
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # User: modify the line below to include only the
@@ -95,7 +95,7 @@ ALLOBJ = $(GENOBJ) $(FUNOBJ) $(JACOBJ) $(HESOBJ) $(STMOBJ) \
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 all:    exe
 
-exe:	$(ALLOBJ) $(MAINOBJ) 
+exe:	$(ALLOBJ) $(MAINOBJ)
 	$(FC) $(FOPT) $(ALLOBJ) $(MAINOBJ) $(LIBS) -o small_f90.exe
 
 stochastic:$(ALLOBJ) $(STOCHOBJ) $(MAINOBJ)
@@ -117,7 +117,7 @@ distclean:
 #	small_f90*.dat small_f90.exe small_f90.map \
 #	small_f90*.f90 small_f90_*.mexglx
 
-small_f90_Precision.o: small_f90_Precision.f90 
+small_f90_Precision.o: small_f90_Precision.f90
 	$(FC) $(FOPT) -c $<
 
 small_f90_Parameters.o: small_f90_Parameters.f90 \
@@ -132,13 +132,13 @@ small_f90_Global.o: small_f90_Global.f90 \
 	            small_f90_Parameters.o small_f90_Precision.o
 	$(FC) $(FOPT) -c $<
 
-small_f90_Initialize.o: small_f90_Initialize.f90  $(GENOBJ) 
+small_f90_Initialize.o: small_f90_Initialize.f90  $(GENOBJ)
 	$(FC) $(FOPT) -c $<
 
-small_f90_Function.o: small_f90_Function.f90  $(GENOBJ) 
+small_f90_Function.o: small_f90_Function.f90  $(GENOBJ)
 	$(FC) $(FOPT) -c $<
 
-small_f90_Stochastic.o: small_f90_Stochastic.f90  $(GENOBJ) 
+small_f90_Stochastic.o: small_f90_Stochastic.f90  $(GENOBJ)
 	$(FC) $(FOPT) -c $<
 
 small_f90_JacobianSP.o: small_f90_JacobianSP.f90 $(GENOBJ)
@@ -150,7 +150,7 @@ small_f90_Jacobian.o: small_f90_Jacobian.f90  $(GENOBJ) small_f90_JacobianSP.o
 small_f90_LinearAlgebra.o: small_f90_LinearAlgebra.f90 $(GENOBJ) small_f90_JacobianSP.o
 	$(FC) $(FOPT) -c $<
 
-small_f90_Rates.o: small_f90_Rates.f90  $(GENOBJ) 
+small_f90_Rates.o: small_f90_Rates.f90  $(GENOBJ)
 	$(FC) $(FOPT) -c $<
 
 small_f90_HessianSP.o: small_f90_HessianSP.f90  $(GENOBJ)

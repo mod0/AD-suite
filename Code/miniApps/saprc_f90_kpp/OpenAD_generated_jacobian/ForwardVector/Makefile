@@ -8,13 +8,16 @@ OAD = openad
 
 #COMPILER = G95
 #COMPILER = LAHEY
-COMPILER = INTEL
+#COMPILER = INTEL
 #COMPILER = PGF
 #COMPILER = HPUX
-#COMPILER = GFORTRAN
+COMPILER = GFORTRAN
 
 FC_G95     = g95
 FOPT_G95   = -cpp -O -pg -fbounds-check -fimplicit-none  -Wall -ftrace=full
+
+CC_G95 = gcc
+COPT_G95 = -O0 -g
 
 FC_LAHEY   = lf95
 # More aggressive for production runs:
@@ -44,6 +47,9 @@ FOPT_HPUX  = -O -u +Oall +check=on
 
 FC_GFORTRAN     = gfortran
 FOPT_GFORTRAN   = -cpp -O
+
+CC_GFORTRAN = gcc
+COPT_GFORTRAN = -O0 -g
 
 # define FULL_ALGEBRA for non-sparse integration
 FC   = $(FC_$(COMPILER))

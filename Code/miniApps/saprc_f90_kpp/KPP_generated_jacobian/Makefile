@@ -5,10 +5,10 @@
 
 #COMPILER = G95
 #COMPILER = LAHEY
-COMPILER = INTEL
+#COMPILER = INTEL
 #COMPILER = PGF
 #COMPILER = HPUX
-#COMPILER = GFORTRAN
+COMPILER = GFORTRAN
 
 FC_G95     = g95
 FOPT_G95   = -cpp -O -pg -fbounds-check -fimplicit-none  -Wall -ftrace=full
@@ -19,7 +19,7 @@ FC_LAHEY   = lf95
 # More checking for debugging:
 FOPT_LAHEY = -Cpp --chk a,e,s,u --pca --ap -O0 -g --trap --trace --chkglobal
 
-FC_INTEL   = ifort 
+FC_INTEL   = ifort
 # More aggressive for production runs:
 #FOPT_INTEL = -cpp -O -fp-model precise -pc80 -prec_div
 # More checking for debugging:
@@ -43,23 +43,24 @@ FOPT_GFORTRAN   = -cpp -O
 FC   = $(FC_$(COMPILER))
 FOPT = $(FOPT_$(COMPILER)) # -DFULL_ALGEBRA
 
+
 LIBS =
 #LIBS = -llapack -lblas
 
-# Command to create Matlab mex gateway routines 
+# Command to create Matlab mex gateway routines
 # Note: use $(FC) as the mex Fortran compiler
 MEX  = mex
 
 GENSRC = saprc2006_Precision.f90  \
 	 saprc2006_Parameters.f90     \
-	 saprc2006_Global.f90  
+	 saprc2006_Global.f90
 
 GENOBJ = saprc2006_Precision.o    \
 	 saprc2006_Parameters.o       \
-	 saprc2006_Global.o     
+	 saprc2006_Global.o
 
-FUNSRC = saprc2006_Function.f90 
-FUNOBJ = saprc2006_Function.o 
+FUNSRC = saprc2006_Function.f90
+FUNOBJ = saprc2006_Function.o
 
 JACSRC = saprc2006_JacobianSP.f90  saprc2006_Jacobian.f90
 JACOBJ = saprc2006_JacobianSP.o    saprc2006_Jacobian.o
@@ -67,20 +68,20 @@ JACOBJ = saprc2006_JacobianSP.o    saprc2006_Jacobian.o
 HESSRC = saprc2006_HessianSP.f90   saprc2006_Hessian.f90
 HESOBJ = saprc2006_HessianSP.o     saprc2006_Hessian.o
 
-STMSRC = saprc2006_StoichiomSP.f90 saprc2006_Stoichiom.f90 
+STMSRC = saprc2006_StoichiomSP.f90 saprc2006_Stoichiom.f90
 STMOBJ = saprc2006_StoichiomSP.o   saprc2006_Stoichiom.o
 
 UTLSRC = saprc2006_Rates.f90 saprc2006_Util.f90 saprc2006_Monitor.f90
 UTLOBJ = saprc2006_Rates.o   saprc2006_Util.o   saprc2006_Monitor.o
 
-LASRC  = saprc2006_LinearAlgebra.f90 
-LAOBJ  = saprc2006_LinearAlgebra.o   
+LASRC  = saprc2006_LinearAlgebra.f90
+LAOBJ  = saprc2006_LinearAlgebra.o
 
-STOCHSRC = saprc2006_Stochastic.f90 
-STOCHOBJ = saprc2006_Stochastic.o 
+STOCHSRC = saprc2006_Stochastic.f90
+STOCHOBJ = saprc2006_Stochastic.o
 
 MAINSRC = saprc2006_Main.f90   saprc2006_Initialize.f90   saprc2006_Integrator.f90 saprc2006_Model.f90
-MAINOBJ = saprc2006_Main.o     saprc2006_Initialize.o     saprc2006_Integrator.o   saprc2006_Model.o 
+MAINOBJ = saprc2006_Main.o     saprc2006_Initialize.o     saprc2006_Integrator.o   saprc2006_Model.o
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # User: modify the line below to include only the
@@ -95,7 +96,7 @@ ALLOBJ = $(GENOBJ) $(FUNOBJ) $(JACOBJ) $(HESOBJ) $(STMOBJ) \
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 all:    exe
 
-exe:	$(ALLOBJ) $(MAINOBJ) 
+exe:	$(ALLOBJ) $(MAINOBJ)
 	$(FC) $(FOPT) $(ALLOBJ) $(MAINOBJ) $(LIBS) -o saprc2006.exe
 
 stochastic:$(ALLOBJ) $(STOCHOBJ) $(MAINOBJ)
@@ -117,7 +118,7 @@ distclean:
 	saprc2006*.dat saprc2006.exe saprc2006.map \
 	saprc2006*.f90 saprc2006_*.mexglx
 
-saprc2006_Precision.o: saprc2006_Precision.f90 
+saprc2006_Precision.o: saprc2006_Precision.f90
 	$(FC) $(FOPT) -c $<
 
 saprc2006_Parameters.o: saprc2006_Parameters.f90 \
@@ -132,13 +133,13 @@ saprc2006_Global.o: saprc2006_Global.f90 \
 	            saprc2006_Parameters.o saprc2006_Precision.o
 	$(FC) $(FOPT) -c $<
 
-saprc2006_Initialize.o: saprc2006_Initialize.f90  $(GENOBJ) 
+saprc2006_Initialize.o: saprc2006_Initialize.f90  $(GENOBJ)
 	$(FC) $(FOPT) -c $<
 
-saprc2006_Function.o: saprc2006_Function.f90  $(GENOBJ) 
+saprc2006_Function.o: saprc2006_Function.f90  $(GENOBJ)
 	$(FC) $(FOPT) -c $<
 
-saprc2006_Stochastic.o: saprc2006_Stochastic.f90  $(GENOBJ) 
+saprc2006_Stochastic.o: saprc2006_Stochastic.f90  $(GENOBJ)
 	$(FC) $(FOPT) -c $<
 
 saprc2006_JacobianSP.o: saprc2006_JacobianSP.f90 $(GENOBJ)
@@ -150,7 +151,7 @@ saprc2006_Jacobian.o: saprc2006_Jacobian.f90  $(GENOBJ) saprc2006_JacobianSP.o
 saprc2006_LinearAlgebra.o: saprc2006_LinearAlgebra.f90 $(GENOBJ) saprc2006_JacobianSP.o
 	$(FC) $(FOPT) -c $<
 
-saprc2006_Rates.o: saprc2006_Rates.f90  $(GENOBJ) 
+saprc2006_Rates.o: saprc2006_Rates.f90  $(GENOBJ)
 	$(FC) $(FOPT) -c $<
 
 saprc2006_HessianSP.o: saprc2006_HessianSP.f90  $(GENOBJ)
