@@ -9,6 +9,7 @@ while conv==0;
  dtx = dt./(Grid.V(:)*Grid.por(:));                          % timestep / pore volume
  fi = max(q,0).*dtx;                                         % injection
  B=spdiags(dtx,0,N,N)*A;
+ spy(full(B));
 
  I=0;
  while I<2^IT;                                               % loop over sub-timesteps

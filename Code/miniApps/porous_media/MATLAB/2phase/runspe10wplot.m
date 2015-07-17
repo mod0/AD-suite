@@ -1,7 +1,7 @@
 close all;
 Grid.Nx=60;  Grid.hx=20*.3048;                       % Dimension in x-direction
 Grid.Ny=220; Grid.hy=10*.3048;                       % Dimension in y-direction
-Grid.Nz=1;   Grid.hz=2*.3048;                        % Dimension in z-direction
+Grid.Nz=2;   Grid.hz=2*.3048;                        % Dimension in z-direction
 N=Grid.Nx*Grid.Ny*Grid.Nz;                           % Number of grid celles
 Grid.V=Grid.hx*Grid.hy*Grid.hz;                      % Volume of each cells
 Fluid.vw=3e-4; Fluid.vo=3e-3;                        % Viscosities
@@ -10,13 +10,13 @@ St = 5;                                              % Maximum saturation time s
 Pt = 100;                                            % Pressure time step
 ND = 2000;                                           % Number of days in simulation
 
-Q=zeros(Grid.Nx,Grid.Ny,1);                          % Source term for injection
+Q=zeros(Grid.Nx,Grid.Ny,Grid.Nz);                    % Source term for injection
 IR=795*(Grid.Nx*Grid.Ny/ (60*220*85));               %   and production. Total
 Q(1,1,:)=IR; Q(Grid.Nx,Grid.Ny,:)=-IR; Q=Q(:);       %   rate scaled to one layer
 
 load ../data/spe10;                                  % Load data from SPE 10
-Grid.K=KU(:,1:Grid.Nx,1:Grid.Ny,1);                  %    permeability, Layer 1
-Por=pU(1:Grid.Nx,1:Grid.Ny,1);                       %    preprocessed porosity, Layer 1
+Grid.K=KU(:,1:Grid.Nx,1:Grid.Ny,1:Grid.Nz);          %    permeability, Layer 1
+Por=pU(1:Grid.Nx,1:Grid.Ny,1:Grid.Nz);               %    preprocessed porosity, Layer 1
 Grid.por=max(Por(:),1e-3);
 
 S=Fluid.swc*ones(N,1);                               % Initial saturation
@@ -26,16 +26,19 @@ for tp=1:ND/Pt;
   for ts=1:Pt/St;
     S=NewtRaph(Grid,S,Fluid,V,Q,St);                 % Implicit saturation solver
     subplot('position',[0.05 .1 .4 .8]);             % Make left subplot
-    pcolor(reshape(S,Grid.Nx,Grid.Ny,Grid.Nz)');     % Plot saturation
+    pcolor(reshape(S(1:Grid.Nx*Grid.Ny),Grid.Nx,Grid.Ny,1)');     %
+                                                                  % Plot saturation 
+    subplot('position',[0.55 .1 .4 .8]);
+    pcolor(reshape(S(Grid.Nx*Grid.Ny+1:2*Grid.Nx*Grid.Ny),Grid.Nx,Grid.Ny,1)');     % Plot saturation
     shading flat; caxis([Fluid.swc 1-Fluid.sor]);    %
 
     [Mw,Mo]=RelPerm(S(N),Fluid); Mt=Mw+Mo;           % Mobilities in well-block
     Tt=[Tt,(tp-1)*Pt+ts*St];                         % Compute simulation time
     Pc=[Pc,[Mw/Mt; Mo/Mt]];                          % Append production data
-    subplot('position',[0.55 .1 .4 .8]);             % Make right subplot
-    plot(Tt,Pc(1,:),Tt,Pc(2,:));                     % Plot production data
-    axis([0,ND,-0.05,1.05]);                         % Set correct axis
-    legend('Water cut','Oil cut');                   % Set legend
+                                                     %subplot('position',[0.55 .1 .4 .8]);             % Make right subplot
+                                                     %    plot(Tt,Pc(1,:),Tt,Pc(2,:));                     % Plot production data
+                                                     %    axis([0,ND,-0.05,1.05]);                         % Set correct axis
+                                                     %    legend('Water cut','Oil cut');                   % Set legend
     drawnow;                                         % Force update of plot
   end
 end
