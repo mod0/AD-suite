@@ -33,7 +33,9 @@ contains
 !
 subroutine spdiags(imatrix, idiags, orows, ocols, omatrix)
     implicit none
-    integer :: orows, ocols, i, j, k, n, d, row, col, nnz, alloc_err
+    logical :: done
+    integer :: orows, ocols, row, col, nnz, k, alloc_err
+    double precision :: elm
     double precision, dimension(:,:) :: imatrix
     integer, dimension(:) :: idiags
     type(spmat) :: omatrix
@@ -46,9 +48,9 @@ subroutine spdiags(imatrix, idiags, orows, ocols, omatrix)
 
 ! Allocate space with min(orows, ocols) rows and size(idiags,1) as columns
 ! Ensure omatrix fields are unallocated
-    if (allocated(omatrix%row_index) .or. &
-       allocated(omatrix%col_index) .or. &
-       allocated(omatrix%values)) then
+    if (associated(omatrix%row_index) .or. &
+       associated(omatrix%col_index) .or. &
+       associated(omatrix%values)) then
         stop "The output matrix has already been allocated space in the heap."
     end if
 
@@ -66,125 +68,26 @@ subroutine spdiags(imatrix, idiags, orows, ocols, omatrix)
     omatrix%rows = orows
     omatrix%columns = ocols
 
+    ! initialize k and done.
     k = 0
+    done = .false.
 
-    do i = 1, size(idiags, 1)
-        d = idiags(i)
-! if orows == ocols || orows > ocols, elements of superdiagonal filled from lower
-! part of corresponding column in imatrix and from upper part for subdiagonals
-        if (orows == ocols .or. orows > ocols) then
-            if (d < 0) then ! subdiagonal read from top
-                ! first element along diagonal
-                row = 1 - d
-                col = 1
+    ! initialize current row and col
+    row = 0
+    col = 0
 
-                ! number of elements along diagonal
-                n = orows - row + 1
+    do while (.not. done)
+        call nextnzelm(imatrix, idiags, orows, ocols, row, col, row, col, elm)
 
-                do j = 1, n
-                    if (imatrix(j, i) /= 0.0d0) then
-                        k = k + 1
-
-                        omatrix%row_index(k) = row + j - 1
-                        omatrix%col_index(k) = col + j - 1
-                        omatrix%values(k) = imatrix(j, i)
-                    end if
-                end do
-            else if (d == 0) then ! main diagonal read from top
-                ! first element along diagonal
-                row = 1
-                col = 1
-
-                ! number of elements along diagonal
-                n = min(orows, ocols)
-
-                do j = 1, n
-                    if (imatrix(j, i) /= 0.0d0) then
-                        k = k + 1
-
-                        omatrix%row_index(k) = row + j - 1
-                        omatrix%col_index(k) = col + j - 1
-                        omatrix%values(k) = imatrix(j, i)
-                    end if
-                end do
-            else  ! super diagonal read from bottom (possible middle)
-                ! first element along diagonal
-                row = 1
-                col = 1 + d
-
-                ! number of elements along diagonal
-                n = ocols - col + 1
-
-                do j = 1, n
-                    if (imatrix(orows - j + 1, i) /= 0.0d0) then
-                        k = k + 1
-
-                        omatrix%row_index(k) = row + n - j
-                        omatrix%col_index(k) = col + n - j
-                        omatrix%values(k) = imatrix(j, i)
-                    end if
-                end do
-            end if
+        if (row > 0 .and. col > 0) then
+            k = k + 1
+            omatrix%row_index(k) = row
+            omatrix%col_index(k) = col
+            omatrix%values(k) = elm
         else
-    ! if orows < ocols, elements of superdiagonal filled from top part of corresponding
-    ! column in imatrix and from lower part for subdiagonals
-            if (d < 0) then ! subdiagonal read from bottom (possible middle)
-                ! first element along diagonal
-                row = 1 - d
-                col = 1
-
-                ! number of elements along diagonal
-                n = orows - row + 1
-
-                do j = 1, n
-                    if (imatrix(orows - j + 1, i) /= 0.0d0) then
-                        k = k + 1
-
-                        omatrix%row_index(k) = row + n - j
-                        omatrix%col_index(k) = col + n - j
-                        omatrix%values(k) = imatrix(j, i)
-                    end if
-                end do
-            else if (d == 0) then ! super diagonal read from top
-                ! first element along diagonal
-                row = 1
-                col = 1
-
-                ! number of elements along diagonal
-                n = min(orows, ocols)
-
-                do j = 1, n
-                    if (imatrix(j, i) /= 0.0d0) then
-                        k = k + 1
-
-                        omatrix%row_index(k) = row + j - 1
-                        omatrix%col_index(k) = col + j - 1
-                        omatrix%values(k) = imatrix(j, i)
-                    end if
-                end do
-            else
-                ! first element along diagonal
-                row = 1
-                col = 1 + d
-
-                ! number of elements along diagonal
-                n = ocols - col + 1
-
-                do j = 1, n
-                    if (imatrix(j, i) /= 0.0d0) then
-                        k = k + 1
-
-                        omatrix%row_index(k) = row + j - 1
-                        omatrix%col_index(k) = col + j - 1
-                        omatrix%values(k) = imatrix(j, i)
-                    end if
-                end do
-            end if
+            done = .true.
         end if
     end do
-
-    ! now sort the entries in imatrix by columns
-
 end subroutine
 
 
@@ -194,101 +97,29 @@ end subroutine
 !
 subroutine countnnz(imatrix, idiags, orows, ocols, nnz)
     implicit none
-    integer :: orows, ocols, i, j, n, d, row, col, nnz
-    double precision, dimension(:,:) :: imatrix
+    logical :: done
+    integer :: orows, ocols, row, col, nnz
     integer, dimension(:) :: idiags
+    double precision :: elm
+    double precision, dimension(:,:) :: imatrix
 
     ! initialize nnz
     nnz = 0
 
-    do i = 1, size(idiags, 1)
-        d = idiags(i)
-! if orows == ocols || orows > ocols, elements of superdiagonal filled from lower
-! part of corresponding column in imatrix and from upper part for subdiagonals
-        if (orows == ocols .or. orows > ocols) then
-            if (d < 0) then ! subdiagonal read from top
-                ! first element along diagonal
-                row = 1 - d
-                col = 1
+    ! initialize current row and col
+    row = 0
+    col = 0
 
-                ! number of elements along diagonal
-                n = orows - row + 1
+    ! initialize done.
+    done = .false.
 
-                do j = 1, n
-                    if (imatrix(j, i) /= 0.0d0) then
-                        nnz = nnz + 1
-                    end if
-                end do
-            else if (d == 0) then ! main diagonal read from top
-                ! first element along diagonal
-                row = 1
-                col = 1
+    do while (.not. done)
+        call nextnzelm(imatrix, idiags, orows, ocols, row, col, row, col, elm)
 
-                ! number of elements along diagonal
-                n = min(orows, ocols)
-
-                do j = 1, n
-                    if (imatrix(j, i) /= 0.0d0) then
-                        nnz = nnz + 1
-                    end if
-                end do
-            else  ! super diagonal read from bottom (possible middle)
-                ! first element along diagonal
-                row = 1
-                col = 1 + d
-
-                ! number of elements along diagonal
-                n = ocols - col + 1
-
-                do j = 1, n
-                    if (imatrix(orows - j + 1, i) /= 0.0d0) then
-                        nnz = nnz + 1
-                    end if
-                end do
-            end if
+        if (row > 0 .and. col > 0) then
+            nnz = nnz + 1
         else
-    ! if orows < ocols, elements of superdiagonal filled from top part of corresponding
-    ! column in imatrix and from lower part for subdiagonals
-            if (d < 0) then ! subdiagonal read from bottom (possible middle)
-                ! first element along diagonal
-                row = 1 - d
-                col = 1
-
-                ! number of elements along diagonal
-                n = orows - row + 1
-
-                do j = 1, n
-                    if (imatrix(orows - j + 1, i) /= 0.0d0) then
-                        nnz = nnz + 1
-                    end if
-                end do
-            else if (d == 0) then ! super diagonal read from top
-                ! first element along diagonal
-                row = 1
-                col = 1
-
-                ! number of elements along diagonal
-                n = min(orows, ocols)
-
-                do j = 1, n
-                    if (imatrix(j, i) /= 0.0d0) then
-                        nnz = nnz + 1
-                    end if
-                end do
-            else
-                ! first element along diagonal
-                row = 1
-                col = 1 + d
-
-                ! number of elements along diagonal
-                n = ocols - col + 1
-
-                do j = 1, n
-                    if (imatrix(j, i) /= 0.0d0) then
-                        nnz = nnz + 1
-                    end if
-                end do
-            end if
+            done = .true.
         end if
     end do
 end subroutine countnnz
@@ -303,7 +134,7 @@ subroutine disp_spmat(imatrix)
     type(spmat) :: imatrix
 
     do k = 1, imatrix%nnz
-        write (*, '(a, i7, a, i7, a, a, f)'), "(", imatrix%row_index(k), ",", &
+        write (*, '(a, i7, a, i7, a, a, f10.5)'), "(", imatrix%row_index(k), ",", &
                     imatrix%col_index(k), ")", " ", imatrix%values(k)
     end do
 end subroutine
@@ -317,7 +148,7 @@ subroutine free_spmat(imatrix)
     type(spmat) :: imatrix
 
 
-    if (allocated(imatrix%row_index)) then
+    if (associated(imatrix%row_index)) then
         deallocate(imatrix%row_index, stat = dealloc_err)
 
         if (dealloc_err /= 0) then
@@ -325,7 +156,7 @@ subroutine free_spmat(imatrix)
         end if
     end if
 
-    if (allocated(imatrix%col_index)) then
+    if (associated(imatrix%col_index)) then
         deallocate(imatrix%col_index, stat = dealloc_err)
 
         if (dealloc_err /= 0) then
@@ -333,7 +164,7 @@ subroutine free_spmat(imatrix)
         end if
     end if
 
-    if (allocated(imatrix%values)) then
+    if (associated(imatrix%values)) then
         deallocate(imatrix%values, stat = dealloc_err)
 
         if (dealloc_err /= 0) then
@@ -373,18 +204,18 @@ subroutine nextnzelm(imatrix, idiags, orows, ocols, crow, ccol, nrow, ncol, nelm
     logical :: nnzfound, diagfound
     integer :: maindiagind, maxsubd, minsupd
     integer :: orows, ocols, nrow, ncol, crow, ccol, trow, tcol
-    integer ::  i, j, k, l, diag, diagind
+    integer ::  i, j, diag, diagind
     integer, dimension(:) :: idiags
     double precision :: nelm
     double precision, dimension(:,:) :: imatrix
 
-    ! initialize nrow and ncol
-    nrow = 0
-    ncol = 0
-
     ! Copy current row and column
     trow = crow
     tcol = ccol
+
+    ! initialize nrow and ncol
+    nrow = 0
+    ncol = 0
 
     ! This method was intended to get the next element in a sparse matrix
     ! to be constructed in a column major mode using the imatrix for the
@@ -520,7 +351,7 @@ subroutine getelm(imatrix, idiags, orows, ocols, row, col, maindiagind, elm)
         call getdiagind(idiags, maindiagind, diag, diagind)
 
         ! ensure that the diagonal exists in the list.
-        if (diagind > 0 .and. diagind <= size(idiags, 1)) then
+        if (diagind <= 0 .and. diagind > size(idiags, 1)) then
                 stop "Diagonal not found in the list of diagonals."
         end if
 
@@ -528,7 +359,7 @@ subroutine getelm(imatrix, idiags, orows, ocols, row, col, maindiagind, elm)
         call firstelm(diag, srow, scol)
 
         ! follow MATLAB conventions
-        if (orows > ocols) then ! subdiagonal read from top
+        if (orows >= ocols) then ! subdiagonal read from top
             ! The index along the diagonal from the top
             i = row - srow + 1
 
@@ -549,7 +380,7 @@ subroutine getelm(imatrix, idiags, orows, ocols, row, col, maindiagind, elm)
         call getdiagind(idiags, maindiagind, diag, diagind)
 
         ! ensure that the diagonal exists in the list.
-        if (diagind > 0 .and. diagind <= size(idiags, 1)) then
+        if (diagind <= 0 .and. diagind > size(idiags, 1)) then
             stop "Diagonal not found in the list of diagonals."
         end if
 
@@ -563,7 +394,7 @@ subroutine getelm(imatrix, idiags, orows, ocols, row, col, maindiagind, elm)
 
             ! read from the top
             elm = imatrix(i, diagind)
-        else if (orows > ocols) then ! superdiagonal read from bottom
+        else if (orows >= ocols) then ! superdiagonal read from bottom
             ! The index along the diagonal from the top
             i = row - srow + 1
 
