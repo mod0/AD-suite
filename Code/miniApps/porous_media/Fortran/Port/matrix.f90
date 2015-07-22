@@ -1,5 +1,9 @@
 module sparse_matrix
     implicit none
+
+    ! export module interface
+    public :: zeros, ones
+
     !
     ! The sparse matrix format
     ! rows: The number of rows in the full matrix
@@ -16,6 +20,19 @@ module sparse_matrix
         double precision, dimension(:), pointer :: values
     end type
 
+    ! Common interface for all the zeros functions
+    interface zeros
+        module procedure zeros1
+        module procedure zeros2
+        module procedure zeros3
+    end interface
+
+    ! Common interface for all the ones functions
+    interface ones
+        module procedure ones1
+        module procedure ones2
+        module procedure ones3
+    end interface
 contains
 
 
@@ -414,6 +431,7 @@ end subroutine getelm
 ! list.
 !
 subroutine getdiagind(idiags, maindiagind, diag, diagind)
+    implicit none
     integer :: i, maindiagind, diag, diagind
     integer, dimension(:) :: idiags
 
@@ -497,5 +515,136 @@ subroutine noelems(diag, orows, ocols, n)
         n = ocols - col + 1
     end if
 end subroutine noelems
+
+
+!
+! Generates Zeros matrix
+!
+subroutine zeros1(rows, Z)
+    implicit none
+    integer :: rows, alloc_error
+    double precision, dimension(:), pointer :: Z
+
+    if (associated(Z)) then
+        stop "The zeros matrix already has been assigned space in the heap."
+    endif
+
+    allocate(Z(rows), stat=alloc_error)
+
+    if (alloc_error /= 0) then
+        stop "Could not allocate memory for the zeros matrix."
+    end if
+
+    Z = 0.0d0
+end subroutine
+
+
+!
+! Generates Zeros matrix
+!
+subroutine zeros2(rows, cols, Z)
+    implicit none
+    integer :: rows, cols, alloc_error
+    double precision, dimension(:, :), pointer :: Z
+
+    if (associated(Z)) then
+        stop "The zeros matrix already has been assigned space in the heap."
+    endif
+
+    allocate(Z(rows, cols), stat=alloc_error)
+
+    if (alloc_error /= 0) then
+        stop "Could not allocate memory for the zeros matrix."
+    end if
+
+    Z = 0.0d0
+end subroutine
+
+!
+! Generates Zeros matrix
+!
+subroutine zeros3(rows, cols, stacks, Z)
+    implicit none
+    integer :: rows, cols, stacks, alloc_error
+    double precision, dimension(:, :, :), pointer :: Z
+
+    if (associated(Z)) then
+        stop "The zeros matrix already has been assigned space in the heap."
+    endif
+
+    allocate(Z(rows, cols, stacks), stat=alloc_error)
+
+    if (alloc_error /= 0) then
+        stop "Could not allocate memory for the zeros matrix."
+    end if
+
+    Z = 0.0d0
+end subroutine
+
+
+!
+! Generates Ones matrix
+!
+subroutine ones1(rows, O)
+    implicit none
+    integer :: rows, alloc_error
+    double precision, dimension(:), pointer :: O
+
+    if (associated(O)) then
+        stop "The ones matrix already has been assigned space in the heap."
+    endif
+
+    allocate(O(rows), stat=alloc_error)
+
+    if (alloc_error /= 0) then
+        stop "Could not allocate memory for the ones matrix."
+    end if
+
+    O = 1.0d0
+end subroutine
+
+
+!
+! Generates Ones matrix
+!
+subroutine ones2(rows, cols, O)
+    implicit none
+    integer :: rows, cols, alloc_error
+    double precision, dimension(:, :), pointer :: O
+
+    if (associated(O)) then
+        stop "The ones matrix already has been assigned space in the heap."
+    endif
+
+    allocate(O(rows, cols), stat=alloc_error)
+
+    if (alloc_error /= 0) then
+        stop "Could not allocate memory for the ones matrix."
+    end if
+
+    O = 1.0d0
+end subroutine
+
+!
+! Generates Ones matrix
+!
+subroutine ones3(rows, cols, stacks, O)
+    implicit none
+    integer :: rows, cols, stacks, alloc_error
+    double precision, dimension(:, :, :), pointer :: O
+
+    if (associated(O)) then
+        stop "The ones matrix already has been assigned space in the heap."
+    endif
+
+    allocate(O(rows, cols, stacks), stat=alloc_error)
+
+    if (alloc_error /= 0) then
+        stop "Could not allocate memory for the ones matrix."
+    end if
+
+    O = 1.0d0
+end subroutine
+
 
 end module sparse_matrix
