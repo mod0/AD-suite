@@ -281,20 +281,14 @@ subroutine nextnzelm(imatrix, idiags, orows, ocols, crow, ccol, nrow, ncol, nelm
     do while (.not. nnzfound)
         ! if current element is empty, find the first non-zero element
         if (trow == 0 .and. tcol == 0) then
+            ! Making changes to always include the main-diagonal elements.
+            nrow = 1
+            ncol = 1
             if (maindiagind > 0) then
-                call firstelm(0, nrow, ncol)
-                call getelm(imatrix, idiags, orows, ocols, nrow, ncol, &
-                            maindiagind, nelm)
-            else if (maxsubd > -orows) then
-                call firstelm(maxsubd, nrow, ncol)
-                call getelm(imatrix, idiags, orows, ocols, nrow, ncol, &
-                            maindiagind, nelm)
-            else if (minsupd < ocols) then
-                call firstelm(minsupd, nrow, ncol)
                 call getelm(imatrix, idiags, orows, ocols, nrow, ncol, &
                             maindiagind, nelm)
             else
-                stop "Incorrect diagonal values."
+                nelm = 0.0d0
             end if
         else if (trow > 0 .and. tcol > 0) then
             ! Given the current row and current column, find the next row, next column
@@ -328,7 +322,13 @@ subroutine nextnzelm(imatrix, idiags, orows, ocols, crow, ccol, nrow, ncol, nelm
                     ! check if diagonal exists
                     call getdiagind(idiags, maindiagind, diag, diagind)
 
+                    ! if diagonal exists or is the main diagonal
                     if (diagind > 0 .and.  diagind <= size(idiags, 1)) then
+                        diagfound = .true.
+
+                        nrow = i
+                        ncol = j
+                    else if (i == j) then ! if diagonal does not exist but is MD
                         diagfound = .true.
 
                         nrow = i
@@ -339,13 +339,19 @@ subroutine nextnzelm(imatrix, idiags, orows, ocols, crow, ccol, nrow, ncol, nelm
 
             ! Now get the element if nrow and ncol are > 0
             if (nrow > 0 .and. ncol > 0) then
-                call getelm(imatrix, idiags, orows, ocols, nrow, ncol, &
+                if(diagind > 0 .and. diagind <= size(idiags, 1)) then
+                    call getelm(imatrix, idiags, orows, ocols, nrow, ncol, &
                             maindiagind, nelm)
+                else
+                    nelm = 0.0d0
+                end if
             end if
             ! if there are no more non-zero elements return nrow ncol as is.
         end if
 
         if (nelm /= 0.0d0) then
+            nnzfound = .true.
+        else if (nelm == 0.0d0 .and. nrow == ncol) then
             nnzfound = .true.
         else
             trow = nrow
