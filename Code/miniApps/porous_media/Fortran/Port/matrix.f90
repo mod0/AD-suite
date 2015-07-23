@@ -25,14 +25,32 @@ module sparse_matrix
         module procedure zeros1
         module procedure zeros2
         module procedure zeros3
-    end interface
+        module procedure zeros4
+    end interface zeros
 
     ! Common interface for all the ones functions
     interface ones
         module procedure ones1
         module procedure ones2
         module procedure ones3
-    end interface
+        module procedure ones4
+    end interface ones
+
+    ! Common interface for all the point wise inverse functions
+    interface pinverse
+        module procedure pinverse1
+        module procedure pinverse2
+        module procedure pinverse3
+        module procedure pinverse4
+    end interface pinverse
+
+    ! Common interface for all reshape functions
+    interface myreshape
+        module procedure myreshape_1_2
+        module procedure myreshape_2_1
+        module procedure myreshape_1_3
+        module procedure myreshape_3_1
+    end interface myreshape
 contains
 
 
@@ -47,6 +65,7 @@ contains
 ! The placement of values in the diagonals will follow MATLABs
 ! convention: spdiags
 ! The structure of the sparse matrix is column-major format
+! TODO: Extend this to initialize diagonal entries no matter what.
 !
 subroutine spdiags(imatrix, idiags, orows, ocols, omatrix)
     implicit none
@@ -583,6 +602,28 @@ end subroutine
 
 
 !
+! Generates Zeros matrix
+!
+subroutine zeros4(rows, cols, stacks, boxes, Z)
+    implicit none
+    integer :: rows, cols, stacks, boxes, alloc_error
+    double precision, dimension(:, :, :, :), pointer :: Z
+
+    if (associated(Z)) then
+        stop "The zeros matrix already has been assigned space in the heap."
+    endif
+
+    allocate(Z(rows, cols, stacks, boxes), stat=alloc_error)
+
+    if (alloc_error /= 0) then
+        stop "Could not allocate memory for the zeros matrix."
+    end if
+
+    Z = 0.0d0
+end subroutine
+
+
+!
 ! Generates Ones matrix
 !
 subroutine ones1(rows, O)
@@ -646,5 +687,148 @@ subroutine ones3(rows, cols, stacks, O)
     O = 1.0d0
 end subroutine
 
+
+!
+! Generates Ones matrix
+!
+subroutine ones4(rows, cols, stacks, boxes, O)
+    implicit none
+    integer :: rows, cols, stacks, boxes, alloc_error
+    double precision, dimension(:, :, :, :), pointer :: O
+
+    if (associated(O)) then
+        stop "The ones matrix already has been assigned space in the heap."
+    endif
+
+    allocate(O(rows, cols, stacks, boxes), stat=alloc_error)
+
+    if (alloc_error /= 0) then
+        stop "Could not allocate memory for the ones matrix."
+    end if
+
+    O = 1.0d0
+end subroutine
+
+!
+! Matrix pointwise inverse
+!
+subroutine pinverse1(amatrix, bmatrix)
+    double precision, dimension(:), pointer :: amatrix
+    double precision, dimension(:), pointer :: bmatrix
+
+
+    bmatrix = 1.0d0 / amatrix
+end subroutine pinverse1
+
+!
+! Matrix pointwise inverse
+!
+subroutine pinverse2(amatrix, bmatrix)
+    double precision, dimension(:,:), pointer :: amatrix
+    double precision, dimension(:,:), pointer :: bmatrix
+
+
+    bmatrix = 1.0d0 / amatrix
+end subroutine pinverse2
+
+!
+! Matrix pointwise inverse
+!
+subroutine pinverse3(amatrix, bmatrix)
+    double precision, dimension(:,:,:), pointer :: amatrix
+    double precision, dimension(:,:,:), pointer :: bmatrix
+
+
+    bmatrix = 1.0d0 / amatrix
+end subroutine pinverse3
+
+!
+! Matrix pointwise inverse
+!
+subroutine pinverse4(amatrix, bmatrix)
+    double precision, dimension(:,:,:,:), pointer :: amatrix
+    double precision, dimension(:,:,:,:), pointer :: bmatrix
+
+
+    bmatrix = 1.0d0 / amatrix
+end subroutine pinverse4
+
+!
+! Reshape a 2d matrix to a 1D array
+!
+subroutine myreshape_2_1(amatrix, bmatrix)
+    integer :: i, j, k
+    double precision, dimension(:,:) :: amatrix
+    double precision, dimension(:) :: bmatrix
+
+    k = 0
+
+    do i = 1, size(amatrix, 1)
+        do j = 1, size(amatrix, 2)
+            k = k + 1
+            bmatrix(k) = amatrix(i, j)
+        end do
+    end do
+end subroutine
+
+
+!
+! Reshape a 1d matrix to a 2D array
+!
+subroutine myreshape_1_2(amatrix, bmatrix)
+    integer :: i, j, k
+    double precision, dimension(:) :: amatrix
+    double precision, dimension(:,:) :: bmatrix
+
+    k = 0
+
+    do i = 1, size(bmatrix, 1)
+        do j = 1, size(bmatrix, 2)
+            k = k + 1
+            bmatrix(i, j) = amatrix(k)
+        end do
+    end do
+end subroutine
+
+!
+! Reshape a 3d matrix to a 1D array
+!
+subroutine myreshape_3_1(amatrix, bmatrix)
+    integer :: i, j, k, l
+    double precision, dimension(:,:,:) :: amatrix
+    double precision, dimension(:) :: bmatrix
+
+    l = 0
+
+    do i = 1, size(amatrix, 1)
+        do j = 1, size(amatrix, 2)
+            do k = 1, size(amatrix, 3)
+                l = l + 1
+                bmatrix(l) = amatrix(i, j, k)
+            end do
+        end do
+    end do
+end subroutine
+
+
+!
+! Reshape a 1d matrix to a 3D array
+!
+subroutine myreshape_1_3(amatrix, bmatrix)
+    integer :: i, j, k, l
+    double precision, dimension(:) :: amatrix
+    double precision, dimension(:,:,:) :: bmatrix
+
+    l = 0
+
+    do i = 1, size(bmatrix, 1)
+        do j = 1, size(bmatrix, 2)
+            do k = 1, size(bmatrix, 3)
+                l = l + 1
+                bmatrix(i, j, k) = amatrix(l)
+            end do
+        end do
+    end do
+end subroutine
 
 end module sparse_matrix

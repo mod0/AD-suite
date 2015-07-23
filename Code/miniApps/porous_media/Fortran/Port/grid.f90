@@ -1,6 +1,7 @@
 module grid
     integer :: Nx_, Ny_, Nz_
     double precision :: hx_, hy_, hz_, V_
+    double precision, dimension(:,:,:,:), pointer :: K_  ! Permeabilities
 
     parameter(Nx_ = 60, &                   ! Dimension in x-direction
               Ny_ = 220, &                  ! Dimension in y-direction
