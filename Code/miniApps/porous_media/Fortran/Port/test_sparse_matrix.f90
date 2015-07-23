@@ -1,5 +1,5 @@
 program test_sparse_matrix
-    use sparse_matrix
+    use matrix
     implicit none
 
     integer, dimension(3) :: idiags
@@ -79,13 +79,13 @@ program test_sparse_matrix
 
 
     ! free sparse matrices
-    call free_spmat(matA)
-    call free_spmat(matB)
-    call free_spmat(matC)
-    call free_spmat(matD)
-    call free_spmat(matE)
-    call free_spmat(matF)
-    call free_spmat(matG)
-    call free_spmat(matH)
+    call free_mat(matA)
+    call free_mat(matB)
+    call free_mat(matC)
+    call free_mat(matD)
+    call free_mat(matE)
+    call free_mat(matF)
+    call free_mat(matG)
+    call free_mat(matH)
 end program
 

@@ -1,8 +1,8 @@
-module sparse_matrix
+module matrix
     implicit none
 
     ! export module interface
-    public :: zeros, ones
+    public :: zeros, ones, free_mat, pinverse, myreshape
 
     !
     ! The sparse matrix format
@@ -51,6 +51,16 @@ module sparse_matrix
         module procedure myreshape_1_3
         module procedure myreshape_3_1
     end interface myreshape
+
+    ! Common interface for all free functions
+    interface free_mat
+        module procedure free_mat1
+        module procedure free_mat2
+        module procedure free_mat3
+        module procedure free_mat4
+        module procedure free_spmat
+    end interface free_mat
+
 contains
 
 
@@ -769,8 +779,8 @@ subroutine myreshape_2_1(amatrix, bmatrix)
 
     k = 0
 
-    do i = 1, size(amatrix, 1)
-        do j = 1, size(amatrix, 2)
+    do j = 1, size(amatrix, 2)
+        do i = 1, size(amatrix, 1)
             k = k + 1
             bmatrix(k) = amatrix(i, j)
         end do
@@ -788,8 +798,8 @@ subroutine myreshape_1_2(amatrix, bmatrix)
 
     k = 0
 
-    do i = 1, size(bmatrix, 1)
-        do j = 1, size(bmatrix, 2)
+    do j = 1, size(bmatrix, 2)
+        do i = 1, size(bmatrix, 1)
             k = k + 1
             bmatrix(i, j) = amatrix(k)
         end do
@@ -806,9 +816,9 @@ subroutine myreshape_3_1(amatrix, bmatrix)
 
     l = 0
 
-    do i = 1, size(amatrix, 1)
+    do k = 1, size(amatrix, 3)
         do j = 1, size(amatrix, 2)
-            do k = 1, size(amatrix, 3)
+            do i = 1, size(amatrix, 1)
                 l = l + 1
                 bmatrix(l) = amatrix(i, j, k)
             end do
@@ -827,9 +837,9 @@ subroutine myreshape_1_3(amatrix, bmatrix)
 
     l = 0
 
-    do i = 1, size(bmatrix, 1)
+    do k = 1, size(bmatrix, 3)
         do j = 1, size(bmatrix, 2)
-            do k = 1, size(bmatrix, 3)
+            do i = 1, size(bmatrix, 1)
                 l = l + 1
                 bmatrix(i, j, k) = amatrix(l)
             end do
@@ -837,4 +847,69 @@ subroutine myreshape_1_3(amatrix, bmatrix)
     end do
 end subroutine
 
-end module sparse_matrix
+
+!
+! Check that the matrix is associated and free it.
+!
+subroutine free_mat1(amatrix)
+    integer :: dealloc_err
+    double precision, dimension(:), pointer :: amatrix
+
+     if (associated(amatrix)) then
+        deallocate(amatrix, stat = dealloc_err)
+
+        if (dealloc_err /= 0) then
+           stop "Could not deallocate memory for 1D matrix"
+        end if
+    end if
+end subroutine free_mat1
+
+!
+! Check that the matrix is associated and free it.
+!
+subroutine free_mat2(amatrix)
+    integer :: dealloc_err
+    double precision, dimension(:,:), pointer :: amatrix
+
+     if (associated(amatrix)) then
+        deallocate(amatrix, stat = dealloc_err)
+
+        if (dealloc_err /= 0) then
+           stop "Could not deallocate memory for 2D matrix"
+        end if
+    end if
+end subroutine free_mat2
+
+!
+! Check that the matrix is associated and free it.
+!
+subroutine free_mat3(amatrix)
+    integer :: dealloc_err
+    double precision, dimension(:,:,:), pointer :: amatrix
+
+     if (associated(amatrix)) then
+        deallocate(amatrix, stat = dealloc_err)
+
+        if (dealloc_err /= 0) then
+           stop "Could not deallocate memory for 3D matrix"
+        end if
+    end if
+end subroutine free_mat3
+
+!
+! Check that the matrix is associated and free it.
+!
+subroutine free_mat4(amatrix)
+    integer :: dealloc_err
+    double precision, dimension(:,:,:,:), pointer :: amatrix
+
+     if (associated(amatrix)) then
+        deallocate(amatrix, stat = dealloc_err)
+
+        if (dealloc_err /= 0) then
+           stop "Could not deallocate memory for 4D matrix"
+        end if
+    end if
+end subroutine free_mat4
+
+end module matrix
