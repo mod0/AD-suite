@@ -219,22 +219,21 @@ subroutine free_spmat(imatrix)
     end if
 end subroutine
 
-!
-! Common matrix operations need to be implemented.
-! i)  inc/dec the elements of the matrix by some quantity
-! ii) Add/Sub two matrices (account for fill in? Heck no.)
-! iii) Multiply two matrices - 2 sparse matrices (fill in? Heck no.)
-! iv) Sparse linear solve.
-!
 
-subroutine addx(imatrix, x)
+!
+! Subroutine adds x to a particular element.
+!
+subroutine addx_elem(imatrix, x, row, col)
     implicit none
-    integer :: i
+    integer :: i, row, col
     type(spmat) :: imatrix
     double precision :: x
 
     do i = 1,imatrix%nnz
-        imatrix%values(i) = imatrix%values(i) + x
+        if(imatrix%row_index(i) == row .and. imatrix%col_index(i) == col) then
+            imatrix%values(i) = imatrix%values(i) + x
+            exit
+        end if
     end do
 end subroutine
 
