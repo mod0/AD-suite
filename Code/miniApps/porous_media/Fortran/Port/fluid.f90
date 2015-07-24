@@ -1,9 +1,9 @@
 module fluid
-    double precision :: vw, vo, swc, sor
+    double precision :: vw_, vo_, swc_, sor_
 
-    parameter(vw = 3d-4, &      ! Viscosity
-              vo = 3d-3, &      ! Viscosity
-              swc = 0.2d0, &    ! Saturation
-              sor = 0.2d0)      ! Saturation
+    parameter(vw_ = 3d-4, &      ! Viscosity
+              vo_ = 3d-3, &      ! Viscosity
+              swc_ = 0.2d0, &    ! Saturation
+              sor_ = 0.2d0)      ! Saturation
 
 end module fluid

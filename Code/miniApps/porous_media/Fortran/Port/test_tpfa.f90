@@ -27,12 +27,15 @@ program test_tpfa
 
     ! setup P and V
     call zeros(Nx_, Ny_, Nz_, P)
+
+    ! note that V vector has to be assigned like
+    ! this
     call zeros(3, Nx_ + 1, Ny_ + 1, Nz_ + 1, V)
 
     Q(1) = 1
     Q(N_) = -1
 
-    call tpfa(Q, P, V)
+    call tpfa(K_, Q, P, V)
 
     ! write the solution
     write(unit=p_filenum) P

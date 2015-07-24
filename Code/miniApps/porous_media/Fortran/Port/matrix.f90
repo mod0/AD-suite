@@ -50,6 +50,8 @@ module matrix
         module procedure myreshape_2_1
         module procedure myreshape_1_3
         module procedure myreshape_3_1
+        module procedure myreshape_1_4
+        module procedure myreshape_4_1
     end interface myreshape
 
     ! Common interface for all free functions
@@ -728,6 +730,7 @@ end subroutine
 ! Matrix pointwise inverse
 !
 subroutine pinverse1(amatrix, bmatrix)
+    implicit none
     double precision, dimension(:), pointer :: amatrix
     double precision, dimension(:), pointer :: bmatrix
 
@@ -739,6 +742,7 @@ end subroutine pinverse1
 ! Matrix pointwise inverse
 !
 subroutine pinverse2(amatrix, bmatrix)
+    implicit none
     double precision, dimension(:,:), pointer :: amatrix
     double precision, dimension(:,:), pointer :: bmatrix
 
@@ -750,6 +754,7 @@ end subroutine pinverse2
 ! Matrix pointwise inverse
 !
 subroutine pinverse3(amatrix, bmatrix)
+    implicit none
     double precision, dimension(:,:,:), pointer :: amatrix
     double precision, dimension(:,:,:), pointer :: bmatrix
 
@@ -761,6 +766,7 @@ end subroutine pinverse3
 ! Matrix pointwise inverse
 !
 subroutine pinverse4(amatrix, bmatrix)
+    implicit none
     double precision, dimension(:,:,:,:), pointer :: amatrix
     double precision, dimension(:,:,:,:), pointer :: bmatrix
 
@@ -772,6 +778,7 @@ end subroutine pinverse4
 ! Reshape a 2d matrix to a 1D array
 !
 subroutine myreshape_2_1(amatrix, bmatrix)
+    implicit none
     integer :: i, j, k
     double precision, dimension(:,:) :: amatrix
     double precision, dimension(:) :: bmatrix
@@ -791,6 +798,7 @@ end subroutine
 ! Reshape a 1d matrix to a 2D array
 !
 subroutine myreshape_1_2(amatrix, bmatrix)
+    implicit none
     integer :: i, j, k
     double precision, dimension(:) :: amatrix
     double precision, dimension(:,:) :: bmatrix
@@ -809,6 +817,7 @@ end subroutine
 ! Reshape a 3d matrix to a 1D array
 !
 subroutine myreshape_3_1(amatrix, bmatrix)
+    implicit none
     integer :: i, j, k, l
     double precision, dimension(:,:,:) :: amatrix
     double precision, dimension(:) :: bmatrix
@@ -830,6 +839,7 @@ end subroutine
 ! Reshape a 1d matrix to a 3D array
 !
 subroutine myreshape_1_3(amatrix, bmatrix)
+    implicit none
     integer :: i, j, k, l
     double precision, dimension(:) :: amatrix
     double precision, dimension(:,:,:) :: bmatrix
@@ -848,9 +858,58 @@ end subroutine
 
 
 !
+! Reshape a 1d matrix to a 4D array
+!
+subroutine myreshape_4_1(amatrix, bmatrix)
+    implicit none
+    integer :: i, j, k, l, m
+    double precision, dimension(:,:,:,:) :: amatrix
+    double precision, dimension(:) :: bmatrix
+
+    m = 0
+
+    do l = 1, size(amatrix, 4)
+        do k = 1, size(amatrix, 3)
+            do j = 1, size(amatrix, 2)
+                do i = 1, size(amatrix, 1)
+                    m = m + 1
+                    bmatrix(m) = amatrix(i, j, k, l)
+                end do
+            end do
+        end do
+    end do
+end subroutine
+
+
+!
+! Reshape a 1d matrix to a 4D array
+!
+subroutine myreshape_1_4(amatrix, bmatrix)
+    implicit none
+    integer :: i, j, k, l, m
+    double precision, dimension(:) :: amatrix
+    double precision, dimension(:,:,:,:) :: bmatrix
+
+    m = 0
+
+    do l = 1, size(bmatrix, 4)
+        do k = 1, size(bmatrix, 3)
+            do j = 1, size(bmatrix, 2)
+                do i = 1, size(bmatrix, 1)
+                    m = m + 1
+                    bmatrix(i, j, k, l) = amatrix(m)
+                end do
+            end do
+        end do
+    end do
+end subroutine
+
+
+!
 ! Check that the matrix is associated and free it.
 !
 subroutine free_mat1(amatrix)
+    implicit none
     integer :: dealloc_err
     double precision, dimension(:), pointer :: amatrix
 
@@ -867,6 +926,7 @@ end subroutine free_mat1
 ! Check that the matrix is associated and free it.
 !
 subroutine free_mat2(amatrix)
+    implicit none
     integer :: dealloc_err
     double precision, dimension(:,:), pointer :: amatrix
 
@@ -883,6 +943,7 @@ end subroutine free_mat2
 ! Check that the matrix is associated and free it.
 !
 subroutine free_mat3(amatrix)
+    implicit none
     integer :: dealloc_err
     double precision, dimension(:,:,:), pointer :: amatrix
 
@@ -899,6 +960,7 @@ end subroutine free_mat3
 ! Check that the matrix is associated and free it.
 !
 subroutine free_mat4(amatrix)
+    implicit none
     integer :: dealloc_err
     double precision, dimension(:,:,:,:), pointer :: amatrix
 
