@@ -37,7 +37,7 @@ contains
             x_old = x
 
             ! start x at 0.0
-            x = 0.0d0
+            x = b
 
             do j = 1, A%nnz
                 ! Not the main diagonal
@@ -52,7 +52,7 @@ contains
             end do
 
             ! add the right hand side and divide by the diagonal entries
-            x = (x + b)/main_diag
+            x = x/main_diag
 
             ! get the norm
             call dnrm2((x - x_old), A%rows, nrm)
