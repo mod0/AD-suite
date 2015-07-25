@@ -2,7 +2,7 @@ module matrix
     implicit none
 
     ! export module interface
-    public :: zeros, ones, free_mat, pinverse, myreshape, free_mat, add_x
+    public :: zeros, ones, free_mat, pinverse, myreshape, add_x, spmat_multiply
 
     !
     ! The sparse matrix format
@@ -72,9 +72,12 @@ module matrix
     ! Common interface to multiply SPMAT with other vectors, diagonal matrices.
     ! SPMAT * SPMAT is currently not implemented as arbitrary fill-ins are
     ! not implemented.
+    ! SPMAT * MAT }- These can be implemented by repeatedly calling
+    ! MAT * SPMAT }- the vector versions of the method.
     interface spmat_multiply
         module procedure spmat_multiply_diagonal
-        module procedure diagonal_multiply_spmat
+        module procedure spmat_multiply_vector
+        module procedure scalar_multiply_spmat
     end interface
 
 contains
@@ -1015,11 +1018,12 @@ end subroutine free_mat4
 !
 ! This routine pre-multiplies a diagonal matrix by a sparse matrix
 !
-subroutine spmat_multiply_diagonal(amatrix, dmatrix, rmatrix)
+subroutine spmat_multiply_diagonal(amatrix, dmatrix, rmatrix, order)
     implicit none
     integer :: i, alloc_err
     type(spmat) :: amatrix, rmatrix
     double precision, dimension(:) :: dmatrix
+    character(len = 3) :: order
 
     ! Ensure rmatrix fields are unallocated
     if (associated(rmatrix%row_index) .or. &
@@ -1039,23 +1043,62 @@ subroutine spmat_multiply_diagonal(amatrix, dmatrix, rmatrix)
     rmatrix%rows = amatrix%rows
     rmatrix%columns = amatrix%columns
 
-    do i = 1,amatrix%nnz
-        rmatrix%row_index(i) = amatrix%row_index(i)
-        rmatrix%col_index(i) = amatrix%col_index(i)
-        ! take combination of columns of amatrix
-        rmatrix%values(i) = amatrix%values(i) * dmatrix(amatrix%col_index(i))
-    end do
+    if (order == "PRE") then
+        do i = 1,amatrix%nnz
+            rmatrix%row_index(i) = amatrix%row_index(i)
+            rmatrix%col_index(i) = amatrix%col_index(i)
+            ! take combination of columns of amatrix
+            rmatrix%values(i) = amatrix%values(i) * dmatrix(amatrix%col_index(i))
+        end do
+    else if (order == "POS") then
+        do i = 1,amatrix%nnz
+            rmatrix%row_index(i) = amatrix%row_index(i)
+            rmatrix%col_index(i) = amatrix%col_index(i)
+            ! take combination of rows of amatrix
+            rmatrix%values(i) = amatrix%values(i) * dmatrix(amatrix%row_index(i))
+        end do
+    end if
 end subroutine spmat_multiply_diagonal
 
 
+
 !
-! This routine pre-multiplies a sparse matrix by a diagonal matrix
+! The routine multiplies a vector by a sparse matrix (PRE/POST)
 !
-subroutine diagonal_multiply_spmat(dmatrix, amatrix, rmatrix)
+subroutine spmat_multiply_vector(amatrix, bvector, cvector, order)
     implicit none
-    integer :: i, alloc_err
+    integer :: i
+    type(spmat) :: amatrix
+    double precision, dimension(:) :: bvector, cvector
+    character(len=3):: order
+
+    cvector = 0.0d0
+
+    if (order == "PRE") then
+        do i = 1,amatrix%nnz
+            ! Combination of the columns of amatrix
+            cvector(amatrix%row_index(i)) = cvector(amatrix%row_index(i)) &
+                                + amatrix%values(i) * bvector(amatrix%col_index(i))
+        end do
+    else if (order == "POS") then
+        do i = 1,amatrix%nnz
+            ! Combination of the rows of amatrix
+            cvector(amatrix%col_index(i)) = cvector(amatrix%col_index(i)) &
+                                + amatrix%values(i) * bvector(amatrix%row_index(i))
+        end do
+    end if
+end subroutine spmat_multiply_vector
+
+
+!
+! This routine multiplies each element of the SPMAT
+! by a scalar.
+!
+subroutine scalar_multiply_spmat(amatrix, scalar, rmatrix)
+    implicit none
+    integer:: i, alloc_err
+    double precision :: scalar
     type(spmat) :: amatrix, rmatrix
-    double precision, dimension(:) :: dmatrix
 
     ! Ensure rmatrix fields are unallocated
     if (associated(rmatrix%row_index) .or. &
@@ -1078,10 +1121,8 @@ subroutine diagonal_multiply_spmat(dmatrix, amatrix, rmatrix)
     do i = 1,amatrix%nnz
         rmatrix%row_index(i) = amatrix%row_index(i)
         rmatrix%col_index(i) = amatrix%col_index(i)
-        ! take combination of columns of amatrix
-        rmatrix%values(i) = amatrix%values(i) * dmatrix(amatrix%row_index(i))
+        rmatrix%values(i) = scalar * amatrix%values(i)
     end do
-end subroutine diagonal_multiply_spmat
-
+end subroutine
 
 end module matrix
