@@ -1,6 +1,7 @@
 module grid
     integer :: Nx_, Ny_, Nz_, N_
     double precision :: hx_, hy_, hz_, V_
+    double precision, dimension(:), pointer :: Por_      ! Porosities
     double precision, dimension(:,:,:,:), pointer :: K_  ! Permeabilities
 
     parameter(Nx_ = 8, &                  ! Dimension in x-direction

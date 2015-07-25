@@ -7,14 +7,53 @@ use linsolve
 implicit none
 contains
 
+!
+! Performs Newton Raphson to solve for saturations
+!
+subroutine NewtRaph(S, V, Q, St)
+    implicit none
+    double precision :: St                             ! Maximum saturation Time Step
+    double precision, dimension(:) :: S, Q
+    double precision, dimension(:,:,:,:) :: V
+
+    type(spmat) :: A, B
+    logical :: converged
+    double precision :: ts_scalingfactor, dt
+    double precision, dimension(N_) :: S_copy, S_iter_copy, dtx, fi, fw, Mw, &
+                                       Mo, dMw, dMo, dF, dG, G, dS
+
+
+
+    ! not yet converged
+    converged = .false.
+
+    ! Assemble system matrix
+    call GenA(V, Q, A)
+
+    ! copy S over
+    S_copy = S
+
+    ! set scaling factor
+    ts_scalingfactor = 0.0d0
+
+    do while(.not. converged)
+        dt = St/(2.0d0**ts_scalingfactor)
+        dtx = dt/(V_ * Por_)
+        fi = max(Q, 0.0d0) * dtx
+
+
+
+    end do
+
+end subroutine NewtRaph
 
 !
 ! Pressure Solver
 !
 subroutine Pres(S, Q, P, V)
-    double precision, dimension(:), pointer :: S, Q
-    double precision, dimension(:,:,:), pointer :: P
-    double precision, dimension(:,:,:,:), pointer :: V
+    double precision, dimension(:) :: S, Q
+    double precision, dimension(:,:,:) :: P
+    double precision, dimension(:,:,:,:) :: V
 
     double precision, dimension(3 * N_) :: M
     double precision, dimension(3, Nx_, Ny_, Nz_) :: KM
@@ -27,6 +66,7 @@ subroutine Pres(S, Q, P, V)
 
     call myreshape(M, KM)
 
+    ! point-wise multiply
     KM = KM * K_
 
     call tpfa(KM, Q, P, V)

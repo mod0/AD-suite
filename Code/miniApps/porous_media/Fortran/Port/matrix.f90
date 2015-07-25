@@ -2,7 +2,7 @@ module matrix
     implicit none
 
     ! export module interface
-    public :: zeros, ones, free_mat, pinverse, myreshape
+    public :: zeros, ones, free_mat, pinverse, myreshape, free_mat, add_x
 
     !
     ! The sparse matrix format
@@ -62,6 +62,20 @@ module matrix
         module procedure free_mat4
         module procedure free_spmat
     end interface free_mat
+
+    ! Common interface for all add methods to spmat
+    interface add_x
+        module procedure addx_elem
+        module procedure addx_diagonal
+    end interface add_x
+
+    ! Common interface to multiply SPMAT with other vectors, diagonal matrices.
+    ! SPMAT * SPMAT is currently not implemented as arbitrary fill-ins are
+    ! not implemented.
+    interface spmat_multiply
+        module procedure spmat_multiply_diagonal
+        module procedure diagonal_multiply_spmat
+    end interface
 
 contains
 
@@ -224,6 +238,10 @@ end subroutine
 
 !
 ! Subroutine adds x to a particular element.
+! This subroutine is a bit flawed because at the time of construction of SPMAT
+! , for other than the main diagonal, entries are skipped if they are 0.0 in
+! the column matrix. Further the element may be non-existent. Structure of
+! SPMAT has to be changed to allow arbitrary fill-ins.
 !
 subroutine addx_elem(imatrix, x, row, col)
     implicit none
@@ -235,6 +253,26 @@ subroutine addx_elem(imatrix, x, row, col)
         if(imatrix%row_index(i) == row .and. imatrix%col_index(i) == col) then
             imatrix%values(i) = imatrix%values(i) + x
             exit
+        end if
+    end do
+end subroutine
+
+
+!
+! Subroutine adds x to a particular diagonal
+! This subroutine is a bit flawed because at the time of construction of SPMAT
+! , for other than the main diagonal, entries are skipped if they are 0.0 in
+! the column matrix
+!
+subroutine addx_diagonal(imatrix, x, diag)
+    implicit none
+    integer :: i, diag
+    type(spmat) :: imatrix
+    double precision :: x
+
+    do i = 1,imatrix%nnz
+        if(imatrix%col_index(i) - imatrix%row_index(i) == diag) then
+            imatrix%values(i) = imatrix%values(i) + x
         end if
     end do
 end subroutine
@@ -972,5 +1010,78 @@ subroutine free_mat4(amatrix)
         end if
     end if
 end subroutine free_mat4
+
+
+!
+! This routine pre-multiplies a diagonal matrix by a sparse matrix
+!
+subroutine spmat_multiply_diagonal(amatrix, dmatrix, rmatrix)
+    implicit none
+    integer :: i, alloc_err
+    type(spmat) :: amatrix, rmatrix
+    double precision, dimension(:) :: dmatrix
+
+    ! Ensure rmatrix fields are unallocated
+    if (associated(rmatrix%row_index) .or. &
+        associated(rmatrix%col_index) .or. &
+        associated(rmatrix%values)) then
+        stop "The output matrix has already been allocated space in the heap."
+    end if
+
+    allocate(rmatrix%row_index(amatrix%nnz), rmatrix%col_index(amatrix%nnz), &
+             rmatrix%values(amatrix%nnz), stat = alloc_err)
+
+    if (alloc_err /= 0) then
+        stop "Could not allocate memory for the sparse matrix."
+    end if
+
+    rmatrix%nnz = amatrix%nnz
+    rmatrix%rows = amatrix%rows
+    rmatrix%columns = amatrix%columns
+
+    do i = 1,amatrix%nnz
+        rmatrix%row_index(i) = amatrix%row_index(i)
+        rmatrix%col_index(i) = amatrix%col_index(i)
+        ! take combination of columns of amatrix
+        rmatrix%values(i) = amatrix%values(i) * dmatrix(amatrix%col_index(i))
+    end do
+end subroutine spmat_multiply_diagonal
+
+
+!
+! This routine pre-multiplies a sparse matrix by a diagonal matrix
+!
+subroutine diagonal_multiply_spmat(dmatrix, amatrix, rmatrix)
+    implicit none
+    integer :: i, alloc_err
+    type(spmat) :: amatrix, rmatrix
+    double precision, dimension(:) :: dmatrix
+
+    ! Ensure rmatrix fields are unallocated
+    if (associated(rmatrix%row_index) .or. &
+        associated(rmatrix%col_index) .or. &
+        associated(rmatrix%values)) then
+        stop "The output matrix has already been allocated space in the heap."
+    end if
+
+    allocate(rmatrix%row_index(amatrix%nnz), rmatrix%col_index(amatrix%nnz), &
+             rmatrix%values(amatrix%nnz), stat = alloc_err)
+
+    if (alloc_err /= 0) then
+        stop "Could not allocate memory for the sparse matrix."
+    end if
+
+    rmatrix%nnz = amatrix%nnz
+    rmatrix%rows = amatrix%rows
+    rmatrix%columns = amatrix%columns
+
+    do i = 1,amatrix%nnz
+        rmatrix%row_index(i) = amatrix%row_index(i)
+        rmatrix%col_index(i) = amatrix%col_index(i)
+        ! take combination of columns of amatrix
+        rmatrix%values(i) = amatrix%values(i) * dmatrix(amatrix%row_index(i))
+    end do
+end subroutine diagonal_multiply_spmat
+
 
 end module matrix

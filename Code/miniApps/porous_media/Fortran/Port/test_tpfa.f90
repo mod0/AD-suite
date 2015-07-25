@@ -28,8 +28,8 @@ program test_tpfa
     ! setup P and V
     call zeros(Nx_, Ny_, Nz_, P)
 
-    ! note that V vector has to be assigned like
-    ! this
+    ! note that V vector has an additional
+    ! length in each dimension x,y,z
     call zeros(3, Nx_ + 1, Ny_ + 1, Nz_ + 1, V)
 
     Q(1) = 1
