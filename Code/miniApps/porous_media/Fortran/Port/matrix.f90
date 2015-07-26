@@ -1026,22 +1026,20 @@ subroutine spmat_multiply_diagonal(amatrix, dmatrix, rmatrix, order)
     character(len = 3) :: order
 
     ! Ensure rmatrix fields are unallocated
-    if (associated(rmatrix%row_index) .or. &
-        associated(rmatrix%col_index) .or. &
-        associated(rmatrix%values)) then
-        stop "The output matrix has already been allocated space in the heap."
+    if (.not.(associated(rmatrix%row_index) .or. &
+              associated(rmatrix%col_index) .or. &
+              associated(rmatrix%values))) then
+        allocate(rmatrix%row_index(amatrix%nnz), rmatrix%col_index(amatrix%nnz), &
+                 rmatrix%values(amatrix%nnz), stat = alloc_err)
+
+        if (alloc_err /= 0) then
+            stop "Could not allocate memory for the sparse matrix."
+        end if
+
+        rmatrix%nnz = amatrix%nnz
+        rmatrix%rows = amatrix%rows
+        rmatrix%columns = amatrix%columns
     end if
-
-    allocate(rmatrix%row_index(amatrix%nnz), rmatrix%col_index(amatrix%nnz), &
-             rmatrix%values(amatrix%nnz), stat = alloc_err)
-
-    if (alloc_err /= 0) then
-        stop "Could not allocate memory for the sparse matrix."
-    end if
-
-    rmatrix%nnz = amatrix%nnz
-    rmatrix%rows = amatrix%rows
-    rmatrix%columns = amatrix%columns
 
     if (order == "PRE") then
         do i = 1,amatrix%nnz
@@ -1093,6 +1091,7 @@ end subroutine spmat_multiply_vector
 !
 ! This routine multiplies each element of the SPMAT
 ! by a scalar.
+! Allows amatrix to be the same as rmatrix
 !
 subroutine scalar_multiply_spmat(amatrix, scalar, rmatrix)
     implicit none
@@ -1101,22 +1100,21 @@ subroutine scalar_multiply_spmat(amatrix, scalar, rmatrix)
     type(spmat) :: amatrix, rmatrix
 
     ! Ensure rmatrix fields are unallocated
-    if (associated(rmatrix%row_index) .or. &
-        associated(rmatrix%col_index) .or. &
-        associated(rmatrix%values)) then
-        stop "The output matrix has already been allocated space in the heap."
-    end if
+    if (.not.(associated(rmatrix%row_index) .or. &
+              associated(rmatrix%col_index) .or. &
+              associated(rmatrix%values))) then
 
-    allocate(rmatrix%row_index(amatrix%nnz), rmatrix%col_index(amatrix%nnz), &
+        allocate(rmatrix%row_index(amatrix%nnz), rmatrix%col_index(amatrix%nnz), &
              rmatrix%values(amatrix%nnz), stat = alloc_err)
 
-    if (alloc_err /= 0) then
-        stop "Could not allocate memory for the sparse matrix."
-    end if
+        if (alloc_err /= 0) then
+            stop "Could not allocate memory for the sparse matrix."
+        end if
 
-    rmatrix%nnz = amatrix%nnz
-    rmatrix%rows = amatrix%rows
-    rmatrix%columns = amatrix%columns
+        rmatrix%nnz = amatrix%nnz
+        rmatrix%rows = amatrix%rows
+        rmatrix%columns = amatrix%columns
+    end if
 
     do i = 1,amatrix%nnz
         rmatrix%row_index(i) = amatrix%row_index(i)

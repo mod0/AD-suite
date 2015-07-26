@@ -3,8 +3,14 @@ use grid
 use fluid
 use matrix
 use linsolve
+use mathutil
 
 implicit none
+
+interface RelPerm
+    module procedure RelPerm_scalar
+    module procedure RelPerm_vector
+end interface RelPerm
 contains
 
 !
@@ -16,13 +22,17 @@ subroutine NewtRaph(S, V, Q, St)
     double precision, dimension(:) :: S, Q
     double precision, dimension(:,:,:,:) :: V
 
-    type(spmat) :: A, B
+    integer :: i, j, it
+    type(spmat) :: A, B, dG
     logical :: converged
-    double precision :: ts_scalingfactor, dt
+    double precision :: dt, dsn
     double precision, dimension(N_) :: S_copy, S_iter_copy, dtx, fi, fw, Mw, &
-                                       Mo, dMw, dMo, dF, dG, G, dS
+                                       Mo, dMw, dMo, dF, G, dS, bfw
 
-
+    ! nullify the fields of A, B, dG
+    nullify(A%row_index, A%col_index, A%values, &
+            B%row_index, B%col_index, B%values, &
+            dG%row_index, dG%col_index, dG%values)
 
     ! not yet converged
     converged = .false.
@@ -34,17 +44,59 @@ subroutine NewtRaph(S, V, Q, St)
     S_copy = S
 
     ! set scaling factor
-    ts_scalingfactor = 0.0d0
+    it = 0.0d0
 
     do while(.not. converged)
-        dt = St/(2.0d0**ts_scalingfactor)
+        dt = St/(2**it)
         dtx = dt/(V_ * Por_)
         fi = max(Q, 0.0d0) * dtx
 
+        call spmat_multiply(A, dtx, B, "POS")
 
+        i = 0
 
+        ! This loop is very badly implemented in the original MATLAB code
+        do while (i < 2**it)
+            j = 0
+            i = i + 1
+            dsn = 1.0d0
+            S_iter_copy = S
+
+            do while (dsn > 1.0d-3 .and. j < 10)
+                call RelPerm(S, Mw, Mo, dMw, dMo)
+                dF = dMw/(Mw + Mo) - (Mw/((Mw + Mo)**2) * (dMw + dMo))
+
+                call spmat_multiply(B, dF, dG, "PRE")
+                call addx_diagonal(dG, -1.0d0, 0)
+
+                fw = Mw / (Mw + Mo)
+                call spmat_multiply(B, fw, bfw, "PRE")
+
+                G = S - S_iter_copy - bfw - fi
+
+                call solve(dG, G, dS)
+                S = S + dS
+                call dnrm2(dS, N_, dsn)
+
+                j = j + 1
+            end do
+
+            if (dsn > 1.0d-3) then
+                i = 2**it               ! Breaks out of while loop.
+                S = S_copy
+            end if
+        end do
+
+        if (dsn < 1.0d-3) then
+            converged = .true.
+        else
+            it = it + 1
+        end if
     end do
 
+    call free_mat(A)
+    call free_mat(B)
+    call free_mat(dG)
 end subroutine NewtRaph
 
 !
@@ -76,7 +128,7 @@ end subroutine
 !
 ! Relative Permeabilities
 !
-subroutine RelPerm(S, Mw, Mo, dMw, dMo)
+subroutine RelPerm_vector(S, Mw, Mo, dMw, dMo)
     implicit none
     double precision, dimension(:) :: S, Mw, Mo
     double precision, dimension(:), optional :: dMw, dMo
@@ -91,7 +143,27 @@ subroutine RelPerm(S, Mw, Mo, dMw, dMo)
         dMw = 2 * S_/vw_/(1 - swc_ - sor_)
         dMo = -2 * (1 - S_)/vo_/(1 - swc_ - sor_)
     endif
-end subroutine RelPerm
+end subroutine RelPerm_vector
+
+!
+! Relative Permeabilities
+!
+subroutine RelPerm_scalar(S, Mw, Mo, dMw, dMo)
+    implicit none
+    double precision :: S, Mw, Mo
+    double precision, optional :: dMw, dMo
+
+    double precision :: S_
+
+    S_ = (S - swc_)/(1.0d0 - swc_ - sor_)   ! rescale saturation
+    Mw = S_**2/vw_
+    Mo = (1 - S_)**2/vo_
+
+    if (present(dMo) .and. present(dMw)) then
+        dMw = 2 * S_/vw_/(1 - swc_ - sor_)
+        dMo = -2 * (1 - S_)/vo_/(1 - swc_ - sor_)
+    endif
+end subroutine RelPerm_scalar
 
 !
 ! Generate A matrix

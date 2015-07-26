@@ -1,5 +1,6 @@
 module linsolve
 use matrix
+use mathutil
 
 implicit none
 
@@ -35,7 +36,7 @@ subroutine sparse_jacobi_method(A, b, x)
     double precision :: nrm
     double precision, dimension(A%rows) :: b, x, x_old, main_diag
 
-    do i = 1, 10000       ! Max iterations
+    do i = 1, 5000      ! Max iterations
         ! start with old x
         x_old = x
 
@@ -67,37 +68,9 @@ subroutine sparse_jacobi_method(A, b, x)
         end if
     end do
 
-    print *, "Iteration count: ", i
+    if (i > 5000) then
+        print *, "Norm: ", nrm
+    end if
 end subroutine sparse_jacobi_method
 
-!
-! Subroutine computes the 2 norm of the vector
-! adapted from the original function version
-! of the corresponding blas routine from
-! NETLIB
-!
-subroutine dnrm2(v, len_v, n)
-    implicit none
-    integer :: i, len_v
-    double precision :: n
-    double precision, dimension(len_v) :: v
-    double precision :: scale
-
-    n = 0.0d0
-    scale = 0.0d0
-
-    do  i = 1, len_v
-        scale = max(scale, abs(v(i)))
-    enddo
-
-    if (scale .eq. 0.0d0) then
-        n = 0.0d0
-    else
-        do i = 1, len_v
-            n = n + (v(i)/scale)**2
-        enddo
-
-        n = scale*sqrt(n)
-    endif
-end subroutine dnrm2
 end module linsolve
