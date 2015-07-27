@@ -29,19 +29,17 @@ call zeros(3, Nx_ + 1, Ny_ + 1, Nz_ + 1, V)
 ! Initialize permeability and porosity for testing
 call zeros(3, Nx_, Ny_, Nz_, K_)
 call zeros(N_, Por_)
-call inputKP()
-
+call inputKP()                      ! Now read the permeabilities and porosities
 
 St = 5                              ! Max saturation time step
 Pt = 100                            ! Pressure time step
 ND = 2000                           ! Number of days in simulation
 
-
 call ones(N_, S)
 S = S * swc_
 
-call zeros(ND/St, Tt)               ! simulation time
-call zeros(2, ND/St, Pc)            ! production data
+call zeros((ND/St) + 1, Tt)               ! simulation time
+call zeros(2, (ND/St) + 1, Pc)            ! production data
 
 Pc(1, 1) = 0.0d0                    ! initial production
 Pc(2, 1) = 1.0d0
@@ -53,18 +51,38 @@ do i = 1, ND/Pt
     do j = 1, Pt/St
         k = k + 1
 
-        print *, "Time step: ", k
+        !print *, "Time step: ", k
 
         call NewtRaph(S, V, Q, St * 1.0d0)      ! Solve for saturation
         call RelPerm(S(N_), Mw, Mo)             ! Mobilities in well-block
 
         Mt = Mw + Mo
 
-        Tt(k) = k * St
+        Tt(k) = 1.0d0 * k * St
         Pc(1,k) = Mw/Mt
         Pc(2,k) = Mo/Mt
     end do
 end do
+
+! Set filename to collect results.
+open(unit = 1, file = 'Pc1', &
+        form = 'unformatted', access = 'stream')
+
+! write the production curve 1
+write(unit=1) Pc(1, :)
+
+! close files
+close(unit=1)
+
+! Set filename to collect results.
+open(unit = 1, file = 'Pc2', &
+        form = 'unformatted', access = 'stream')
+
+! write the production curve 2
+write(unit=1) Pc(2, :)
+
+! close files
+close(unit=1)
 
 call free_mat(Tt)
 call free_mat(S)
@@ -82,29 +100,35 @@ contains
 !
 subroutine inputKP()
     integer :: i, j, k, l, m
+
+    integer :: maxNx, maxNy, maxNz
+    parameter(maxNx=60, maxNy=220, maxNz=85)
+
+    double precision, dimension(maxNx * maxNy * maxNz) :: pUr
+    double precision, dimension(3 * maxNx, maxNy * maxNz) :: KUr
+    double precision, dimension(3 * maxNx * maxNy * maxNz) :: KUrl
+
+    integer, dimension(Nx_ * Ny_ * Nz_) :: Pindices
     integer, dimension(3 * Nx_ * Ny_ * Nz_) :: Kindices
-    double precision, dimension(3366000) :: KUrl
-    double precision, dimension(180,18700) :: KUr
-    double precision, dimension(1122000) :: pUr
 
     ! read KUr
     open(1,file='KUr.txt',status='old')
-    read(1,*) ((KUr(i,j), j=1,18700), i=1,180)
+    read(1,*) ((KUr(i,j), j=1,maxNy * maxNz), i=1,3 * maxNx)
     close(1)
 
     ! reshape 2 dimension to 1 dimension
     call myreshape(KUr, KUrl)
     ! then reshape 1 dimension to 4 dimension (hack for time being)
     ! select according to specified dimension
-
     m = 0
     do l = 1, Nz_
         do k = 1,Ny_
             do j = 1,Nx_
                 do i = 1,3
                     m = m + 1
-                    Kindices(m) = ((l-1) * (Nx_ * Ny_ * 3) + (k - 1) * (Nx_ * 3) &
-                                    + 3 * (j-1) + i)
+                    Kindices(m) = ((l - 1) * (maxNx * maxNy * 3) &
+                                  + (k - 1) * (maxNx * 3) &
+                                  + 3 * (j-1) + i)
                 end do
             end do
         end do
@@ -117,8 +141,21 @@ subroutine inputKP()
     read(1,*) (pUr(i), i=1,1122000)
     close(1)
 
-    Por_ = max(pUr((/(((((l-1) *(Nx_ * Ny_) + (k - 1) * Nx_ &
-                + j), j=1,Nx_), k=1,Ny_), l=1,Nz_)/)), 1.0d-3)
+    m = 0
+    do k = 1,Nz_
+        do j = 1,Ny_
+            do i = 1,Nx_
+                m = m + 1
+                Pindices(m) = ((k - 1) * (maxNx * maxNy) &
+                              + (j - 1) * (maxNx) + i)
+            end do
+        end do
+    end do
+
+    Por_ = max(pUr(Pindices), 1.0d-3)
+
+    !print *, K_
+    !print *, Por_
 end subroutine inputKP
 
 end program runspe10

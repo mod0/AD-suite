@@ -199,7 +199,7 @@ subroutine disp_spmat(imatrix)
     type(spmat) :: imatrix
 
     do k = 1, imatrix%nnz
-        write (*, '(a, i7, a, i7, a, a, f10.5)'), "(", imatrix%row_index(k), ",", &
+        write (*, '(a, i7, a, i7, a, a, e23.16)'), "(", imatrix%row_index(k), ",", &
                     imatrix%col_index(k), ")", " ", imatrix%values(k)
     end do
 end subroutine
@@ -518,15 +518,23 @@ subroutine getdiagind(idiags, maindiagind, diag, diagind)
         i = 1
 
         ! go over the list of idiags forwards and find the needed diagonal.
-        do while (idiags(i) /= diag .and. i <= size(idiags, 1))
-            i = i + 1
+        do while (i <= size(idiags, 1))
+            if(idiags(i) /= diag ) then
+                i = i + 1
+            else
+                exit
+            end if
         end do
     else if (diag > 0) then
         i = size(idiags, 1)
 
         ! go over the list of idiags backwards and find the needed diagonal.
-        do while (idiags(i) /= diag .and. i > 0)
-            i = i - 1
+        do while (i > 0)
+            if(idiags(i) /= diag) then
+                i = i - 1
+            else
+                exit
+            end if
         end do
     else if (diag == 0) then
         i = maindiagind

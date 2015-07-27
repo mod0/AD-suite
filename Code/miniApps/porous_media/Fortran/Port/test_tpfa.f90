@@ -7,7 +7,7 @@ program test_tpfa
     implicit none
 
     character(len = 10) :: filename
-    integer :: dealloc_err, p_filenum
+    integer :: p_filenum
     double precision, dimension(:), pointer :: Q
     double precision, dimension(:,:,:), pointer :: P
     double precision, dimension(:,:,:,:), pointer :: V
