@@ -143,55 +143,24 @@ end subroutine sparse_gauss_seidel_method
 !
 ! A wrapper for mgmres
 !
-subroutine sparse_mgmres_method(A, b, x, tol_abs_ip, tol_rel_ip)
+subroutine sparse_mgmres_method(A, b, x)
     use mgmres
     implicit none
     type(spmat) :: A
     integer :: itr_max, mr
     double precision :: tol_abs, tol_rel
-    double precision, optional :: tol_abs_ip, tol_rel_ip
     double precision, dimension(:) :: b, x
 
-    if(present(tol_abs_ip)) then
-        tol_abs = tol_abs_ip
-    else
-        tol_abs = 1.0d-6
-    end if
 
-    if(present(tol_rel_ip)) then
-        tol_rel = tol_rel_ip
-    else
-        tol_rel = 1.0d-6
-    endif
-
+    tol_abs = 1.0d-6
+    tol_rel = 1.0d-6
     itr_max = 5
-    mr = A%rows
+    mr = (A%rows)
 
     call mgmres_st ( A%rows, A%nnz, A%row_index, A%col_index, A%values, x, b, &
                     itr_max, mr, tol_abs, tol_rel )
 
 end subroutine sparse_mgmres_method
-
-!
-! This method tries to reuse the solution from the
-! mgmres and does jacobi iteration when the residual
-! falls below some threshold
-!
-! (YES SUCH a method exists in this file. I KNOW!)
-!
-subroutine sparse_melange_method(A, b, x)
-    implicit none
-    type(spmat) :: A
-    double precision :: tol_abs_ip, tol_rel_ip
-    double precision, dimension(:) :: b, x
-
-    tol_abs_ip = 1.0d-3
-    tol_rel_ip = 1.0d-3
-
-    call sparse_mgmres_method(A, b, x, tol_abs_ip, tol_rel_ip)
-    call sparse_jacobi_method(A, b, x)
-
-end subroutine sparse_melange_method
 
 
 end module linsolve

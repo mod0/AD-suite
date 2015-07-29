@@ -51,11 +51,11 @@ Tt(1) = 0.0d0                       ! initial time.
 
 k = 1
 do i = 1, ND/Pt
-    call print_array(S,1,0,output)
-    call print_array(Q,1,0,output)
+    !call print_array(S,1,0,output)
+    !call print_array(Q,1,0,output)
     call Pres(S, Q, P, V)                       ! Pressure solver
-    call print_array(P,1,0,1,0,1,0,output)
-    call print_array(V,1,0,1,0,1,0,1,0,output)
+    !call print_array(P,1,0,1,0,1,0,output)
+    !call print_array(V,1,0,1,0,1,0,1,0,output)
     do j = 1, Pt/St
         k = k + 1
 
@@ -64,7 +64,7 @@ do i = 1, ND/Pt
 
         call NewtRaph(S, V, Q, St * 1.0d0)      ! Solve for saturation
 
-        call print_array(S,1,0,output)
+        !call print_array(S,1,0,output)
 
         call RelPerm(S(N_), Mw, Mo)             ! Mobilities in well-block
 
@@ -105,9 +105,7 @@ close(unit=1)
 call plot(Tt, Pc(1,:), Tt, Pc(2,:), terminal='png', filename='WaterOilCut.png')
 
 
-call print_array(Pc, 1,0,1,0,output)
-
-
+!call print_array(Pc, 1,0,1,0,output)
 
 call free_mat(Tt)
 call free_mat(S)
