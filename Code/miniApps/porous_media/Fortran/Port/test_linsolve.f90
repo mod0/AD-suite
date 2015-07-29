@@ -8,6 +8,10 @@ program test_linsolve
     double precision, dimension(6) :: x, u
     double precision, dimension(6,3) :: B
 
+    integer :: output
+
+    output = 1
+
 ! Get the results from running spdiags_matlabtest.m to compare implementation
 ! with MATLAB. Matches for all the below cases.
 
@@ -42,14 +46,18 @@ program test_linsolve
 
     call spdiags(B, idiags, 6, 6, matA)
 
-    call disp_spmat(matA)
+    call disp_spmat(matA, output)
 
-    u(1) = 1.7d0
-    u(2) = 3.5d0
-    u(3) = 7.7d0
-    u(4) = -2.11d0
-    u(5) = 4.3d0
-    u(6) = 15.8d0
+    x(1) = 1.7d0
+    x(2) = 3.5d0
+    x(3) = 7.7d0
+    x(4) = -2.11d0
+    x(5) = 4.3d0
+    x(6) = 15.8d0
+
+    call spmat_multiply(matA, x, u, "PRE")
+
+    print *, x
 
     call solve(matA, u, x)
 

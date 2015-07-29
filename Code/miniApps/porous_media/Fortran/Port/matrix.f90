@@ -193,15 +193,17 @@ end subroutine countnnz
 !
 ! Display the matrix entries
 !
-subroutine disp_spmat(imatrix)
+subroutine disp_spmat(imatrix, output)
     implicit none
-    integer :: k
+    integer :: k, output
     type(spmat) :: imatrix
 
-    do k = 1, imatrix%nnz
-        write (*, '(a, i7, a, i7, a, a, e23.16)'), "(", imatrix%row_index(k), ",", &
-                    imatrix%col_index(k), ")", " ", imatrix%values(k)
-    end do
+    if(output /= 0) then
+        do k = 1, imatrix%nnz
+            write (*, '(a, i7, a, i7, a, a, e23.16)'), "(", imatrix%row_index(k), ",", &
+                        imatrix%col_index(k), ")", " ", imatrix%values(k)
+        end do
+    end if
 end subroutine
 
 !

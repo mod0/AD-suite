@@ -31,22 +31,24 @@
 !       Print real 1d array to the screen
 !
 !cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine print_array1(a, minrow, maxrow)
+        subroutine print_array1(a, minrow, maxrow, output)
           real*8 :: a(:)
-          integer*4 :: i, l, minrow, maxrow, maxrow_temp
+          integer*4 :: i, l, minrow, maxrow, maxrow_temp, output
 
-          l = size(a, 1)
+          if (output /= 0) then
+              l = size(a, 1)
 
-          if (maxrow.eq.0) then
-            maxrow_temp = l
-          else
-            maxrow_temp = maxrow
-          endif
+              if (maxrow.eq.0) then
+                maxrow_temp = l
+              else
+                maxrow_temp = maxrow
+              endif
 
-          do i = minrow, maxrow_temp
-!-------- print the values
-              print *, a(i)
-          enddo
+              do i = minrow, maxrow_temp
+    !-------- print the values
+                  print *, a(i)
+              enddo
+          end if
         end subroutine
 
 !cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -55,33 +57,35 @@
 !
 !cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine print_array2(a, minrow, maxrow, mincol,
-     &   maxcol)
+     &   maxcol, output)
           real*8 :: a(:,:)
           integer*4 :: i, j, l1, l2, minrow, maxrow, mincol, maxcol,
-     &                 maxrow_temp, maxcol_temp
+     &                 maxrow_temp, maxcol_temp, output
 
-          l1 = size(a, 1)
-          l2 = size(a, 2)
+          if(output /= 0) then
+              l1 = size(a, 1)
+              l2 = size(a, 2)
 
-          if (maxrow.eq.0) then
-            maxrow_temp = l1
-          else
-            maxrow_temp = maxrow
+              if (maxrow.eq.0) then
+                maxrow_temp = l1
+              else
+                maxrow_temp = maxrow
+              endif
+
+              if (maxcol.eq.0) then
+                maxcol_temp = l2
+              else
+                maxcol_temp = maxcol
+              endif
+
+              do i = minrow, maxrow_temp
+                do j = mincol, maxcol_temp
+    !-------- print the values
+                  write (*,'(e23.16, a,$)') a(i,j), ' '
+                enddo
+                print *, ""
+              enddo
           endif
-
-          if (maxcol.eq.0) then
-            maxcol_temp = l2
-          else
-            maxcol_temp = maxcol
-          endif
-
-          do i = minrow, maxrow_temp
-            do j = mincol, maxcol_temp
-!-------- print the values
-              write (*,'(e23.16, a,$)') a(i,j), ' '
-            enddo
-            print *, ""
-          enddo
         end subroutine
 
 
@@ -91,44 +95,46 @@
 !
 !cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine print_array3(a, minrow, maxrow, mincol,
-     &   maxcol, minstack, maxstack)
+     &   maxcol, minstack, maxstack, output)
           real*8 :: a(:,:,:)
           integer*4 :: i, j, l1, l2, minrow, maxrow, mincol, maxcol,
-     &                 k, l3, minstack, maxstack,
+     &                 k, l3, minstack, maxstack, output,
      &                 maxrow_temp, maxcol_temp, maxstack_temp
 
-          l1 = size(a, 1)
-          l2 = size(a, 2)
-          l3 = size(a, 3)
+           if(output /= 0) then
+              l1 = size(a, 1)
+              l2 = size(a, 2)
+              l3 = size(a, 3)
 
-          if (maxrow.eq.0) then
-            maxrow_temp = l1
-          else
-            maxrow_temp = maxrow
+              if (maxrow.eq.0) then
+                maxrow_temp = l1
+              else
+                maxrow_temp = maxrow
+              endif
+
+              if (maxcol.eq.0) then
+                maxcol_temp = l2
+              else
+                maxcol_temp = maxcol
+              endif
+
+              if (maxstack.eq.0) then
+                maxstack_temp = l3
+              else
+                maxstack_temp = maxstack
+              endif
+
+              do k = minstack, maxstack_temp
+                  print *, "a(:,:," , k , "):"
+                  do i = minrow, maxrow_temp
+                    do j = mincol, maxcol_temp
+        !-------- print the values
+                      write (*,'(e23.16, a,$)') a(i,j,k), ' '
+                    enddo
+                    print *, ""
+                  enddo
+              end do
           endif
-
-          if (maxcol.eq.0) then
-            maxcol_temp = l2
-          else
-            maxcol_temp = maxcol
-          endif
-
-          if (maxstack.eq.0) then
-            maxstack_temp = l3
-          else
-            maxstack_temp = maxstack
-          endif
-
-          do k = minstack, maxstack_temp
-              print *, "a(:,:," , k , "):"
-              do i = minrow, maxrow_temp
-                do j = mincol, maxcol_temp
-    !-------- print the values
-                  write (*,'(e23.16, a,$)') a(i,j,k), ' '
-                enddo
-                print *, ""
-              enddo
-          end do
         end subroutine
 
 !cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -137,54 +143,56 @@
 !
 !cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine print_array4(a, minrow, maxrow, mincol,
-     &   maxcol, minstack, maxstack, minbox, maxbox)
+     &   maxcol, minstack, maxstack, minbox, maxbox, output)
           real*8 :: a(:,:,:,:)
           integer*4 :: i, j, l1, l2, minrow, maxrow, mincol, maxcol,
      &                 k, l3, minstack, maxstack, maxstack_temp,
      &                 l, l4, minbox, maxbox, maxbox_temp,
-     &                 maxrow_temp, maxcol_temp
+     &                 maxrow_temp, maxcol_temp, output
 
-          l1 = size(a, 1)
-          l2 = size(a, 2)
-          l3 = size(a, 3)
-          l4 = size(a, 4)
+          if(output /= 0) then
+              l1 = size(a, 1)
+              l2 = size(a, 2)
+              l3 = size(a, 3)
+              l4 = size(a, 4)
 
-          if (maxrow.eq.0) then
-            maxrow_temp = l1
-          else
-            maxrow_temp = maxrow
-          endif
+              if (maxrow.eq.0) then
+                maxrow_temp = l1
+              else
+                maxrow_temp = maxrow
+              endif
 
-          if (maxcol.eq.0) then
-            maxcol_temp = l2
-          else
-            maxcol_temp = maxcol
-          endif
+              if (maxcol.eq.0) then
+                maxcol_temp = l2
+              else
+                maxcol_temp = maxcol
+              endif
 
-          if (maxstack.eq.0) then
-            maxstack_temp = l3
-          else
-            maxstack_temp = maxstack
-          endif
+              if (maxstack.eq.0) then
+                maxstack_temp = l3
+              else
+                maxstack_temp = maxstack
+              endif
 
-          if (maxbox.eq.0) then
-            maxbox_temp = l4
-          else
-            maxbox_temp = maxbox
-          endif
+              if (maxbox.eq.0) then
+                maxbox_temp = l4
+              else
+                maxbox_temp = maxbox
+              endif
 
-          do l = minbox, maxbox_temp
-              do k = minstack, maxstack_temp
-                  print *, "a(:,:," , k , ",", l, "):"
-                  do i = minrow, maxrow_temp
-                    do j = mincol, maxcol_temp
-!-------- print the values
-                      write (*,'(e23.16, a,$)') a(i,j,k,l), ' '
-                    enddo
-                    print *, ""
-                  enddo
+              do l = minbox, maxbox_temp
+                  do k = minstack, maxstack_temp
+                      print *, "a(:,:," , k , ",", l, "):"
+                      do i = minrow, maxrow_temp
+                        do j = mincol, maxcol_temp
+    !-------- print the values
+                          write (*,'(e23.16, a,$)') a(i,j,k,l), ' '
+                        enddo
+                        print *, ""
+                      enddo
+                  end do
               end do
-          end do
+          end if
         end subroutine
 
 !cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc

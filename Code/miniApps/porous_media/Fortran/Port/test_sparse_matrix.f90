@@ -2,12 +2,15 @@ program test_sparse_matrix
     use matrix
     implicit none
 
+    integer :: output
     integer, dimension(3) :: idiags
     double precision, dimension(6,3) :: B
     type(spmat) :: matA, matB, matC, matD, matE, matF, matG, matH
 
 ! Get the results from running spdiags_matlabtest.m to compare implementation
 ! with MATLAB. Matches for all the below cases.
+
+    output = 1
 
     ! instantiate B
     B(1,1) = 1
@@ -61,21 +64,21 @@ program test_sparse_matrix
 
     ! display matrices
     write (*,*) "Matrix A:"
-    call disp_spmat(matA)
+    call disp_spmat(matA,output)
     write (*,*) "Matrix B:"
-    call disp_spmat(matB)
+    call disp_spmat(matB,output)
     write (*,*) "Matrix C:"
-    call disp_spmat(matC)
+    call disp_spmat(matC,output)
     write (*,*) "Matrix D:"
-    call disp_spmat(matD)
+    call disp_spmat(matD,output)
     write (*,*) "Matrix E:"
-    call disp_spmat(matE)
+    call disp_spmat(matE,output)
     write (*,*) "Matrix F:"
-    call disp_spmat(matF)
+    call disp_spmat(matF,output)
     write (*,*) "Matrix G:"
-    call disp_spmat(matG)
+    call disp_spmat(matG,output)
     write (*,*) "Matrix H:"
-    call disp_spmat(matH)
+    call disp_spmat(matH,output)
 
 
     ! free sparse matrices

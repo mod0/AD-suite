@@ -22,8 +22,10 @@ subroutine sparse_solve(A, b, x)
     type(spmat) :: A
     double precision, dimension(:) :: b
     double precision, dimension(:) :: x
-
-    call sparse_jacobi_method(A, b, x)
+    if(1 .ne. 0) then
+        x = 0.0d0
+    end if
+    call sparse_mgmres_method(A, b, x)
 end subroutine sparse_solve
 
 !
@@ -36,15 +38,14 @@ subroutine sparse_jacobi_method(A, b, x)
     double precision :: nrm
     double precision, dimension(A%rows) :: b, x, x_old, main_diag
 
-    x = b
 
-    do i = 1, 5000      ! Max iterations
-        ! start with old x
+    do i = 1, 100000      ! Max iterations
+
         x_old = x
-
         ! start x with right hand side
         x = b
 
+!$omp parallel
         do j = 1, A%nnz
             ! Not the main diagonal
             if (A%row_index(j) /= A%col_index(j)) then
@@ -56,6 +57,7 @@ subroutine sparse_jacobi_method(A, b, x)
                 main_diag(A%row_index(j)) = A%values(j)
             end if
         end do
+!$omp end parallel
 
         ! divide by the diagonal entries
         x = x/main_diag
@@ -86,9 +88,7 @@ subroutine sparse_gauss_seidel_method(A, b, x)
     double precision :: nrm
     double precision, dimension(A%rows) :: b, x, x_old, main_diag
 
-    x = b
-
-    do k = 1, 5000      ! Max iterations
+    do k = 1, 100000      ! Max iterations
         ! start with old x
         x_old = x
 
@@ -129,7 +129,8 @@ subroutine sparse_gauss_seidel_method(A, b, x)
 
         ! Exit when converged.
         if (nrm < 1.0d-8) then
-            !print *, "Converged in norm"
+!            print *, "Iterations: ", k
+!            print *, "Converged in norm"
             exit
         end if
     end do
@@ -138,5 +139,59 @@ subroutine sparse_gauss_seidel_method(A, b, x)
         print *, "Norm: ", nrm
     end if
 end subroutine sparse_gauss_seidel_method
+
+!
+! A wrapper for mgmres
+!
+subroutine sparse_mgmres_method(A, b, x, tol_abs_ip, tol_rel_ip)
+    use mgmres
+    implicit none
+    type(spmat) :: A
+    integer :: itr_max, mr
+    double precision :: tol_abs, tol_rel
+    double precision, optional :: tol_abs_ip, tol_rel_ip
+    double precision, dimension(:) :: b, x
+
+    if(present(tol_abs_ip)) then
+        tol_abs = tol_abs_ip
+    else
+        tol_abs = 1.0d-6
+    end if
+
+    if(present(tol_rel_ip)) then
+        tol_rel = tol_rel_ip
+    else
+        tol_rel = 1.0d-6
+    endif
+
+    itr_max = 5
+    mr = A%rows
+
+    call mgmres_st ( A%rows, A%nnz, A%row_index, A%col_index, A%values, x, b, &
+                    itr_max, mr, tol_abs, tol_rel )
+
+end subroutine sparse_mgmres_method
+
+!
+! This method tries to reuse the solution from the
+! mgmres and does jacobi iteration when the residual
+! falls below some threshold
+!
+! (YES SUCH a method exists in this file. I KNOW!)
+!
+subroutine sparse_melange_method(A, b, x)
+    implicit none
+    type(spmat) :: A
+    double precision :: tol_abs_ip, tol_rel_ip
+    double precision, dimension(:) :: b, x
+
+    tol_abs_ip = 1.0d-3
+    tol_rel_ip = 1.0d-3
+
+    call sparse_mgmres_method(A, b, x, tol_abs_ip, tol_rel_ip)
+    call sparse_jacobi_method(A, b, x)
+
+end subroutine sparse_melange_method
+
 
 end module linsolve

@@ -3,6 +3,8 @@ use fvm
 use grid
 use fluid
 use matrix
+use gnufor2
+use print_active
 
 implicit none
 
@@ -13,11 +15,13 @@ double precision, dimension(:,:), pointer :: Pc
 double precision, dimension(:,:,:), pointer :: P
 double precision, dimension(:,:,:,:), pointer :: V
 
-ir = 795 * (Nx_ * Ny_ / (Nx_ * Ny_ * Nz_))
+ir = (795.0 * Nx_ * Ny_ * Nz_) / (maxNx * maxNy * maxNz)
 
 call zeros(N_, Q)
-Q(1:N_:Nx_*Ny_) = ir
-Q(Nx_*Ny_:N_:Nx_*Ny_) = -ir
+!Q(1:N_:Nx_*Ny_) = ir
+!Q(Nx_*Ny_:N_:Nx_*Ny_) = -ir
+Q(1) = ir
+Q(N_) = -ir
 
 ! setup P and V
 call zeros(Nx_, Ny_, Nz_, P)
@@ -47,13 +51,21 @@ Tt(1) = 0.0d0                       ! initial time.
 
 k = 1
 do i = 1, ND/Pt
+    call print_array(S,1,0,output)
+    call print_array(Q,1,0,output)
     call Pres(S, Q, P, V)                       ! Pressure solver
+    call print_array(P,1,0,1,0,1,0,output)
+    call print_array(V,1,0,1,0,1,0,1,0,output)
     do j = 1, Pt/St
         k = k + 1
 
-        !print *, "Time step: ", k
+        print *, "Timestep:", k
+
 
         call NewtRaph(S, V, Q, St * 1.0d0)      ! Solve for saturation
+
+        call print_array(S,1,0,output)
+
         call RelPerm(S(N_), Mw, Mo)             ! Mobilities in well-block
 
         Mt = Mw + Mo
@@ -84,6 +96,19 @@ write(unit=1) Pc(2, :)
 ! close files
 close(unit=1)
 
+
+!---------------------------------------------------------------------------
+! Call GNUPLOT through the interface module.
+! Uncomment these plot calls after verifying you have GNUPlot installed.
+!---------------------------------------------------------------------------
+! Plot the final solution for the forward trajectory
+call plot(Tt, Pc(1,:), Tt, Pc(2,:), terminal='png', filename='WaterOilCut.png')
+
+
+call print_array(Pc, 1,0,1,0,output)
+
+
+
 call free_mat(Tt)
 call free_mat(S)
 call free_mat(Q)
@@ -100,9 +125,6 @@ contains
 !
 subroutine inputKP()
     integer :: i, j, k, l, m
-
-    integer :: maxNx, maxNy, maxNz
-    parameter(maxNx=60, maxNy=220, maxNz=85)
 
     double precision, dimension(maxNx * maxNy * maxNz) :: pUr
     double precision, dimension(3 * maxNx, maxNy * maxNz) :: KUr
