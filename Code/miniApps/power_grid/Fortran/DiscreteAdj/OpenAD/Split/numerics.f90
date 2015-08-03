@@ -82,6 +82,20 @@ contains
         ! Compute the gradient value.
         call power_grid_cost_gradient(lm, tout_b, yout_b, tout_f, yout_f, g)
 #endif
+!        !>>>>>>>>>>>>> Uncomment the following lines to write the solutions
+!        ! to a file which can later be visualized using MATLAB.
+!        ! Forward Time Steps
+!        open(unit=1, file='toutf')
+!        write (1,'(e23.16)') (tout_f(i), i = 1,tlen)
+!        close(unit=1)
+!        ! Forward Solution Phi
+!        open(unit=1, file='phi')
+!        write (1,'(e23.16)') (yout_f(i,1), i = 1,tlen)
+!        close(unit=1)
+!        ! Forward Solution Omega
+!        open(unit=1, file='omega')
+!        write (1,'(e23.16)') (yout_f(i,2), i = 1,tlen)
+!        close(unit=1)
     end subroutine get_cost_function_and_gradient
 
 

@@ -38,11 +38,6 @@ program power_grid
     type(active) :: f_OAD
 #endif
 
-    ! -------------------------------------------------------------------------
-    ! declare variables to hold file name numbers
-    ! -------------------------------------------------------------------------
-!    integer :: tout_f_filenum, yout_f_filenum, tout_b_filenum, yout_b_filenum
-
     ! Check that the number of parameters does not exceed one.
     ! The formulation of the problem has to be changed otherwise.
     if (np > 1) then
@@ -66,13 +61,6 @@ program power_grid
     u(1) = 1.1d0                ! the value of the upper bound.
 
 
-
-    ! Set the filename numbers
-!    tout_f_filenum = 11
-!    yout_f_filenum = 12
-!    tout_b_filenum = 13
-!    yout_b_filenum = 14
-
     ! -------------------------------------------------------------------------
     ! initialize variables/constants for time integration scheme - fixed t.step
     ! -------------------------------------------------------------------------
@@ -91,16 +79,6 @@ program power_grid
 
     ! Iterate maximum number of iterations calling the optimization routine.
     do i = 1, max_opt_iter
-        ! Set filename to collect results.
-!        write(filename, '(A6, I2.2, I2.2)') "output", tout_f_filenum, i
-!        open(unit = tout_f_filenum, file = filename)
-!        write(filename, '(A6, I2.2, I2.2)') "output", yout_f_filenum, i
-!        open(unit = yout_f_filenum, file = filename)
-!        write(filename, '(A6, I2.2, I2.2)') "output", tout_b_filenum, i
-!        open(unit = tout_b_filenum, file = filename)
-!        write(filename, '(A6, I2.2, I2.2)') "output", yout_b_filenum, i
-!        open(unit = yout_b_filenum, file = filename)
-
 #if !defined(USE_OPENAD)
         call setulb(np, m, pm, l, u, nbd, f, g, factr, pgtol, wa, iwa, task, &
                     iprint, csave,lsave,isave,dsave)
@@ -134,13 +112,6 @@ program power_grid
             our_rev_mode%adjoint=.TRUE.
             call get_cost_function_and_gradient(f_OAD, g, tlen)
 #endif
-            ! write the solutions to the file.
-!            call write_array1(tout_f, 1, 0, tout_f_filenum)
-!            call write_array1(tout_b, 1, 0, tout_b_filenum)
-!            call write_array2(yout_f, 1, 0, 1, &
-!                    0, yout_f_filenum)
-!            call write_array2(yout_b, 1, 0, 1, &
-!                    0, yout_b_filenum)
         elseif (task(1:5) == "NEW_X") then
             if (i < max_opt_iter) then
                 ! continue the iteration at the new point
@@ -168,24 +139,8 @@ program power_grid
         else
             print *, "The task is ", task
         endif
-
-!        close(tout_f_filenum)
-!        close(tout_b_filenum)
-!        close(yout_f_filenum)
-!        close(yout_b_filenum)
     enddo
 
     ! stop the iteration. print current values
     print *, "Maximum number of iterations reached. The value of pm is ", pm
-
-    !---------------------------------------------------------------------------
-    ! Call GNUPLOT through the interface module.
-    ! Uncomment these plot calls after verifying you have GNUPlot installed.
-    !---------------------------------------------------------------------------
-    ! Plot the final solution for the forward trajectory
-    !call plot(tout_f, yout_f(:,1), terminal='png', filename='phi_fwd_fortran.png')
-    !call plot(tout_f, yout_f(:,2), terminal='png', filename='omega_fwd_fortran.png')
-    ! Plot the final solution for the adjoint variables
-    !call plot(tout_b, yout_b(:,1), terminal='png', filename='lambda1_adj_fortran.png')
-    !call plot(tout_b, yout_b(:,2), terminal='png', filename='lambda2_adj_fortran.png')
 end program power_grid
