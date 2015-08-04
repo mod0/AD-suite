@@ -158,7 +158,7 @@ subroutine inputKP()
 
     ! read KUr
     open(1,file='pUr.txt',status='old')
-    read(1,*) (pUr(i), i=1,1122000)
+    read(1,*) (pUr(i), i=1,maxNx * maxNy * maxNz)
     close(1)
 
     m = 0
