@@ -1,0 +1,100 @@
+
+%
+\documentclass[conference]{article}
+
+% Some very useful LaTeX packages include:
+% (uncomment the ones you want to load)
+
+\usepackage{url} 
+\usepackage{listings} 
+\usepackage{float}
+\usepackage{todonotes}
+\usepackage{amsmath}
+\usepackage{url}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=blue}
+\makeatletter
+\newif\if@restonecol
+\makeatother
+\let\algorithm\relax
+\let\endalgorithm\relax
+\usepackage[ruled,vlined]{algorithm2e}
+\newcommand{\mytodo}[1]{\textcolor{red}{[#1]}} %for displaying red texts
+\renewcommand{\textfraction}{0.01}
+
+
+
+\lstdefinelanguage{myfortran}{%
+  tabsize=4,
+  language=fortran,
+  frame=tblr,
+  columns=fullflexible,
+  breaklines=true
+  basicstyle=\linespread{0.85}\ttfamily\small,
+  stringstyle=\linespread{0.85}\sffamily\itshape\color{brown}\small,
+  commentstyle=\linespread{0.85}\sffamily\itshape\color{green}\small,
+  backgroundcolor=\color{white},
+  showstringspaces=false,
+  showspaces=false,
+  mathescape=false,
+  classoffset=0,
+  keywordstyle=\ttfamily\color{blue}\small,
+  morekeywords={},
+  emph={},
+  emphstyle=\linespread{0.85}\color{green}\small
+}
+\lstset{language=myfortran}
+
+% correct bad hyphenation here
+\hyphenation{op-tical net-works semi-conduc-tor}
+%\renewcommand{\topfraction}{0.99}
+\renewcommand{\textfraction}{0.0}
+%\renewcommand{\bottomfraction}{0.99}
+%\renewcommand{\floatpagefraction}{0.01}
+\usepackage{setspace}
+\begin{document}
+
+
+\title{Fortran Testsuite for Automatic Differentiation}
+\author{Mahesh Narayanamurthi, Sri Hari Krishna Narayanan, Torsten Bosse, Paul Hovland\\
+Mathematics and Computer Science Division\\
+Argone National Laboratory\\
+}
+\maketitle
+\clearpage
+\section{TableOfContents}
+\tableofcontents
+\lstlistoflistings
+\clearpage
+\section{Introduction}
+\clearpage
+\section{Testsuite}
+% make the title area
+
+\input{../Code/miniApps/air_foil/README.tex}\clearpage 
+\input{../Code/miniApps/power_grid/README.tex} \clearpage
+
+\newpage
+\bibliographystyle{acm}
+\bibliography{report}  
+
+\newpage
+\vfill
+\begin{flushright}
+\scriptsize
+\framebox{\parbox{2.4in}{The submitted manuscript has been created by
+UChicago Argonne, LLC, Operator of Argonne National Laboratory
+(``Argonne").  Argonne, a U.S. Department of Energy Office
+of Science laboratory, is operated under Contract No.
+DE-AC02-06CH11357.  The U.S. Government retains for itself, and
+others acting on its behalf, a paid-up, nonexclusive, irrevocable
+worldwide license in said article to reproduce, prepare derivative works,
+distribute copies to the public, and perform publicly and display
+publicly, by or on behalf of the Government.}}
+\normalsize
+\end{flushright}
+
+% that's all folks
+\end{document}
+
+
