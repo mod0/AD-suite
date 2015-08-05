@@ -1,6 +1,5 @@
-
 %
-\documentclass[conference]{article}
+\documentclass[conference,english]{article}
 
 % Some very useful LaTeX packages include:
 % (uncomment the ones you want to load)
@@ -24,6 +23,12 @@
 \usepackage[ruled,vlined]{algorithm2e}
 \newcommand{\mytodo}[1]{\textcolor{red}{[#1]}} %for displaying red texts
 \renewcommand{\textfraction}{0.01}
+
+\usepackage{babel,xcolor,framed,marginnote}
+\colorlet{shadecolor}{blue!10}
+\newenvironment{TodoPar}
+  {\begin{shaded}\marginnote{\fbox{Todo}}}
+  {\end{shaded}}
 
 \lstdefinestyle{BashInputStyle}{
   language=bash,

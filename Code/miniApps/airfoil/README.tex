@@ -17,10 +17,12 @@ The airfoil test-case is organized into five subdirectories as shown below:\\
 \subsubsection{Differentiated code using Tapenade}
 The directory \texttt{air\_foil\_tapenade} contains the files to compile the original \textbf{non-linear flow code}, the \textbf{forward-mode linear flow code} and the \textbf{reverse-mode adjoint flow code}. The binaries (\textbf{files}), corresponding to these, on building the directory are \texttt{airfoil} (\textbf{{airfoil.F}}), \texttt{air\_lin} (\textbf{{air\_lin.F}}) and \texttt{air\_adj} (\textbf{{air\_adj.F}}) respectively. \\
 
+\noindent The binary \texttt{testlinadj} (\textbf{{testlinadj.F}}), which is built along with the rest, constructs a small mesh, initializes flow and tests the linear and adjoint versions of the routines against one another and each of them against the estimate from performing complex finite difference. \\
+
 \noindent The differentiated versions of the original non-linear flow routines are used in the files \texttt{air\_lin.F} and \texttt{air\_adj.F}. These have been obtained by passing the undifferentiated routines to Tapenade on the \href{http://www-tapenade.inria.fr:8080/tapenade/index.jsp}{web}. \\
 
-\noindent The arguments that were used while generating the differentiated version of the routines can be traced back to the Tapenade invocations that are commented in the \texttt{Makefile}, as Tapenade was not available locally at the time. An example of how one would call tapenade to generate the adjoint version \texttt{flux\_face\_bx.f} appears below. \\
-
+\noindent The arguments that were used while generating the differentiated version of the routines can be traced back to the Tapenade invocations that are commented in the \texttt{Makefile}, as Tapenade was not available locally at the time. An example of how one would call tapenade to generate the adjoint version \texttt{flux\_face\_bx.f} appears on the following page. 
+\clearpage
 \begin{lstlisting}[style=BashInputStyle]
 $ tapenade -backward                                   \
 		   -head         flux_face                         \
@@ -30,8 +32,57 @@ $ tapenade -backward                                   \
 		   -difffuncname "_bx"                             \
 		   routines.f;
 \end{lstlisting}
-\clearpage
 \noindent The listing of files and their descriptions follow.\\
+\dirtree{%
+.1 /. 
+.2 air\_foil\_tapenade.  
+.3 adBuffer.c\DTcomment{Tapenade support file}. 
+.3 adBuffer.f\DTcomment{Tapenade support file}. 
+.3 adBuffer.h\DTcomment{Tapenade support file}. 
+.3 adStack.c\DTcomment{Tapenade support file}. 
+.3 adStack.h\DTcomment{Tapenade support file}. 
+.3 air\_adj.F\DTcomment{Driver for reverse-mode adjoint flow code}. 
+.3 airfoil.F\DTcomment{Driver for non-linear flow code}. 
+.3 air\_lin.F\DTcomment{Driver for forward-mode linear flow code}. 
+.3 flux\_face\_b.f\DTcomment{ADJ version of flux\_face from routines.F}. 
+.3 flux\_face\_bx.f\DTcomment{Ditto flux\_face\_b with co-ordinate variations}. 
+.3 flux\_face\_d.f\DTcomment{TL version of flux\_face from routines.F}. 
+.3 flux\_face\_dx.f\DTcomment{Ditto flux\_face\_d with co-ordinate variations}. 
+.3 flux\_wall\_b.f\DTcomment{ADJ version of flux\_wall from routines.F}. 
+.3 flux\_wall\_bx.f\DTcomment{Ditto flux\_wall\_b with co-ordinate variations}. 
+.3 flux\_wall\_d.f\DTcomment{TL version of flux\_wall from routines.F}. 
+.3 flux\_wall\_dx.f\DTcomment{Ditto flux\_wall\_d with co-ordinate variations}. 
+.3 input.F\DTcomment{Routines to read and write data}. 
+.3 lift\_wall\_b.f\DTcomment{ADJ version of lift\_wall from routines.F}. 
+.3 lift\_wall\_bx.f\DTcomment{Ditto lift\_wall\_b with co-ordinate variations}. 
+.3 lift\_wall\_d.f\DTcomment{TL version of lift\_wall from routines.F}. 
+.3 lift\_wall\_dx.f\DTcomment{Ditto lift\_wall\_d with co-ordinate variations}. 
+.3 print\_active.F\DTcomment{Routines to record matrices and vectors}. 
+.3 routines.F\DTcomment{Real and complex versions of non-linear routines}. 
+.3 testlinadj.F\DTcomment{Validate Tapenade generated routines}. 
+.3 time\_cell\_b.f\DTcomment{ADJ version of time\_cell from routines.F}. 
+.3 time\_cell\_bx.f\DTcomment{Ditto time\_cell\_b with co-ordinate variations}. 
+.3 time\_cell\_d.f\DTcomment{TL version of time\_cell from routines.F}. 
+.3 time\_cell\_dx.f\DTcomment{Ditto time\_cell\_d with co-ordinate variations}. 
+.3 const.inc\DTcomment{Constants common block}. 
+.3 flow.dat\DTcomment{Initial flow - scaled up problem size}. 
+.3 flow.dat.bak\DTcomment{Initial flow - original}. 
+.3 grid.dat\DTcomment{Unstructured grid - scaled up problem size}. 
+.3 grid.dat.bak\DTcomment{Unstructured grid}. 
+.3 Makefile\DTcomment{Build commands}. 
+}
+\clearpage
+\subsubsection{Differentiated code using OpenAD in Reverse Joint Mode}
+For details on reverse joint mode refer \cite{Griewank_2008} and \cite{Utke_2014}.\\
+
+\noindent The directory \texttt{air\_foil\_wopenad\_joint} contains the files to compile the original \textbf{non-linear flow code} and the \textbf{reverse-mode adjoint flow code}. The binaries (\textbf{files}), corresponding to these, on building the directory are \texttt{airfoil} (\textbf{{airfoil.F}}) and \texttt{air\_adj} (\textbf{{air\_adj.F}}) respectively. \\
+
+\begin{TodoPar}\noindent The binary \texttt{testlinadj} (\textbf{{testlinadj.F}}), which was earlier used to validate the forward-linear and reverse-adjoint routines in the \texttt{air\_foil\_tapenade} subdirectory, is not yet available to test OpenAD/F as modifications have to be done to use \texttt{oad\_active} type in the source code.\end{TodoPar}
+
+\noindent The adjoint version of the original non-linear flow routines are used in the file  \texttt{air\_adj.F}. These have been obtained by passing the undifferentiated routines to OpenAD/F in reverse-joint mode.\\
+
+\noindent For details on how to call OpenAD/F in reverse-joint mode refer \cite{Utke_2014}. The listing of files and their descriptions follow.\\
+
 \dirtree{%
 .1 /. 
 .2 air\_foil\_tapenade.  
