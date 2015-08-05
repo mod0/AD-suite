@@ -12,6 +12,9 @@
 \usepackage{amsmath}
 \usepackage{url}
 \usepackage{hyperref}
+\usepackage{dirtree}
+\usepackage{booktabs}
+\usepackage{graphicx}
 \hypersetup{colorlinks=true,linkcolor=blue}
 \makeatletter
 \newif\if@restonecol
@@ -22,7 +25,18 @@
 \newcommand{\mytodo}[1]{\textcolor{red}{[#1]}} %for displaying red texts
 \renewcommand{\textfraction}{0.01}
 
-
+\lstdefinestyle{BashInputStyle}{
+  language=bash,
+  basicstyle=\small\sffamily,
+%  numbers=left,
+  numberstyle=\tiny,
+  numbersep=3pt,
+  frame=tb,
+  columns=fullflexible,
+  backgroundcolor=\color{yellow!20},
+  linewidth=0.9\linewidth,
+  xleftmargin=0.1\linewidth
+}
 
 \lstdefinelanguage{myfortran}{%
   tabsize=4,
@@ -43,6 +57,7 @@
   emph={},
   emphstyle=\linespread{0.85}\color{green}\small
 }
+
 \lstset{language=myfortran}
 
 % correct bad hyphenation here
@@ -62,20 +77,36 @@ Argone National Laboratory\\
 }
 \maketitle
 \clearpage
-\section{TableOfContents}
+\section*{Table of contents}
 \tableofcontents
 \lstlistoflistings
+\clearpage
+\section{Abbreviations}
+\begin{table}[h]
+\centering
+\label{abbr_table}
+\begin{tabular}{@{}|l|l|@{}}
+\hline
+\textbf{Abbreviation} & \textbf{Expansion}      \\ \hline
+TL           & tangent linear \\ \hline
+ADJ           & adjoint \\ \hline
+\end{tabular}
+\end{table}
 \clearpage
 \section{Introduction}
 \clearpage
 \section{Testsuite}
 % make the title area
 
-\input{../Code/miniApps/air_foil/README.tex}\clearpage 
-\input{../Code/miniApps/power_grid/README.tex} \clearpage
+\input{../Code/miniApps/airfoil/README.tex}\clearpage 
+%\input{../Code/miniApps/power_grid/README.tex} \clearpage
+%\input{../Code/miniApps/small_f90_kpp/README.tex} \clearpage
+%\input{../Code/miniApps/saprc_f90_kpp/README.tex} \clearpage
+%\input{../Code/miniApps/porous_media/README.tex} \clearpage
 
 \newpage
 \bibliographystyle{acm}
+\nocite{*}
 \bibliography{report}  
 
 \newpage

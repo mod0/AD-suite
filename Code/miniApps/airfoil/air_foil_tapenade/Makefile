@@ -53,10 +53,10 @@ AIRFOIL = input.o routines.o airfoil.o
 AIR_LIN = input.o \
           flux_face_d.o  flux_wall_d.o  time_cell_d.o  lift_wall_d.o \
           flux_face_dx.o flux_wall_dx.o time_cell_dx.o lift_wall_dx.o \
-    			$(addsuffix .o, $(RTSUPP))\
-          print_active.o \
-    			air_lin.o 
-          
+	  $(addsuffix .o, $(RTSUPP))\
+	  print_active.o \
+	  air_lin.o 
+
 AIR_ADJ = input.o routines.o \
           flux_face_b.o  flux_wall_b.o  time_cell_b.o  lift_wall_b.o \
           flux_face_bx.o flux_wall_bx.o time_cell_bx.o lift_wall_bx.o \
@@ -303,7 +303,7 @@ lift_wall_bx.o:	routines.F
 #
 
 clean:	
-	/bin/rm -f *.o *.cpp *.msg *.mod
+	/bin/rm -f *.o *.cpp *.msg *.mod routines.f
 
 realclean: clean	
 	/bin/rm -f $(TARGETS)

@@ -1,5 +1,5 @@
-Grid.Nx=60;  Grid.hx=20*.3048;                       % Dimension in x-direction
-Grid.Ny=220; Grid.hy=10*.3048;                       % Dimension in y-direction
+Grid.Nx=4;  Grid.hx=20*.3048;                        % Dimension in x-direction
+Grid.Ny=4; Grid.hy=10*.3048;                         % Dimension in y-direction
 Grid.Nz=2;   Grid.hz=2*.3048;                        % Dimension in z-direction
 N=Grid.Nx*Grid.Ny*Grid.Nz;                           % Number of grid celles
 Grid.V=Grid.hx*Grid.hy*Grid.hz;                      % Volume of each cells
@@ -8,8 +8,8 @@ Fluid.vw=3e-4; Fluid.vo=3e-3;                        % Viscosities
 Fluid.swc=0.2; Fluid.sor=0.2;                        % Irreducible saturations
 
 Q=zeros(Grid.Nx,Grid.Ny,Grid.Nz);                    % Source term for injection
-IR=795*(Grid.Nx*Grid.Ny/ (60*220*85));               %   and production. Total
-Q(1,1,:)=IR; Q(Grid.Nx,Grid.Ny,:)=-IR; Q=Q(:);       %   rate scaled to one layer
+IR=795*(Grid.Nx*Grid.Ny*Grid.Nz/ (60*220*85));       %   and production. Total
+Q(1,1,1)=IR; Q(Grid.Nx,Grid.Ny,Grid.Nz)=-IR; Q=Q(:); %   rate scaled to one layer
 
 load ../data/spe10;                                  % Load data from SPE 10
 Grid.K=KU(:,1:Grid.Nx,1:Grid.Ny,1:Grid.Nz);          %    permeability

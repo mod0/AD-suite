@@ -17,11 +17,11 @@ c
 #include "const.inc"
 c
         integer    maxnode,     maxcell,       maxedge
-        parameter (maxnode=9900,maxcell=9702+1,maxedge=19502)
+        parameter (maxnode=721801,maxcell=720000+1,maxedge=1441400)
 c
         integer*4 ecell(2,maxedge), boun(maxedge),
      &            edge(2,maxedge), cell(4,maxcell)
-        real*8    x(2,maxnode), xd(2,maxnode), 
+        real*8    x(2,maxnode), xd(2,maxnode),
      &            q(4,maxcell), qd(4,maxcell), qdold(4,maxcell),
      &            adt(maxcell), adtd(maxcell),
      &            resd(4,maxcell), resd2(4,maxcell)
@@ -130,7 +130,7 @@ c
         adt(ncell)  = 0.0d0
         adtd(ncell) = 0.0d0
 c
-        
+
 #if DEBUG
 c--------- Write to files
         tmp_v1 = 0
@@ -172,7 +172,7 @@ c
             call flux_face_dx(x(1,in1),xd(1,in1),
      &                        x(1,in2),xd(1,in2),
      &                        q(1,ic1),qd(1,ic1),
-     &                        q(1,ic2),qd(1,ic2), 
+     &                        q(1,ic2),qd(1,ic2),
      &                        adt(ic1),adtd(ic1),
      &                        adt(ic2),adtd(ic2),
      &                        dum1,resd2(1,ic1), dum2,resd2(1,ic2))
@@ -233,7 +233,7 @@ c
               qdold(ipde,ic) = qd(ipde,ic)
             enddo
           enddo
-c 
+c
 c-------- predictor/corrector update loop
 c
           do k = 1, 2
@@ -287,8 +287,8 @@ c--------- Write to files
 
             adt(ncell)  = 0.0d0
             adtd(ncell) = 0.0d0
-c 
-c---------- flux evaluation loop 
+c
+c---------- flux evaluation loop
 c
             do ie = 1, nedge
               in1 = edge(1,ie)
@@ -299,7 +299,7 @@ c
               if(boun(ie).eq.0) then
                 call flux_face_d(x(1,in1),x(1,in2),
      &                           q(1,ic1),qd(1,ic1),
-     &                           q(1,ic2),qd(1,ic2), 
+     &                           q(1,ic2),qd(1,ic2),
      &                           adt(ic1),adtd(ic1),
      &                           adt(ic2),adtd(ic2),
      &                           dum1,resd(1,ic1), dum2,resd(1,ic2))
@@ -420,7 +420,7 @@ c
             write(*,'(i5,e13.6,e23.16)') iter,rms,liftd
           endif
         enddo
-c 
+c
 
 #if DEBUG
         close(x_OAD_v_filenum)

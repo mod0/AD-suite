@@ -16,7 +16,7 @@ c
 #include "const.inc"
 c
         integer    maxnode,     maxcell,       maxedge
-        parameter (maxnode=9900,maxcell=9702+1,maxedge=19502)
+        parameter (maxnode=721801,maxcell=720000+1,maxedge=1441400)
 c
         integer*4 ecell(2,maxedge), boun(maxedge),
      &            edge(2,maxedge), cell(4,maxcell)
@@ -105,7 +105,7 @@ c
               resbold(ipde,ic) = resb(ipde,ic)
             enddo
           enddo
-c 
+c
 c-------- predictor/corrector update loop
 c
           do k = 1, 2
@@ -115,8 +115,8 @@ c
               enddo
               adtb(ic) = 0.0d0
             enddo
-c 
-c---------- flux evaluation loop 
+c
+c---------- flux evaluation loop
 c
 c            write(*,*) 'entering flux_fac_b/flux_wall_b'
 c
@@ -129,7 +129,7 @@ c
               if(boun(ie).eq.0) then
                 call flux_face_b(x(1,in1),x(1,in2),
      &                           q(1,ic1),qb(1,ic1),
-     &                           q(1,ic2),qb(1,ic2), 
+     &                           q(1,ic2),qb(1,ic2),
      &                           adt(ic1),adtb(ic1),
      &                           adt(ic2),adtb(ic2),
      &                           dum1,resb(1,ic1), dum2,resb(1,ic2))
@@ -190,7 +190,7 @@ c
                 call flux_face_bx(x(1,in1),xb(1,in1),
      &                            x(1,in2),xb(1,in2),
      &                            q(1,ic1),qb(1,ic1),
-     &                            q(1,ic2),qb(1,ic2), 
+     &                            q(1,ic2),qb(1,ic2),
      &                            adt(ic1),adtb(ic1),
      &                            adt(ic2),adtb(ic2),
      &                            dum1,resb(1,ic1), dum2,resb(1,ic2))
@@ -224,6 +224,6 @@ c
             write(*,'(i5,e13.6,e23.16)') iter,rms,liftd
           endif
         enddo
-c 
+c
         stop
         end
