@@ -13,7 +13,7 @@ c
 #include "const.inc"
 c
         integer    maxnode,     maxcell,       maxedge
-        parameter (maxnode=9900,maxcell=9702+1,maxedge=19502)
+        parameter (maxnode=721801,maxcell=720000+1,maxedge=1441400)
 c
         integer*4 ecell(2,maxedge), boun(maxedge),
      &            edge(2,maxedge), cell(4,maxcell)
