@@ -5,19 +5,32 @@ The airfoil test-case is derived from the paper \cite{Giles_2005}. The source co
 For the mathematical formulation refer \cite{Giles_2005}.
 
 \subsection{Directory structure and description of files}
-The airfoil test-case is organized into four subdirectories as shown below:\\
+The airfoil test-case is organized into five subdirectories as shown below:\\
 \dirtree{%
 .1 /. 
 .2 air\_foil\_tapenade\DTcomment{Tapenade in Tangent and Adjoint mode}. 
 .2 air\_foil\_wopenad\_joint\DTcomment{OpenAD/F in Reverse Joint mode}. 
 .2 air\_foil\_wopenad\_split\DTcomment{OpenAD/F in Reverse Split mode}. 
 .2 air\_foil\_wopenad\_tanglin\DTcomment{OpenAD/F in Forward mode}. 
+.2 mesh\_generator\DTcomment{MATLAB scripts to generate mesh}. 
 }
 \subsubsection{Differentiated code using Tapenade}
-The directory \texttt{air\_foil\_tapenade} contains the files to compile the original \textbf{non-linear flow code}, the \textbf{forward-mode linear flow code} and the \textbf{reverse-mode adjoint flow code}. The binaries (\textbf{files}) corresponding to these on building the directory are \texttt{airfoil} (\textbf{{airfoil.F}}), \texttt{air\_lin} (\textbf{{air\_lin.F}}) and \texttt{air\_adj} (\textbf{{air\_adj.F}}) respectively. \\
+The directory \texttt{air\_foil\_tapenade} contains the files to compile the original \textbf{non-linear flow code}, the \textbf{forward-mode linear flow code} and the \textbf{reverse-mode adjoint flow code}. The binaries (\textbf{files}), corresponding to these, on building the directory are \texttt{airfoil} (\textbf{{airfoil.F}}), \texttt{air\_lin} (\textbf{{air\_lin.F}}) and \texttt{air\_adj} (\textbf{{air\_adj.F}}) respectively. \\
 
 \noindent The differentiated versions of the original non-linear flow routines are used in the files \texttt{air\_lin.F} and \texttt{air\_adj.F}. These have been obtained by passing the undifferentiated routines to Tapenade on the \href{http://www-tapenade.inria.fr:8080/tapenade/index.jsp}{web}. \\
 
+\noindent The arguments that were used while generating the differentiated version of the routines can be traced back to the Tapenade invocations that are commented in the \texttt{Makefile}, as Tapenade was not available locally at the time. An example of how one would call tapenade to generate the adjoint version \texttt{flux\_face\_bx.f} appears below. \\
+
+\begin{lstlisting}[style=BashInputStyle]
+$ tapenade -backward                                   \
+		   -head         flux_face                         \
+		   -output       flux_face                         \
+		   -vars         "x1 x2 q1 q2 adt1 adt2 res1 res2" \
+		   -outvars      "x1 x2 q1 q2 adt1 adt2 res1 res2" \
+		   -difffuncname "_bx"                             \
+		   routines.f;
+\end{lstlisting}
+\clearpage
 \noindent The listing of files and their descriptions follow.\\
 \dirtree{%
 .1 /. 
@@ -49,12 +62,18 @@ The directory \texttt{air\_foil\_tapenade} contains the files to compile the ori
 .3 time\_cell\_b.f\DTcomment{ADJ version of time\_cell from routines.F}. 
 .3 time\_cell\_bx.f\DTcomment{Ditto time\_cell\_b with co-ordinate variations}. 
 .3 time\_cell\_d.f\DTcomment{TL version of time\_cell from routines.F}. 
-.3 time\_cell\_dx.f\DTcomment{Ditto time\_cell\_d with co-ordinate variations}.  
+.3 time\_cell\_dx.f\DTcomment{Ditto time\_cell\_d with co-ordinate variations}. 
+.3 const.inc\DTcomment{Constants common block}. 
+.3 flow.dat\DTcomment{Initial flow - scaled up problem size}. 
+.3 flow.dat.bak\DTcomment{Initial flow - original}. 
+.3 grid.dat\DTcomment{Unstructured grid - scaled up problem size}. 
+.3 grid.dat.bak\DTcomment{Unstructured grid}. 
+.3 Makefile\DTcomment{Build commands}. 
 }
 
 \subsection{Modifications performed}
 \subsection{How to build}
-Running make as below, in each of the four subdirectories listed above will build the  binaries \texttt{airfoil}, \texttt{air\_lin} and \texttt{air\_adj}.
+Running make as below, in each of the four subdirectories beginning with ``airfoil'' will build the  binaries \texttt{airfoil}, \texttt{air\_lin} and \texttt{air\_adj}.
 \begin{lstlisting}[style=BashInputStyle]
     $ make
 \end{lstlisting}

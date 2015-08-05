@@ -1,4 +1,4 @@
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%-----------------------------------------------------------------------
 % The following source code has been locally copied from a different GIT 
 % project by the original authors:
 %
@@ -14,11 +14,15 @@
 % https://github.com/OP2/OP2-Common
 %
 %
+% The link to the original code is:
+% https://github.com/OP2/OP2-Common/blob/master/apps/mesh_generators/naca0012.m
+%
+%
 % License and terms of use carry-over as-is from the original
 % project above.
 %
 % 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%----------------------------------------------------------------------
 %
 % use NACA0012 definition to construct airfoil upper surface
 %
