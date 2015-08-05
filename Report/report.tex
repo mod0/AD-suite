@@ -29,16 +29,28 @@
 \newenvironment{TodoPar}
   {\begin{shaded}\marginnote{\fbox{Todo}}}
   {\end{shaded}}
+\newenvironment{NotePar}
+  {\begin{shaded}\marginnote{\fbox{Note}}}
+  {\end{shaded}}
 
-\lstdefinestyle{BashInputStyle}{
+\lstdefinelanguage{mybash}{
+  tabsize=4,
   language=bash,
-  basicstyle=\small\sffamily,
-%  numbers=left,
-  numberstyle=\tiny,
-  numbersep=3pt,
   frame=tb,
   columns=fullflexible,
+  breaklines=true,
+  basicstyle=\small\sffamily,
+  stringstyle=\small\sffamily\itshape\color{brown}\small,
+  commentstyle=\small\sffamily\itshape\color{green}\small,
   backgroundcolor=\color{yellow!20},
+  showstringspaces=false,
+  showspaces=false,
+  mathescape=false,
+  classoffset=0,
+  keywordstyle=\sffamily\color{blue}\small,
+  morekeywords={},
+  emph={},
+  emphstyle=\linespread{0.85}\color{green}\small,
   linewidth=0.9\linewidth,
   xleftmargin=0.1\linewidth
 }
@@ -46,21 +58,45 @@
 \lstdefinelanguage{myfortran}{%
   tabsize=4,
   language=fortran,
-  frame=tblr,
+  frame=tb,
   columns=fullflexible,
-  breaklines=true
-  basicstyle=\linespread{0.85}\ttfamily\small,
-  stringstyle=\linespread{0.85}\sffamily\itshape\color{brown}\small,
-  commentstyle=\linespread{0.85}\sffamily\itshape\color{green}\small,
-  backgroundcolor=\color{white},
+  breaklines=true,
+  basicstyle=\small\sffamily,
+  stringstyle=\small\sffamily\itshape\color{brown}\small,
+  commentstyle=\small\sffamily\itshape\color{green}\small,
+  backgroundcolor=\color{yellow!20},
   showstringspaces=false,
   showspaces=false,
   mathescape=false,
   classoffset=0,
-  keywordstyle=\ttfamily\color{blue}\small,
+  keywordstyle=\sffamily\color{blue}\small,
   morekeywords={},
   emph={},
-  emphstyle=\linespread{0.85}\color{green}\small
+  emphstyle=\linespread{0.85}\color{green}\small,
+  linewidth=0.9\linewidth,
+  xleftmargin=0.1\linewidth
+}
+
+\lstdefinelanguage{mymatlab}{%
+  tabsize=4,
+  language=matlab,
+  frame=tb,
+  columns=fullflexible,
+  breaklines=true,
+  basicstyle=\small\sffamily,
+  stringstyle=\small\sffamily\itshape\color{brown}\small,
+  commentstyle=\small\sffamily\itshape\color{green}\small,
+  backgroundcolor=\color{yellow!20},
+  showstringspaces=false,
+  showspaces=false,
+  mathescape=false,
+  classoffset=0,
+  keywordstyle=\sffamily\color{blue}\small,
+  morekeywords={},
+  emph={},
+  emphstyle=\linespread{0.85}\color{green}\small,
+  linewidth=0.9\linewidth,
+  xleftmargin=0.1\linewidth
 }
 
 \lstset{language=myfortran}

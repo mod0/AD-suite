@@ -23,7 +23,7 @@ The directory \texttt{air\_foil\_tapenade} contains the files to compile the ori
 
 \noindent The arguments that were used while generating the differentiated version of the routines can be traced back to the Tapenade invocations that are commented in the \texttt{Makefile}, as Tapenade was not available locally at the time. An example of how one would call tapenade to generate the adjoint version \texttt{flux\_face\_bx.f} appears on the following page. 
 \clearpage
-\begin{lstlisting}[style=BashInputStyle]
+\begin{lstlisting}[language=mybash]
 $ tapenade -backward                                   \
 		   -head         flux_face                         \
 		   -output       flux_face                         \
@@ -145,10 +145,58 @@ For details on reverse split mode refer \cite{Griewank_2008} and \cite{Utke_2014
 .3 time\_cell.F\DTcomment{UD version of time\_cell from routines.F}.  
 }
 
+\clearpage
+\subsubsection{Differentiated code using OpenAD in Forward Mode}
+\noindent The directory \texttt{air\_foil\_wopenad\_tanglin} contains the files to compile the original \textbf{non-linear flow code} and the \textbf{forward-mode linear flow code}. The binaries (\textbf{files}), corresponding to these, on building the directory are \texttt{airfoil} (\textbf{{airfoil.F}}) and \texttt{air\_lin} (\textbf{{air\_lin.F}}) respectively. \\
+
+\begin{TodoPar}\noindent The binary \texttt{testlinadj} (\textbf{{testlinadj.F}}), which was earlier used to validate the forward-linear and reverse-adjoint routines in the \texttt{air\_foil\_tapenade} subdirectory, is not yet available to test OpenAD/F as modifications have to be done to use \texttt{oad\_active} type in the source code.\end{TodoPar}
+
+\noindent The tangent-linear version of the original non-linear flow routines are used in the file  \texttt{air\_lin.F}. These have been obtained by passing the undifferentiated routines to OpenAD/F in forward mode.\\
+
+\noindent For details on how to call OpenAD/F in forward-mode refer \cite{Utke_2014}. The listing of files and their descriptions follow.\\
+
+\dirtree{%
+.1 /. 
+.2 air\_foil\_wopenad\_tanglin.  
+.3 airfoil.F\DTcomment{Driver for non-linear flow code}. 
+.3 air\_lin.F\DTcomment{Driver for forward-mode linear flow code driver}. 
+.3 const.inc\DTcomment{Constants common block}. 
+.3 flow.dat\DTcomment{Initial flow - scaled up problem size}. 
+.3 flow.dat.bak\DTcomment{Initial flow - original}. 
+.3 flux\_face.F\DTcomment{UD version of flux\_face from routines.F}. 
+.3 flux\_wall.F\DTcomment{UD version of flux\_wall from routines.F}. 
+.3 grid.dat\DTcomment{Unstructured grid - scaled up problem size}. 
+.3 grid.dat.bak\DTcomment{Unstructured grid - original}. 
+.3 iaddr.c\DTcomment{OpenAD/F support file}. 
+.3 input.F\DTcomment{Routines to read and write data}. 
+.3 lift\_wall.F\DTcomment{UD version of lift\_wall from routines.F}. 
+.3 Makefile\DTcomment{Build commands}. 
+.3 Makefile.bak\DTcomment{Unused makefile}. 
+.3 print\_active.F\DTcomment{Routines to record matrices and vectors}. 
+.3 routines.F\DTcomment{Real and complex versions of non-linear routines}. 
+.3 testlinadj.F.bak\DTcomment{Unused derivatives test code}. 
+.3 time\_cell.F\DTcomment{UD version of time\_cell from routines.F}. 
+}
+\clearpage
+\subsubsection{Mesh generation}\label{mesh_gen}
+The directory \texttt{mesh\_generator} packs a MATLAB script \texttt{naca0012.m} which can be used to generate larger meshes. The \texttt{airfoil} example can read the meshes that are in the ``old'' format. This can be specified while calling the script from MATLAB like below.
+\hfill\break
+\begin{lstlisting}[language=mymatlab]
+>> naca0012(`old')
+\end{lstlisting}
+The script generates a \texttt{grid.dat} file where the first row contains the number of nodes, cells and edges in the mesh and the corresponding mesh data follows. The size of the mesh can be controlled by changing the parameters \texttt{I} and \texttt{J} in the MATLAB script.
+
+\begin{NotePar}
+\noindent To use a new grid file in airfoil code, the parameters \texttt{maxnode}, \texttt{maxcell} and \texttt{maxedge} have to be set appropriately in each of the driver files. Also, note that the \texttt{maxcell} is one more than corresponding value from the \texttt{grid.dat} file.
+\end{NotePar}
+\clearpage
 \subsection{Modifications performed}
+
+\clearpage
 \subsection{How to build}
 Running make as below, in each of the four subdirectories beginning with ``airfoil'' will build the  binaries \texttt{airfoil}, \texttt{air\_lin} and \texttt{air\_adj}.
-\begin{lstlisting}[style=BashInputStyle]
+\hfill\break
+\begin{lstlisting}[language=mybash]
     $ make
 \end{lstlisting}
 \subsection{How to verify}
