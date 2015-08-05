@@ -59,7 +59,7 @@ $ tapenade -backward                                   \
 .3 lift\_wall\_dx.f\DTcomment{Ditto lift\_wall\_d with co-ordinate variations}. 
 .3 print\_active.F\DTcomment{Routines to record matrices and vectors}. 
 .3 routines.F\DTcomment{Real and complex versions of non-linear routines}. 
-.3 testlinadj.F\DTcomment{Validate Tapenade generated routines}. 
+.3 testlinadj.F\DTcomment{Derivatives test code}. 
 .3 time\_cell\_b.f\DTcomment{ADJ version of time\_cell from routines.F}. 
 .3 time\_cell\_bx.f\DTcomment{Ditto time\_cell\_b with co-ordinate variations}. 
 .3 time\_cell\_d.f\DTcomment{TL version of time\_cell from routines.F}. 
@@ -68,7 +68,7 @@ $ tapenade -backward                                   \
 .3 flow.dat\DTcomment{Initial flow - scaled up problem size}. 
 .3 flow.dat.bak\DTcomment{Initial flow - original}. 
 .3 grid.dat\DTcomment{Unstructured grid - scaled up problem size}. 
-.3 grid.dat.bak\DTcomment{Unstructured grid}. 
+.3 grid.dat.bak\DTcomment{Unstructured grid - original}. 
 .3 Makefile\DTcomment{Build commands}. 
 }
 \clearpage
@@ -85,41 +85,64 @@ For details on reverse joint mode refer \cite{Griewank_2008} and \cite{Utke_2014
 
 \dirtree{%
 .1 /. 
-.2 air\_foil\_tapenade.  
-.3 adBuffer.c\DTcomment{Tapenade support file}. 
-.3 adBuffer.f\DTcomment{Tapenade support file}. 
-.3 adBuffer.h\DTcomment{Tapenade support file}. 
-.3 adStack.c\DTcomment{Tapenade support file}. 
-.3 adStack.h\DTcomment{Tapenade support file}. 
+.2 air\_foil\_wopenad\_joint.  
+.3 adStack.c.bak\DTcomment{Unused Tapenade support file}. 
 .3 air\_adj.F\DTcomment{Driver for reverse-mode adjoint flow code}. 
 .3 airfoil.F\DTcomment{Driver for non-linear flow code}. 
-.3 air\_lin.F\DTcomment{Driver for forward-mode linear flow code}. 
-.3 flux\_face\_b.f\DTcomment{ADJ version of flux\_face from routines.F}. 
-.3 flux\_face\_bx.f\DTcomment{Ditto flux\_face\_b with co-ordinate variations}. 
-.3 flux\_face\_d.f\DTcomment{TL version of flux\_face from routines.F}. 
-.3 flux\_face\_dx.f\DTcomment{Ditto flux\_face\_d with co-ordinate variations}. 
-.3 flux\_wall\_b.f\DTcomment{ADJ version of flux\_wall from routines.F}. 
-.3 flux\_wall\_bx.f\DTcomment{Ditto flux\_wall\_b with co-ordinate variations}. 
-.3 flux\_wall\_d.f\DTcomment{TL version of flux\_wall from routines.F}. 
-.3 flux\_wall\_dx.f\DTcomment{Ditto flux\_wall\_d with co-ordinate variations}. 
-.3 input.F\DTcomment{Routines to read and write data}. 
-.3 lift\_wall\_b.f\DTcomment{ADJ version of lift\_wall from routines.F}. 
-.3 lift\_wall\_bx.f\DTcomment{Ditto lift\_wall\_b with co-ordinate variations}. 
-.3 lift\_wall\_d.f\DTcomment{TL version of lift\_wall from routines.F}. 
-.3 lift\_wall\_dx.f\DTcomment{Ditto lift\_wall\_d with co-ordinate variations}. 
-.3 print\_active.F\DTcomment{Routines to record matrices and vectors}. 
-.3 routines.F\DTcomment{Real and complex versions of non-linear routines}. 
-.3 testlinadj.F\DTcomment{Validate Tapenade generated routines}. 
-.3 time\_cell\_b.f\DTcomment{ADJ version of time\_cell from routines.F}. 
-.3 time\_cell\_bx.f\DTcomment{Ditto time\_cell\_b with co-ordinate variations}. 
-.3 time\_cell\_d.f\DTcomment{TL version of time\_cell from routines.F}. 
-.3 time\_cell\_dx.f\DTcomment{Ditto time\_cell\_d with co-ordinate variations}. 
+.3 air\_lin.F.bak\DTcomment{Unused forward-mode linear flow code driver}. 
 .3 const.inc\DTcomment{Constants common block}. 
 .3 flow.dat\DTcomment{Initial flow - scaled up problem size}. 
 .3 flow.dat.bak\DTcomment{Initial flow - original}. 
+.3 flux\_face.F\DTcomment{UD version of flux\_face from routines.F}. 
+.3 flux\_wall.F\DTcomment{UD version of flux\_wall from routines.F}. 
 .3 grid.dat\DTcomment{Unstructured grid - scaled up problem size}. 
-.3 grid.dat.bak\DTcomment{Unstructured grid}. 
+.3 grid.dat.bak\DTcomment{Unstructured grid - original}. 
+.3 iaddr.c\DTcomment{OpenAD/F support file}. 
+.3 input.F\DTcomment{Routines to read and write data}. 
+.3 lift\_wall.F\DTcomment{UD version of lift\_wall from routines.F}. 
 .3 Makefile\DTcomment{Build commands}. 
+.3 Makefile.bak\DTcomment{Unused makefile}. 
+.3 print\_active.F\DTcomment{Routines to record matrices and vectors}. 
+.3 routines.F\DTcomment{Real and complex versions of non-linear routines}. 
+.3 testlinadj.F.bak\DTcomment{Unused derivatives test code}. 
+.3 time\_cell.F\DTcomment{UD version of time\_cell from routines.F}.  
+}
+
+\clearpage
+\subsubsection{Differentiated code using OpenAD in Reverse Split Mode}
+For details on reverse split mode refer \cite{Griewank_2008} and \cite{Utke_2014}.\\
+
+\noindent The directory \texttt{air\_foil\_wopenad\_split} contains the files to compile the original \textbf{non-linear flow code} and the \textbf{reverse-mode adjoint flow code}. The binaries (\textbf{files}), corresponding to these, on building the directory are \texttt{airfoil} (\textbf{{airfoil.F}}) and \texttt{air\_adj} (\textbf{{air\_adj.F}}) respectively. \\
+
+\begin{TodoPar}\noindent The binary \texttt{testlinadj} (\textbf{{testlinadj.F}}), which was earlier used to validate the forward-linear and reverse-adjoint routines in the \texttt{air\_foil\_tapenade} subdirectory, is not yet available to test OpenAD/F as modifications have to be done to use \texttt{oad\_active} type in the source code.\end{TodoPar}
+
+\noindent The adjoint version of the original non-linear flow routines are used in the file  \texttt{air\_adj.F}. These have been obtained by passing the undifferentiated routines to OpenAD/F in reverse-split mode.\\
+
+\noindent For details on how to call OpenAD/F in reverse-split mode refer \cite{Utke_2014}. The listing of files and their descriptions follow.\\
+
+\dirtree{%
+.1 /. 
+.2 air\_foil\_wopenad\_joint.  
+.3 adStack.c.bak\DTcomment{Unused Tapenade support file}. 
+.3 air\_adj.F\DTcomment{Driver for reverse-mode adjoint flow code}. 
+.3 airfoil.F\DTcomment{Driver for non-linear flow code}. 
+.3 air\_lin.F.bak\DTcomment{Unused forward-mode linear flow code driver}. 
+.3 const.inc\DTcomment{Constants common block}. 
+.3 flow.dat\DTcomment{Initial flow - scaled up problem size}. 
+.3 flow.dat.bak\DTcomment{Initial flow - original}. 
+.3 flux\_face.F\DTcomment{UD version of flux\_face from routines.F}. 
+.3 flux\_wall.F\DTcomment{UD version of flux\_wall from routines.F}. 
+.3 grid.dat\DTcomment{Unstructured grid - scaled up problem size}. 
+.3 grid.dat.bak\DTcomment{Unstructured grid - original}. 
+.3 iaddr.c\DTcomment{OpenAD/F support file}. 
+.3 input.F\DTcomment{Routines to read and write data}. 
+.3 lift\_wall.F\DTcomment{UD version of lift\_wall from routines.F}. 
+.3 Makefile\DTcomment{Build commands}. 
+.3 Makefile.bak\DTcomment{Unused makefile}. 
+.3 print\_active.F\DTcomment{Routines to record matrices and vectors}. 
+.3 routines.F\DTcomment{Real and complex versions of non-linear routines}. 
+.3 testlinadj.F.bak\DTcomment{Unused derivatives test code}. 
+.3 time\_cell.F\DTcomment{UD version of time\_cell from routines.F}.  
 }
 
 \subsection{Modifications performed}
