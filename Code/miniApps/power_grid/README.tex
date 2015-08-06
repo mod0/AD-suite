@@ -1,41 +1,48 @@
-\section{Airfoil}
+\section{Power Generation (not Power Grid)}
 \subsection{Author and source}
-The airfoil test-case is derived from the paper \cite{Giles_2005}. The source code is available \href{http://people.maths.ox.ac.uk/gilesm/codes/airfoil/bangalore05.tar}{here}. The application is a 2D inviscid airfoil code using an unstructured grid. 
+The power generation test-case is derived from the summer project \cite{Rao_2013} at ANL. A copy of the source code, with some minor bug fixes to the original, is included in the \texttt{git} repository as described below. The application is an optimal control problem to `\textit{`maximize the input power to a generator while limiting its mechanical angle oscillation}'' as described in the reference above.
 \subsection{Description of the mathematical formulation}
-For the mathematical formulation refer \cite{Giles_2005}.
+A general framework for an \textcolor{red}{optimal control} \cite{Sandu_2012} problem is given below:
+\[ \theta \,=\, \text{argmin} \;\; \Psi(x, \theta) = \int_{t_0}^{t_F} r\big(x(t), \theta\big)\, dt \,+\, w\big(x(t_F), \theta\big)\]
+\[ \text{subject to:} \;\; x' = f(t, x, \theta), \; t_0 \leq t \leq t_F, \; x(t_0) = x_0(\theta) \]
+Here, we seek to minimize the cost function $\Psi$ by choosing $\theta$. However, noting that the parameter $\theta$ also decides the value of $x(t_F)$ on which the cost function is dependent. This dependency relation of $x(t_F)$ on $\theta$ comes from the constraint ODE.\\
 
+\noindent Using continuous adjoints, the gradient of the \textcolor{red}{hamiltonian} with respect to the parameters $\theta$ can be written as:
+
+\[\nabla_{\theta} \Psi = w_{\theta}^T\big(x(t_F), \theta\big) + \bigg(\frac{d x_0}{d \theta}\bigg)^T \,.\, \lambda(t_0) +\;\int_{t_0}^{t_F} \bigg(f_{\theta}^T(t, x, \theta) \,.\, \lambda(t) + r_{\theta}^T\big(x,\theta\big)\bigg) dt\]
+
+\noindent The actual problem that is being solved by the power generation example is given below:
+
+\[ p_m \,=\, \text{argmin} \;\; \Psi( p_m, \phi) = - p_m \,+\, c \int_{t_0}^{t_F} \big((\phi - \phi_S)_{+}\big)^4 \, dt\]
+subject to: 
+\begin{eqnarray*}
+\frac{d\phi}{dt} &=& \omega_B (\omega - \omega_S)\\
+\frac{d\omega}{dt} &=& \frac{\omega_S}{2H} (p_m - p_{max} sin(\phi) - D(\omega - \omega_S)),\; t_0 \leq t \leq t_F \\
+\phi(t_0) &=& sin^{-1}\bigg(\frac{p_m}{p_{max}}\bigg) \\
+\omega(t_0) &=& 1 
+\end{eqnarray*}
+$\omega$: frequency, \, $\phi$: phase angle,\, $p_m$: parameter\\
+
+\noindent The \texttt{MATLAB} code uses continuous adjoints to compute the gradient of the cost function $\Psi$ with respect to the parameter $p_m$.
+\clearpage
 \subsection{Directory structure and description of files}
-The airfoil test-case is organized into five subdirectories as shown below:\\
+The power generation test-case is organized into five subdirectories as shown below:\\
 \dirtree{%
 .1 /. 
-.2 air\_foil\_tapenade\DTcomment{Tapenade in Tangent and Adjoint mode}. 
-.2 air\_foil\_wopenad\_joint\DTcomment{OpenAD/F in Reverse Joint mode}. 
-.2 air\_foil\_wopenad\_split\DTcomment{OpenAD/F in Reverse Split mode}. 
-.2 air\_foil\_wopenad\_tanglin\DTcomment{OpenAD/F in Forward mode}. 
-.2 mesh\_generator\DTcomment{MATLAB scripts to generate mesh}. 
+.2 MATLAB\DTcomment{Original MATLAB files with minor bug fixes}. 
+.2 Fortran/ContinuousAdj\DTcomment{Fortran port with continuous adjoints}. 
+.2 Fortran/DiscreteAdj/OpenAD/TangLin\DTcomment{OpenAD/F in Forward Mode}. 
+.2 Fortran/DiscreteAdj/OpenAD/Joint\DTcomment{OpenAD/F in RJ Mode}. 
+.2 Fortran/DiscreteAdj/OpenAD/Split\DTcomment{OpenAD/F in RS Mode}. 
+.2 Fortran/DiscreteAdj/Tapenade\DTcomment{Tapenade in Adjoint Mode}.  
 }
-\subsubsection{Differentiated code using Tapenade}
-The directory \texttt{air\_foil\_tapenade} contains the files to compile the original \textbf{non-linear flow code}, the \textbf{forward-mode linear flow code} and the \textbf{reverse-mode adjoint flow code}. The binaries (\textbf{files}), corresponding to these, on building the directory are \texttt{airfoil} (\textbf{{airfoil.F}}), \texttt{air\_lin} (\textbf{{air\_lin.F}}) and \texttt{air\_adj} (\textbf{{air\_adj.F}}) respectively. \\
+\subsubsection{MATLAB files}
+The directory \texttt{MATLAB} contains the original files with some minor bug fixes to comply with \cite{Rao_2013} and \cite{Sandu_2012}. The \texttt{MATLAB} version of the code uses the continuous adjoint formulation as mentioned in the earlier references.
 
-\noindent The binary \texttt{testlinadj} (\textbf{{testlinadj.F}}), which is built along with the rest, constructs a small mesh, initializes flow and tests the linear and adjoint versions of the routines against one another and each of them against the estimate from performing complex finite difference. \\
-
-\noindent The differentiated versions of the original non-linear flow routines are used in the files \texttt{air\_lin.F} and \texttt{air\_adj.F}. These have been obtained by passing the undifferentiated routines to Tapenade on the \href{http://www-tapenade.inria.fr:8080/tapenade/index.jsp}{web}. \\
-
-\noindent The arguments that were used while generating the differentiated version of the routines can be traced back to the Tapenade invocations that are commented in the \texttt{Makefile}, as Tapenade was not available locally at the time. An example of how one would call tapenade to generate the adjoint version \texttt{flux\_face\_bx.f} appears on the following page. 
-\clearpage
-\begin{lstlisting}[language=mybash]
-$ tapenade -backward                                   \
-		   -head         flux_face                         \
-		   -output       flux_face                         \
-		   -vars         "x1 x2 q1 q2 adt1 adt2 res1 res2" \
-		   -outvars      "x1 x2 q1 q2 adt1 adt2 res1 res2" \
-		   -difffuncname "_bx"                             \
-		   routines.f;
-\end{lstlisting}
 \noindent The listing of files and their descriptions follow.\\
 \dirtree{%
 .1 /. 
-.2 air\_foil\_tapenade.  
+.2 MATLAB.  
 .3 adBuffer.c\DTcomment{Tapenade support file}. 
 .3 adBuffer.f\DTcomment{Tapenade support file}. 
 .3 adBuffer.h\DTcomment{Tapenade support file}. 
