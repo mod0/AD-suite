@@ -190,7 +190,7 @@ The script generates a \texttt{grid.dat} file where the first row contains the n
 \noindent To use a new grid file in airfoil code, the parameters \texttt{maxnode}, \texttt{maxcell} and \texttt{maxedge} have to be set appropriately in each of the driver files. Also, note that the \texttt{maxcell} is one more than corresponding value from the \texttt{grid.dat} file.
 \end{NotePar}
 \subsection{Modifications performed}
-%\lstinputlisting[language=mydiff]{../Code/miniApps/airfoil/airfoil_tapenade.diff}
+Refer section \ref{diff_airfoil}
 \subsection{How to build}
 Running make as below, in each of the four subdirectories beginning with ``airfoil'' will build the  binaries \texttt{airfoil}, \texttt{air\_lin} and \texttt{air\_adj}.
 \hfill\break
@@ -249,38 +249,24 @@ c
 \hfill \break
 In order to generate the corresponding flows, lines \texttt{19-22} of \texttt{input.F} may be initially commented. A base flow is initialized in lines \texttt{12-17}. Using this, the binary \texttt{airfoil} may be executed for a long time period. When the binary finishes executing, it writes the solution at the end of the simulation to \texttt{flow.dat} file. This file may later be used by uncommenting the lines \texttt{19-22} of \texttt{input.F} to warm-start the simulation with a hopefully converged flow.\\
 
-\noindent Quoting verbatim an email from one of the authors of \cite{Giles_2005}:
+\noindent Paraphrasing an email from one of the authors of \cite{Giles_2005}:
 
 \begin{verbatim}
-> Hi,
->
-> The airfoil testcase is one which I developed many years ago 
-> for another project (in fact an AD project using Tapenade):
-> http://people.maths.ox.ac.uk/~gilesm/codes/airfoil/index.html
->
-> It does the first initialisation to uniform flow at a given 
-> pressure, density, Mach number and angle of attack.   I don't
-> think there would be a problem using this for a really big mesh,
-> but you might need to reduce the timestep in the CFD calculation
-> to cope with the strong initial transient.
->
-> We used to run it with just this one line of input to get the
-> uniform initialisation (the second initialisation was skipped
-> due to the err/end condition).   After a block of iterations 
-> it would stop and write out the solution, and we could then 
-> later read that back in to continue the calculation, if we 
-> wanted to.
->
-> I'm cc'ing Gihan and Istvan who have done scaling studies on 
-> OP2 -- they may have other scripts which might be helpful, 
-> and might know if there are any issues with this initialisation 
-> for very large grids.
->
-> Please give my regards to Paul.
->
-> Cheers,
->
-> Mike
+ The airfoil testcase was developed several years ago for an
+ an AD project using Tapenade:
+ http://people.maths.ox.ac.uk/~gilesm/codes/airfoil/index.html
+
+ The input.F file initializes a uniform flow at a given 
+ pressure, density, mach number and angle of attack. For 
+ this technique (of initializing the flow) to be used with
+ larger meshes, the timestep in the CFD calculations may
+ need to be  lowered to handle strong initial transients.
+
+ The authors used to run the simulation using just this
+ technique, letting the simulation warm up by running 
+ several iterations. At the end of each simulation the
+ updated flow is written to the same flow.dat file which
+ can later be used to continue the simulation, if needed.
 \end{verbatim}
 \subsubsection{Throwing more stuff on the tape, artificially}
 One of the intended uses of this airfoil test-case is to test checkpointing algorithms in AD tools. With regards to \texttt{OpenAD/F}
