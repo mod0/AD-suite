@@ -1,7 +1,7 @@
 \section{Power Generation (not Power Grid)}
 \subsection{Author and source}
 The power generation test-case is derived from the summer project \cite{Rao_2013} at ANL. A copy of the source code, with some minor bug fixes to the original, is included in the \texttt{git} repository as described below. The application is an optimal control problem to `\textit{`maximize the input power to a generator while limiting its mechanical angle oscillation}'' as described in the reference above.
-\subsection{Description of the mathematical formulation}
+\subsection{Description of the mathematical formulation}\label{power_cont_adj_math}
 A general framework for an \textcolor{red}{optimal control} \cite{Sandu_2012} problem is given below:
 \[ \theta \,=\, \text{argmin} \;\; \Psi(x, \theta) = \int_{t_0}^{t_F} r\big(x(t), \theta\big)\, dt \,+\, w\big(x(t_F), \theta\big)\]
 \[ \text{subject to:} \;\; x' = f(t, x, \theta), \; t_0 \leq t \leq t_F, \; x(t_0) = x_0(\theta) \]
@@ -30,137 +30,109 @@ The power generation test-case is organized into five subdirectories as shown be
 \dirtree{%
 .1 /. 
 .2 MATLAB\DTcomment{Original MATLAB files with minor bug fixes}. 
-.2 Fortran/ContinuousAdj\DTcomment{Fortran port with continuous adjoints}. 
-.2 Fortran/DiscreteAdj/OpenAD/TangLin\DTcomment{OpenAD/F in Forward Mode}. 
-.2 Fortran/DiscreteAdj/OpenAD/Joint\DTcomment{OpenAD/F in RJ Mode}. 
-.2 Fortran/DiscreteAdj/OpenAD/Split\DTcomment{OpenAD/F in RS Mode}. 
+.2 Fortran/ContinuousAdj\DTcomment{\texttt{Fortran} port with continuous adjoints}. 
+.2 Fortran/DiscreteAdj/OpenAD/TangLin\DTcomment{\texttt{OpenAD/F} in FW Mode}. 
+.2 Fortran/DiscreteAdj/OpenAD/Joint\DTcomment{\texttt{OpenAD/F} in RJ Mode}. 
+.2 Fortran/DiscreteAdj/OpenAD/Split\DTcomment{\texttt{OpenAD/F} in RS Mode}. 
 .2 Fortran/DiscreteAdj/Tapenade\DTcomment{Tapenade in Adjoint Mode}.  
 }
-\subsubsection{MATLAB files}
-The directory \texttt{MATLAB} contains the original files with some minor bug fixes to comply with \cite{Rao_2013} and \cite{Sandu_2012}. The \texttt{MATLAB} version of the code uses the continuous adjoint formulation as mentioned in the earlier references.
+\subsubsection{\texttt{MATLAB} version}
+The directory \texttt{MATLAB} contains the original files with some minor bug fixes to comply with \cite{Rao_2013} and \cite{Sandu_2012}. The \texttt{MATLAB} version of the code uses the continuous adjoint formulation as mentioned in the earlier references.\\
 
 \noindent The listing of files and their descriptions follow.\\
 \dirtree{%
 .1 /. 
 .2 MATLAB.  
-.3 adBuffer.c\DTcomment{Tapenade support file}. 
-.3 adBuffer.f\DTcomment{Tapenade support file}. 
-.3 adBuffer.h\DTcomment{Tapenade support file}. 
-.3 adStack.c\DTcomment{Tapenade support file}. 
-.3 adStack.h\DTcomment{Tapenade support file}. 
-.3 air\_adj.F\DTcomment{Driver for reverse-mode adjoint flow code}. 
-.3 airfoil.F\DTcomment{Driver for non-linear flow code}. 
-.3 air\_lin.F\DTcomment{Driver for forward-mode linear flow code}. 
-.3 flux\_face\_b.f\DTcomment{ADJ version of flux\_face from routines.F}. 
-.3 flux\_face\_bx.f\DTcomment{Ditto flux\_face\_b with co-ordinate variations}. 
-.3 flux\_face\_d.f\DTcomment{TL version of flux\_face from routines.F}. 
-.3 flux\_face\_dx.f\DTcomment{Ditto flux\_face\_d with co-ordinate variations}. 
-.3 flux\_wall\_b.f\DTcomment{ADJ version of flux\_wall from routines.F}. 
-.3 flux\_wall\_bx.f\DTcomment{Ditto flux\_wall\_b with co-ordinate variations}. 
-.3 flux\_wall\_d.f\DTcomment{TL version of flux\_wall from routines.F}. 
-.3 flux\_wall\_dx.f\DTcomment{Ditto flux\_wall\_d with co-ordinate variations}. 
-.3 input.F\DTcomment{Routines to read and write data}. 
-.3 lift\_wall\_b.f\DTcomment{ADJ version of lift\_wall from routines.F}. 
-.3 lift\_wall\_bx.f\DTcomment{Ditto lift\_wall\_b with co-ordinate variations}. 
-.3 lift\_wall\_d.f\DTcomment{TL version of lift\_wall from routines.F}. 
-.3 lift\_wall\_dx.f\DTcomment{Ditto lift\_wall\_d with co-ordinate variations}. 
-.3 print\_active.F\DTcomment{Routines to record matrices and vectors}. 
-.3 routines.F\DTcomment{Real and complex versions of non-linear routines}. 
-.3 testlinadj.F\DTcomment{Derivatives test code}. 
-.3 time\_cell\_b.f\DTcomment{ADJ version of time\_cell from routines.F}. 
-.3 time\_cell\_bx.f\DTcomment{Ditto time\_cell\_b with co-ordinate variations}. 
-.3 time\_cell\_d.f\DTcomment{TL version of time\_cell from routines.F}. 
-.3 time\_cell\_dx.f\DTcomment{Ditto time\_cell\_d with co-ordinate variations}. 
-.3 const.inc\DTcomment{Constants common block}. 
-.3 flow.dat\DTcomment{Initial flow - scaled up problem size}. 
-.3 flow.dat.bak\DTcomment{Initial flow - original}. 
-.3 grid.dat\DTcomment{Unstructured grid - scaled up problem size}. 
-.3 grid.dat.bak\DTcomment{Unstructured grid - original}. 
-.3 Makefile\DTcomment{Build commands}. 
+.3 main.m\DTcomment{Driver file for the power generation model}. 
+.3 sens\_check.m\DTcomment{Model with continuous adjoint}. 
+.3 TSOPF\_Experiments.pdf\DTcomment{Same as \cite{Rao_2013}}. 
 }
+\hfill\break
+\noindent The \texttt{MATLAB} version can be executed like below.\\
+
+\begin{lstlisting}[language=mymatlab, numbers=none]
+>> main
+\end{lstlisting}
+\hfill \break
+\noindent The plots generated by the \texttt{MATLAB} version appear on the following page.
 \clearpage
-\subsubsection{Differentiated code using OpenAD in Reverse Joint Mode}
-For details on reverse joint mode refer \cite{Griewank_2008} and \cite{Utke_2014}.\\
+\begin{figure}[h]
+\centering
+\includegraphics[width=1.2\linewidth]{../Code/miniApps/power_grid/phi_matlab.png}
+\label{fig:plot_of_phi_matlab}
+\includegraphics[width=1.2\linewidth]{../Code/miniApps/power_grid/omega_matlab.png}
+\label{fig:plot_of_omega_matlab}
+\end{figure}
+\clearpage
+\subsubsection{\texttt{Fortran} port with continuous adjoints}\label{sec_fortran_port_power}
+The directory \texttt{Fortran/ContinousAdj} contains the port of the \texttt{MATLAB} version. L-BFGS \cite{Byrd_1996},\cite{Zhu_1997},\cite{Morales_2011} was used to perform the optimization in the \texttt{Fortran} port, a copy of which can be obtained \href{http://users.iems.northwestern.edu/~nocedal/lbfgsb.html}{here}.\\
 
-\noindent The directory \texttt{air\_foil\_wopenad\_joint} contains the files to compile the original \textbf{non-linear flow code} and the \textbf{reverse-mode adjoint flow code}. The binaries (\textbf{files}), corresponding to these, on building the directory are \texttt{airfoil} (\textbf{{airfoil.F}}) and \texttt{air\_adj} (\textbf{{air\_adj.F}}) respectively. \\
+\noindent The directory \texttt{Fortran/ContinousAdj} contains the files to compile continous adjoint version of the optimal control problem listed in \ref{power_cont_adj_math} and \cite{Rao_2013}. The binaries (\textbf{files}), corresponding to these, on building the directory are \texttt{powergrid} (\textbf{{main.f90}}).\\
 
-\begin{TodoPar}\noindent The binary \texttt{testlinadj} (\textbf{{testlinadj.F}}), which was earlier used to validate the forward-linear and reverse-adjoint routines in the \texttt{air\_foil\_tapenade} subdirectory, is not yet available to test OpenAD/F as modifications have to be done to use \texttt{oad\_active} type in the source code.\end{TodoPar}
-
-\noindent The adjoint version of the original non-linear flow routines are used in the file  \texttt{air\_adj.F}. These have been obtained by passing the undifferentiated routines to OpenAD/F in reverse-joint mode.\\
-
-\noindent For details on how to call OpenAD/F in reverse-joint mode refer \cite{Utke_2014}. The listing of files and their descriptions follow.\\
+\noindent The listing of files and their descriptions follow.\\
 
 \dirtree{%
 .1 /. 
-.2 air\_foil\_wopenad\_joint.  
-.3 adStack.c.bak\DTcomment{Unused Tapenade support file}. 
-.3 air\_adj.F\DTcomment{Driver for reverse-mode adjoint flow code}. 
-.3 airfoil.F\DTcomment{Driver for non-linear flow code}. 
-.3 air\_lin.F.bak\DTcomment{Unused forward-mode linear flow code driver}. 
-.3 const.inc\DTcomment{Constants common block}. 
-.3 flow.dat\DTcomment{Initial flow - scaled up problem size}. 
-.3 flow.dat.bak\DTcomment{Initial flow - original}. 
-.3 flux\_face.F\DTcomment{UD version of flux\_face from routines.F}. 
-.3 flux\_wall.F\DTcomment{UD version of flux\_wall from routines.F}. 
-.3 grid.dat\DTcomment{Unstructured grid - scaled up problem size}. 
-.3 grid.dat.bak\DTcomment{Unstructured grid - original}. 
-.3 iaddr.c\DTcomment{OpenAD/F support file}. 
-.3 input.F\DTcomment{Routines to read and write data}. 
-.3 lift\_wall.F\DTcomment{UD version of lift\_wall from routines.F}. 
+.2 Fortran/ContinuousAdj.  
+.3 blas.f\DTcomment{L-BFGS support file}. 
+.3 constants.f90\DTcomment{Constants and shared variables}. 
+.3 gnufor2.f90\DTcomment{\texttt{Fortran} bindings for GNUPlot}. 
+.3 iterate.dat\DTcomment{Output from L-BFGS optimization routine}. 
+.3 lbfgsb.f\DTcomment{L-BFGS optimization routine}. 
+.3 linpack.f\DTcomment{L-BFGS support file}. 
+.3 main.f90\DTcomment{Driver for the continuous adjoint port}. 
 .3 Makefile\DTcomment{Build commands}. 
-.3 Makefile.bak\DTcomment{Unused makefile}. 
-.3 print\_active.F\DTcomment{Routines to record matrices and vectors}. 
-.3 routines.F\DTcomment{Real and complex versions of non-linear routines}. 
-.3 testlinadj.F.bak\DTcomment{Unused derivatives test code}. 
-.3 time\_cell.F\DTcomment{UD version of time\_cell from routines.F}.  
+.3 print\_active.f\DTcomment{Routines to pretty print matrices and vectors}. 
+.3 timer.f\DTcomment{L-BFGS support file}. 
 }
-
+\hfill \break
+\noindent The plots generated by the \texttt{Fortran} version using continuous adjoints appear on the following page.
 \clearpage
-\subsubsection{Differentiated code using OpenAD in Reverse Split Mode}
+\begin{figure}[h]
+\centering
+\includegraphics[width=1.2\linewidth]{../Code/miniApps/power_grid/phi_fortran_ca.png}
+\label{fig:plot_of_phi_fortran_ca}
+\includegraphics[width=1.2\linewidth]{../Code/miniApps/power_grid/omega_fortran_ca.png}
+\label{fig:plot_of_omega_fortran_ca}
+\end{figure}
+\clearpage
+\subsubsection{\texttt{Fortran} port with \texttt{OpenAD/F} in Reverse Split Mode}
 For details on reverse split mode refer \cite{Griewank_2008} and \cite{Utke_2014}.\\
 
-\noindent The directory \texttt{air\_foil\_wopenad\_split} contains the files to compile the original \textbf{non-linear flow code} and the \textbf{reverse-mode adjoint flow code}. The binaries (\textbf{files}), corresponding to these, on building the directory are \texttt{airfoil} (\textbf{{airfoil.F}}) and \texttt{air\_adj} (\textbf{{air\_adj.F}}) respectively. \\
+\noindent The directory \texttt{Fortran/DiscreteAdj/OpenAD/Split} contains the files to compile the discrete adjoint version of the \texttt{Fortran} port in section \ref{sec_fortran_port_power}. L-BFGS \cite{Byrd_1996},\cite{Zhu_1997},\cite{Morales_2011} was used to perform the optimization in the discrete adjoint version of the Fortran port, a copy of which can be obtained \href{http://users.iems.northwestern.edu/~nocedal/lbfgsb.html}{here}.\\
 
-\begin{TodoPar}\noindent The binary \texttt{testlinadj} (\textbf{{testlinadj.F}}), which was earlier used to validate the forward-linear and reverse-adjoint routines in the \texttt{air\_foil\_tapenade} subdirectory, is not yet available to test OpenAD/F as modifications have to be done to use \texttt{oad\_active} type in the source code.\end{TodoPar}
+\noindent The binaries (\textbf{files}), corresponding to these, on building the directory are \texttt{powergrid} (\textbf{{main.f90}}).\\
 
-\noindent The adjoint version of the original non-linear flow routines are used in the file  \texttt{air\_adj.F}. These have been obtained by passing the undifferentiated routines to OpenAD/F in reverse-split mode.\\
+\noindent The adjoint version of the forward model is used in the file  \texttt{main.f90}. These have been obtained by passing the undifferentiated routines to \texttt{OpenAD/F} in reverse-split mode.\\
 
-\noindent For details on how to call OpenAD/F in reverse-split mode refer \cite{Utke_2014}. The listing of files and their descriptions follow.\\
+\noindent For details on how to call \texttt{OpenAD/F} in reverse-split mode refer \cite{Utke_2014}. The listing of files and their descriptions follow.\\
 
 \dirtree{%
 .1 /. 
-.2 air\_foil\_wopenad\_split.  
-.3 adStack.c.bak\DTcomment{Unused Tapenade support file}. 
-.3 air\_adj.F\DTcomment{Driver for reverse-mode adjoint flow code}. 
-.3 airfoil.F\DTcomment{Driver for non-linear flow code}. 
-.3 air\_lin.F.bak\DTcomment{Unused forward-mode linear flow code driver}. 
-.3 const.inc\DTcomment{Constants common block}. 
-.3 flow.dat\DTcomment{Initial flow - scaled up problem size}. 
-.3 flow.dat.bak\DTcomment{Initial flow - original}. 
-.3 flux\_face.F\DTcomment{UD version of flux\_face from routines.F}. 
-.3 flux\_wall.F\DTcomment{UD version of flux\_wall from routines.F}. 
-.3 grid.dat\DTcomment{Unstructured grid - scaled up problem size}. 
-.3 grid.dat.bak\DTcomment{Unstructured grid - original}. 
-.3 iaddr.c\DTcomment{OpenAD/F support file}. 
-.3 input.F\DTcomment{Routines to read and write data}. 
-.3 lift\_wall.F\DTcomment{UD version of lift\_wall from routines.F}. 
+.2 Fortran/DiscreteAdj/OpenAD/Split.  
+.3 blas.f\DTcomment{L-BFGS support file}. 
+.3 constants.f90\DTcomment{Constants and shared variables}. 
+.3 gnufor2.f90\DTcomment{\texttt{Fortran} bindings for GNUPlot}. 
+.3 iterate.dat\DTcomment{Output from L-BFGS optimization routine}. 
+.3 lbfgsb.f\DTcomment{L-BFGS optimization routine}. 
+.3 linpack.f\DTcomment{L-BFGS support file}. 
+.3 main.f90\DTcomment{Driver for the discrete adjoint of port}. 
 .3 Makefile\DTcomment{Build commands}. 
-.3 Makefile.bak\DTcomment{Unused makefile}. 
-.3 print\_active.F\DTcomment{Routines to record matrices and vectors}. 
-.3 routines.F\DTcomment{Real and complex versions of non-linear routines}. 
-.3 testlinadj.F.bak\DTcomment{Unused derivatives test code}. 
-.3 time\_cell.F\DTcomment{UD version of time\_cell from routines.F}.  
+.3 Makefile\_continuous\_adjoint\DTcomment{Build commands for CA model}. 
+.3 numerics.f90\DTcomment{FW and ADJ model routines from \texttt{main.f90}}. 
+.3 print\_active.f\DTcomment{Routines to pretty print matrices and vectors}. 
+.3 timer.f\DTcomment{L-BFGS support file}.  
 }
 
 \clearpage
 \subsubsection{Differentiated code using OpenAD in Forward Mode}
 \noindent The directory \texttt{air\_foil\_wopenad\_tanglin} contains the files to compile the original \textbf{non-linear flow code} and the \textbf{forward-mode linear flow code}. The binaries (\textbf{files}), corresponding to these, on building the directory are \texttt{airfoil} (\textbf{{airfoil.F}}) and \texttt{air\_lin} (\textbf{{air\_lin.F}}) respectively. \\
 
-\begin{TodoPar}\noindent The binary \texttt{testlinadj} (\textbf{{testlinadj.F}}), which was earlier used to validate the forward-linear and reverse-adjoint routines in the \texttt{air\_foil\_tapenade} subdirectory, is not yet available to test OpenAD/F as modifications have to be done to use \texttt{oad\_active} type in the source code.\end{TodoPar}
+\begin{TodoPar}\noindent The binary \texttt{testlinadj} (\textbf{{testlinadj.F}}), which was earlier used to validate the forward-linear and reverse-adjoint routines in the \texttt{air\_foil\_tapenade} subdirectory, is not yet available to test \texttt{OpenAD/F} as modifications have to be done to use \texttt{oad\_active} type in the source code.\end{TodoPar}
 
-\noindent The tangent-linear version of the original non-linear flow routines are used in the file  \texttt{air\_lin.F}. These have been obtained by passing the undifferentiated routines to OpenAD/F in forward mode.\\
+\noindent The tangent-linear version of the original non-linear flow routines are used in the file  \texttt{air\_lin.F}. These have been obtained by passing the undifferentiated routines to \texttt{OpenAD/F} in forward mode.\\
 
-\noindent For details on how to call OpenAD/F in forward-mode refer \cite{Utke_2014}. The listing of files and their descriptions follow.\\
+\noindent For details on how to call \texttt{OpenAD/F} in forward-mode refer \cite{Utke_2014}. The listing of files and their descriptions follow.\\
 
 \dirtree{%
 .1 /. 
@@ -174,7 +146,7 @@ For details on reverse split mode refer \cite{Griewank_2008} and \cite{Utke_2014
 .3 flux\_wall.F\DTcomment{UD version of flux\_wall from routines.F}. 
 .3 grid.dat\DTcomment{Unstructured grid - scaled up problem size}. 
 .3 grid.dat.bak\DTcomment{Unstructured grid - original}. 
-.3 iaddr.c\DTcomment{OpenAD/F support file}. 
+.3 iaddr.c\DTcomment{\texttt{OpenAD/F} support file}. 
 .3 input.F\DTcomment{Routines to read and write data}. 
 .3 lift\_wall.F\DTcomment{UD version of lift\_wall from routines.F}. 
 .3 Makefile\DTcomment{Build commands}. 
@@ -224,56 +196,3 @@ At the time of writing, there exists no script that can validate the output from
 \noindent Additionally, the binary \texttt{testlinadj} can be used to test linear and adjoint routines in \texttt{air\_foil\_tapenade} directory. And by modifying \texttt{testlinadj.F} suitably - by making use of \texttt{oad\_active} type - in each of the other directories, validation can be performed.
 \end{TodoPar}
 \subsection{How to extend}
-\subsubsection{Generating larger grids and flows}
-Section \ref{mesh_gen} discusses how to create a larger mesh. Once a larger mesh has been created, corresponding flow has to be now generated. The \texttt{airfoil} application provides all the necessary code to do this. \\
-
-\noindent The file \texttt{input.F} has a section of code that goes as below.\\
-
-\begin{lstlisting}[language=myfortran]
-c
-c------ read in data from flow file, initialising if necessary
-c
-        open(1,file='flow.dat',status='old')
-        read(1,*) p, r, mach, alpha
-        alpha = alpha*datan(1.0d0)/45.0d0
-        p = 1.0d0
-        r = 1.0d0
-        u = dsqrt(gam*p/r)*mach
-        e = p/(r*gm1) + 0.5d0*u**2
-c
-        do ic = 1, ncell
-          q(1,ic) = r
-          q(2,ic) = r*u
-          q(3,ic) = 0.d0
-          q(4,ic) = r*e
-        enddo
-c
-        do ic = 1, ncell
-          read(1,*,err=999,end=999) (q(ipde,ic),ipde=1,4)
-        enddo
- 999    close(1)
-\end{lstlisting}
-\hfill \break
-In order to generate the corresponding flows, lines \texttt{19-22} of \texttt{input.F} may be initially commented. A base flow is initialized in lines \texttt{12-17}. Using this, the binary \texttt{airfoil} may be executed for a long time period. When the binary finishes executing, it writes the solution at the end of the simulation to \texttt{flow.dat} file. This file may later be used by uncommenting the lines \texttt{19-22} of \texttt{input.F} to warm-start the simulation with a hopefully converged flow.\\
-
-\noindent Paraphrasing an email from one of the authors of \cite{Giles_2005}:
-
-\begin{verbatim}
- The airfoil testcase was developed several years ago for an
- an AD project using Tapenade:
- http://people.maths.ox.ac.uk/~gilesm/codes/airfoil/index.html
-
- The input.F file initializes a uniform flow at a given 
- pressure, density, mach number and angle of attack. For 
- this technique (of initializing the flow) to be used with
- larger meshes, the timestep in the CFD calculations may
- need to be  lowered to handle strong initial transients.
-
- The authors used to run the simulation using just this
- technique, letting the simulation warm up by running 
- several iterations. At the end of each simulation the
- updated flow is written to the same flow.dat file which
- can later be used to continue the simulation, if needed.
-\end{verbatim}
-\subsubsection{Throwing more stuff on the tape, artificially}
-One of the intended uses of this airfoil test-case is to test checkpointing algorithms in AD tools. With regards to \texttt{OpenAD/F}
