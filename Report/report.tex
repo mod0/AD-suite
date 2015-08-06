@@ -24,6 +24,9 @@
 \newcommand{\mytodo}[1]{\textcolor{red}{[#1]}} %for displaying red texts
 \renewcommand{\textfraction}{0.01}
 
+\definecolor{cadmiumgreen}{rgb}{0.0, 0.42, 0.24}
+\definecolor{auburn}{rgb}{0.43, 0.21, 0.1}
+
 \usepackage{babel,xcolor,framed,marginnote}
 \colorlet{shadecolor}{blue!10}
 \newenvironment{TodoPar}
@@ -97,6 +100,30 @@
   emphstyle=\linespread{0.85}\color{green}\small,
   linewidth=0.9\linewidth,
   xleftmargin=0.1\linewidth
+}
+
+\lstdefinelanguage{mydiff}{
+%  tabsize=4,
+  frame=tblr,
+%  breaklines=true,
+  basicstyle=\small\sffamily,
+  stringstyle=\small\sffamily\itshape\color{brown}\small,
+  commentstyle=\small\sffamily\itshape\color{green}\small,
+  morecomment=[f][\color{blue}]{@@},     % group identifier
+  morecomment=[f][\color{red}]-,         % deleted lines 
+  morecomment=[f][\color{cadmiumgreen}]+,       % added lines
+  morecomment=[f][\color{magenta}]{---}, % Diff header lines (must appear after +,-)
+  morecomment=[f][\color{magenta}]{+++},
+  morecomment=[f][\color{auburn}]{!!!},
+  backgroundcolor=\color{blue!5},
+%  showstringspaces=false,
+%  showspaces=false,
+%  mathescape=false,
+%  classoffset=0,
+%  keywordstyle=\sffamily\color{blue}\small,
+%  morekeywords={},
+%  emph={},
+%  emphstyle=\linespread{0.85}\color{green}\small,
 }
 
 \lstset{language=myfortran}
