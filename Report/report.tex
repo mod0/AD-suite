@@ -31,12 +31,14 @@
 \definecolor{auburn}{rgb}{0.43, 0.21, 0.1}
 
 \usepackage{babel,xcolor,framed,marginnote}
-\colorlet{shadecolor}{blue!10}
 \newenvironment{TodoPar}
-  {\begin{shaded}\marginnote{\fbox{Todo}}}
+  {\colorlet{shadecolor}{green!10}\begin{shaded}\marginnote{\fbox{Todo}}}
   {\end{shaded}}
 \newenvironment{NotePar}
-  {\begin{shaded}\marginnote{\fbox{Note}}}
+  {\colorlet{shadecolor}{blue!10}\begin{shaded}\marginnote{\fbox{Note}}}
+  {\end{shaded}}
+\newenvironment{HypoPar}
+  {\colorlet{shadecolor}{red!10}\begin{shaded}\marginnote{\fbox{Hypo}}}
   {\end{shaded}}
 
 \lstdefinelanguage{mybash}{
@@ -149,7 +151,7 @@
 \title{Fortran Testsuite for Automatic Differentiation}
 \author{Mahesh Narayanamurthi, Sri Hari Krishna Narayanan, Torsten Bosse, Paul Hovland\\
 Mathematics and Computer Science Division\\
-Argone National Laboratory\\
+Argonne National Laboratory\\
 }
 \maketitle
 \clearpage
@@ -165,6 +167,9 @@ Argone National Laboratory\\
 \hline
 \textbf{Abbreviation} & \textbf{Expansion}      \\ \hline
 CA           & continuous adjoint \\ \hline
+DA           & discrete adjoint \\ \hline
+OAD           & openad \\ \hline
+TAP          & tapenade \\ \hline
 FW           & forward \\ \hline
 TL           & tangent linear \\ \hline
 ADJ           & adjoint \\ \hline

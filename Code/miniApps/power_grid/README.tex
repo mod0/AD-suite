@@ -1,6 +1,6 @@
 \section{Power Generation (not Power Grid)}
 \subsection{Author and source}
-The power generation test-case is derived from the summer project \cite{Rao_2013} at ANL. A copy of the source code, with some minor bug fixes to the original, is included in the \texttt{git} repository as described below. The application is an optimal control problem to `\textit{`maximize the input power to a generator while limiting its mechanical angle oscillation}'' as described in the reference above.
+The power generation test-case is derived from the summer project \cite{Rao_2013} at ANL. A copy of the source code, with some minor bug fixes to the original, is included in the \texttt{git} repository as described below. The application is an optimal control problem to \textit{``maximize the input power to a generator while limiting its mechanical angle oscillation}'' as described in the reference above.
 \subsection{Description of the mathematical formulation}\label{power_cont_adj_math}
 A general framework for an \textcolor{red}{optimal control} \cite{Sandu_2012} problem is given below:
 \[ \theta \,=\, \text{argmin} \;\; \Psi(x, \theta) = \int_{t_0}^{t_F} r\big(x(t), \theta\big)\, dt \,+\, w\big(x(t_F), \theta\big)\]
@@ -119,7 +119,7 @@ For details on reverse split mode refer \cite{Griewank_2008} and \cite{Utke_2014
 .3 main.f90\DTcomment{Driver for the discrete adjoint of port}. 
 .3 Makefile\DTcomment{Build commands}. 
 .3 Makefile\_continuous\_adjoint\DTcomment{Build commands for CA model}. 
-.3 numerics.f90\DTcomment{FW and ADJ model routines from \texttt{main.f90}}. 
+.3 numerics.f90\DTcomment{FW and CA model routines from \texttt{main.f90}}. 
 .3 print\_active.f\DTcomment{Routines to pretty print matrices and vectors}. 
 .3 timer.f\DTcomment{L-BFGS support file}.  
 }
@@ -159,7 +159,7 @@ For details on reverse joint mode refer \cite{Griewank_2008} and \cite{Utke_2014
 .3 main.f90\DTcomment{Driver for the discrete adjoint of port}. 
 .3 Makefile\DTcomment{Build commands}. 
 .3 Makefile\_continuous\_adjoint\DTcomment{Build commands for CA model}. 
-.3 numerics.f90\DTcomment{FW and ADJ model routines from \texttt{main.f90}}. 
+.3 numerics.f90\DTcomment{FW and CA model routines from \texttt{main.f90}}. 
 .3 print\_active.f\DTcomment{Routines to pretty print matrices and vectors}. 
 .3 timer.f\DTcomment{L-BFGS support file}.  
 }
@@ -197,7 +197,7 @@ For details on reverse joint mode refer \cite{Griewank_2008} and \cite{Utke_2014
 .3 main.f90\DTcomment{Driver for the discrete adjoint of port}. 
 .3 Makefile\DTcomment{Build commands}. 
 .3 Makefile\_continuous\_adjoint\DTcomment{Build commands for CA model}. 
-.3 numerics.f90\DTcomment{FW and ADJ model routines from \texttt{main.f90}}. 
+.3 numerics.f90\DTcomment{FW and CA model routines from \texttt{main.f90}}. 
 .3 print\_active.f\DTcomment{Routines to pretty print matrices and vectors}. 
 .3 timer.f\DTcomment{L-BFGS support file}.  
 }
@@ -243,33 +243,69 @@ The source code is under
 /Code/miniApps/powergrid/DiscreteAdj/OpenAD/TangLin
 \end{Verbatim}
 \clearpage
-\subsection{Modifications performed}
-Refer section \ref{diff_airfoil}
+\subsubsection{\texttt{Fortran} port with \texttt{Tapenade} in Adjoint Mode}
+\noindent The directory \texttt{Fortran/DiscreteAdj/Tapenade} contains the files to compile the discrete adjoint version of the \texttt{Fortran} port in section \ref{sec_fortran_port_power}. L-BFGS \cite{Byrd_1996},\cite{Zhu_1997},\cite{Morales_2011} was used to perform the optimization in the discrete adjoint version of the Fortran port, a copy of which can be obtained \href{http://users.iems.northwestern.edu/~nocedal/lbfgsb.html}{here}.\\
+
+\noindent The binaries (\textbf{files}), corresponding to these, on building the directory are \texttt{powergrid} (\textbf{{main.f90}}).\\
+
+\noindent The adjoint version of the forward model is used in the file  \texttt{main.f90}. These have been obtained by passing the undifferentiated routines to \texttt{Tapenade} on the \href{http://www-tapenade.inria.fr:8080/tapenade/index.jsp}{web} to generate \texttt{numerics\_tapenade.f90}.\\
+
+\dirtree{%
+.1 /. 
+.2 Fortran/DiscreteAdj/Tapenade.  
+.3 adBuffer.c\DTcomment{Tapenade support file}. 
+.3 adBuffer.f\DTcomment{Tapenade support file}. 
+.3 adBuffer.h\DTcomment{Tapenade support file}. 
+.3 adStack.c\DTcomment{Tapenade support file}. 
+.3 adStack.h\DTcomment{Tapenade support file}. 
+.3 blas.f\DTcomment{L-BFGS support file}. 
+.3 constants.f90\DTcomment{Constants and shared variables}. 
+.3 gnufor2.f90\DTcomment{\texttt{Fortran} bindings for GNUPlot}. 
+.3 iterate.dat\DTcomment{Output from L-BFGS optimization routine}. 
+.3 lbfgsb.f\DTcomment{L-BFGS optimization routine}. 
+.3 linpack.f\DTcomment{L-BFGS support file}. 
+.3 main.f90\DTcomment{Driver for the discrete adjoint of port}. 
+.3 Makefile\DTcomment{Build commands}. 
+.3 Makefile\_continuous\_adjoint\DTcomment{Build commands for CA model}. 
+.3 numerics.f90\DTcomment{FW and CA model routines from \texttt{main.f90}}. 
+.3 numerics\_tapenade.f90\DTcomment{FW and TAP-DA routines from \texttt{main.f90}}. 
+.3 print\_active.f\DTcomment{Routines to pretty print matrices and vectors}. 
+.3 timer.f\DTcomment{L-BFGS support file}.  
+}
+
+\hfill \break
+\noindent The plots generated by the \texttt{Fortran} version using discrete adjoints generated by \texttt{Tapenade} in adjoint mode appear on the following page.
+
+\clearpage
+\begin{figure}[h]
+\centering
+\includegraphics[width=1.2\linewidth]{../Code/miniApps/power_grid/phi_fortran_da_tap.png}
+\label{fig:phi_fortran_da_tap}
+\includegraphics[width=1.2\linewidth]{../Code/miniApps/power_grid/omega_fortran_da_tap.png}
+\label{fig:omega_fortran_da_tap}
+\end{figure}
+\clearpage
+%\subsection{Modifications performed}
 \subsection{How to build}
-Running make as below, in each of the four subdirectories beginning with ``airfoil'' will build the  binaries \texttt{airfoil}, \texttt{air\_lin} and \texttt{air\_adj}.
+Running make as below, in each of the five subdirectories beginning with \texttt{Fortran/} will build the  binary \texttt{powergrid}
 \hfill\break
 \begin{lstlisting}[language=mybash, numbers=none]
     $ make
 \end{lstlisting}
-\begin{NotePar}
-\noindent  The directories \texttt{air\_foil\_wopenad\_split} and \texttt{air\_foil\_wopenad\_joint} will only build the binaries \texttt{airfoil} and \texttt{air\_adj}.\\
-
-\noindent Likewise the directory \texttt{air\_foil\_wopenad\_tanglin} will only build the binaries \texttt{airfoil} and \texttt{air\_lin}.
-\end{NotePar}
 \subsection{How to verify}
-At the time of writing, there exists no script that can validate the output from any of the binaries. All versions of the binary \texttt{airfoil} should produce exactly the same output.\\
+At the time of writing, there exists no script that can validate the output from any of the binaries. All versions of the binary \texttt{powergrid} should produce similar (in some sense/nearby) optimal and objective values.\\
 
-\noindent Validation by eyeballing the output from each version of the binaries \texttt{air\_lin} and  \texttt{air\_adj} has been performed. It is of significance to note that the outputs from \texttt{air\_lin} and  \texttt{air\_adj} should also be within certain fixed tolerance from one another.
+\noindent Validation by eyeballing the output from each version of the binary  \texttt{powergrid} has been performed. 
 
 \begin{TodoPar}
 \noindent It will be valuable to write a \texttt{python} script that will take as input two \texttt{csv} files and find the \texttt{max-norm} of the difference between the corresponding entries. Other norms may also be computed. 
 \end{TodoPar}
 
-\noindent In order to test the derivatives, since the code does computations deterministically i.e. there are no convergence related iterations, each version of \texttt{airfoil} can be made to write the computed derivatives to a file and the files themselves can be passed to the \texttt{python} script.\\
+\begin{HypoPar}
+\noindent I wonder it might be difficult to test the derivatives of each version of \texttt{powergrid} against another, since the code does not do computations deterministically i.e. there are convergence related iterations, each version may take different trajectories (except at the starting point) until they arrive at nearby solutions that are similar as metioned earlier.\\
 
-\begin{TodoPar}
-\noindent Additionally, the binary \texttt{testlinadj} can be used to test linear and adjoint routines in \texttt{air\_foil\_tapenade} directory. And by modifying \texttt{testlinadj.F} suitably - by making use of \texttt{oad\_active} type - in each of the other directories, validation can be performed.
-\end{TodoPar}
+\noindent One solution, might be to generate multiple experiments with several different starting points and compare the derivatives at the starting points alone.
+\end{HypoPar}
 
 
-\subsection{How to extend}
+%\subsection{How to extend}
