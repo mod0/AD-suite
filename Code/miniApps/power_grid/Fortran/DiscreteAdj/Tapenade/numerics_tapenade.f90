@@ -100,6 +100,20 @@ CONTAINS
     x(2) = perturb*1.0d0
 ! Compute the function value.
     CALL POWER_GRID_COST_FUNCTION(x, tout_f, yout_f, f)
+!>>>>>>>>>>>>> UNCOMMENT THE FOLLOWING LINES TO WRITE THE SOLUTIONS
+! TO A FILE WHICH CAN LATER BE VISUALIZED USING MATLAB.
+! FORWARD TIME STEPS
+!    OPEN(UNIT=1, FILE='toutf')
+!    WRITE (1,'(E23.16)') (tout_f(I), I = 1,TLEN)
+!    CLOSE(UNIT=1)
+!    ! FORWARD SOLUTION PHI
+!    OPEN(UNIT=1, FILE='phi')
+!    WRITE (1,'(E23.16)') (yout_f(I,1), I = 1,TLEN)
+!    CLOSE(UNIT=1)
+!    ! FORWARD SOLUTION OMEGA
+!    OPEN(UNIT=1, FILE='omega')
+!    WRITE (1,'(E23.16)') (yout_f(I,2), I = 1,TLEN)
+!    CLOSE(UNIT=1)
   END SUBROUTINE GET_COST_FUNCTION_AND_GRADIENT
 !  Differentiation of power_grid_cost_function in reverse (adjoint) mode:
 !   gradient     of useful results: f
