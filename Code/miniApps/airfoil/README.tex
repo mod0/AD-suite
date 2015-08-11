@@ -202,7 +202,7 @@ Running make as below, in each of the four subdirectories beginning with ``airfo
 
 \noindent Likewise the directory \texttt{air\_foil\_wopenad\_tanglin} will only build the binaries \texttt{airfoil} and \texttt{air\_lin}.
 \end{NotePar}
-\subsection{How to verify}
+\subsection{How to verify}\label{airfoil_verify}
 At the time of writing, there exists no script that can validate the output from any of the binaries. All versions of the binary \texttt{airfoil} should produce exactly the same output.\\
 
 \noindent Validation by eyeballing the output from each version of the binaries \texttt{air\_lin} and  \texttt{air\_adj} has been performed. It is of significance to note that the outputs from \texttt{air\_lin} and  \texttt{air\_adj} should also be within certain fixed tolerance from one another.
@@ -211,7 +211,7 @@ At the time of writing, there exists no script that can validate the output from
 \noindent It will be valuable to write a \texttt{python} script that will take as input two \texttt{csv} files and find the \texttt{max-norm} of the difference between the corresponding entries. Other norms may also be computed. 
 \end{TodoPar}
 
-\noindent In order to test the derivatives, since the code does computations deterministically i.e. there are no convergence related iterations, each version of \texttt{airfoil} can be made to write the computed derivatives to a file and the files themselves can be passed to the \texttt{python} script.\\
+\noindent In order to test the derivatives, since the code does computations deterministically i.e. there are no convergence related iterations that need the derivatives, like newton iteration, each version of \texttt{airfoil} can be made to write the computed derivatives to a file and the files themselves can be passed to the \texttt{python} script.\\
 
 \begin{TodoPar}
 \noindent Additionally, the binary \texttt{testlinadj} can be used to test linear and adjoint routines in \texttt{air\_foil\_tapenade} directory. And by modifying \texttt{testlinadj.F} suitably - by making use of \texttt{oad\_active} type - in each of the other directories, validation can be performed.
@@ -268,5 +268,5 @@ In order to generate the corresponding flows, lines \texttt{19-22} of \texttt{in
  updated flow is written to the same flow.dat file which
  can later be used to continue the simulation, if needed.
 \end{Verbatim}
-\subsubsection{Throwing more stuff on the tape, artificially}
-One of the intended uses of this airfoil test-case is to test checkpointing algorithms in AD tools. With regards to \texttt{OpenAD/F}
+%\subsubsection{Throwing more stuff on the tape, artificially}
+%One of the intended uses of this airfoil test-case is to test checkpointing algorithms in AD tools. With regards to \texttt{OpenAD/F}
