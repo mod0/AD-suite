@@ -1802,7 +1802,7 @@ parameter(St = 5,&       ! Max saturation time step
           Pt = 100,&     ! Pressure time step
           ND = 2000)    ! Number of days in simulation
           
-double precision :: ir, Mw, Mo, Mt, mu, sigma, oil
+double precision :: ir, Mw, Mo, Mt, mu, sigma, totaloil
 double precision, dimension((ND/St) + 1) :: Tt
 double precision, dimension(N_) :: S
 double precision, dimension(N_) :: Q
@@ -1846,9 +1846,9 @@ ir = (795.0 * Nx_ * Ny_ * Nz_) / (maxNx * maxNy * maxNz)
 ! initialize mu, sigma, oil
 mu = 0.0d0
 sigma = 1.0d0
-oil = 0.0d0
+totaloil = 0.0d0
 
-call run_simulation(ir, mu, sigma, Q, oil)
+call run_simulation(ir, mu, sigma, Q, totaloil)
 
 
 !! Set filename to collect results.
@@ -1893,9 +1893,8 @@ subroutine inputKP()
 
     double precision, dimension(maxNx * maxNy * maxNz) :: pUr
     double precision, dimension(3 * maxNx, maxNy * maxNz) :: KUr
-    double precision, dimension(3 * maxNx * maxNy * maxNz), target :: KUrl
-    double precision, dimension(:), pointer :: KUrlP
-    
+    double precision, dimension(3 * maxNx * maxNy * maxNz) :: KUrl
+
     integer, dimension(Nx_ * Ny_ * Nz_) :: Pindices
     integer, dimension(3 * Nx_ * Ny_ * Nz_) :: Kindices
 
@@ -1922,9 +1921,7 @@ subroutine inputKP()
         end do
     end do
 
-    KUrlP => KUrl(Kindices)
-    
-    call myreshape(KUrlP, K_)
+    call myreshape_1_4(KUrl(Kindices), K_)
 
     ! read KUr
     open(1,file='pUr.txt',status='old')
@@ -2006,12 +2003,10 @@ end subroutine inflow_truncated_normal_x_outflow_point
 !
 subroutine simulate_reservoir(Q, oil)
     integer :: i, j, k
-    double precision :: oil, oil_temp
+    double precision :: oil
     double precision, dimension(N_) :: Q
 
     S = swc_                            ! initial saturation
-
-    oil_temp = 0.0d0
     
     Pc(1, 1) = 0.0d0                    ! initial production
     Pc(2, 1) = 1.0d0
@@ -2032,11 +2027,9 @@ subroutine simulate_reservoir(Q, oil)
             Pc(1,k) = Mw/Mt
             Pc(2,k) = Mo/Mt
 
-            oil_temp = oil_temp + Pc(2, k) * St     ! Reimann sum
+            oil = oil + Pc(2, k) * St     ! Reimann sum
         end do
     end do
-    
-    oil = oil_temp
 end subroutine simulate_reservoir
 
 
@@ -2044,11 +2037,15 @@ end subroutine simulate_reservoir
 ! Top level method to be differentiated
 !
 subroutine run_simulation(ir, mu, sigma, Q, oil)
-    double precision :: ir, mu, sigma, oil
+    double precision :: ir, mu, sigma, oil, oil_temp
     double precision, dimension(N_) :: Q
     
+    oil_temp = 0.0d0
+    
     call inflow_truncated_normal_x_outflow_point(Q, ir, mu, sigma)
-    call simulate_reservoir(Q, oil)
+    call simulate_reservoir(Q, oil_temp)
+    
+    oil = oil_temp
 end subroutine run_simulation
 
 end program runspe10
