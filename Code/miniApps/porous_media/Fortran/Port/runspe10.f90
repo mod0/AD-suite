@@ -97,13 +97,33 @@ write(unit=1) Pc(2, :)
 close(unit=1)
 
 
+! Set filename to collect results.
+open(unit = 1, file = 'Pc12', &
+        form = 'unformatted', access = 'stream')
+
+! write the both production curves
+write(unit=1) Pc
+
+! close files
+close(unit=1)
+
+
+! open file to write saturation data
+open(unit=1, file='Sat', &
+          form = 'unformatted', access='stream')
+! Write saturation data
+write(unit=1) S
+
+! close file
+close(unit=1)
+
+
 !---------------------------------------------------------------------------
 ! Call GNUPLOT through the interface module.
 ! Uncomment these plot calls after verifying you have GNUPlot installed.
 !---------------------------------------------------------------------------
 ! Plot the final solution for the forward trajectory
 call plot(Tt, Pc(1,:), Tt, Pc(2,:), terminal='png', filename='WaterOilCut.png')
-
 
 !call print_array(Pc, 1,0,1,0,output)
 
