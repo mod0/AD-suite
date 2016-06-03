@@ -256,6 +256,8 @@ subroutine GenA(V, Q, A)
 
     ! This can be sped up by passing 3 arrays having rows, cols and diagind
     ! this can be done because diag positions are fixed.
+    !TODO: Have a variant of spdiags which will instead of writing it in
+    !the spmat type, it will write it in separate arrays sent to it.
     call spdiags(diags, (/ -Nx_ * Ny_, -Nx_, -1, 0, 1, Nx_, Nx_ * Ny_ /), &
                  N_, N_, A)
 end subroutine GenA
@@ -328,6 +330,8 @@ subroutine tpfa(K, Q, P, V)
 
     !call print_array(diags,1,0,1,0,output)
 
+    !TODO: Have a variant of spdiags which will instead of writing it in
+    !the spmat type, it will write it in separate arrays sent to it.
     call spdiags(diags, (/ -Nx_ * Ny_, -Nx_, -1, 0, 1, Nx_, Nx_ * Ny_ /), &
                  N_, N_, A)
 
@@ -345,7 +349,8 @@ subroutine tpfa(K, Q, P, V)
 
 
     ! solve the linear system
-    call solve(A, Q, u )
+    ! Pass the rows_index, cols_index, values separately.
+    call solve(A, Q, u)
 
     !call print_array(u,1,0,output)
 
