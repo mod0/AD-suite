@@ -61,8 +61,9 @@ do i = 1, ND/Pt
 
         print *, "Timestep:", k
 
-
-        call NewtRaph(S, V, Q, St * 1.0d0)      ! Solve for saturation
+        ! use NewtRaph1 for sparse matrix structures,
+        ! use NewtRaph2 for sparse matrix structures unrolled for openad
+        call NewtRaph1(S, V, Q, St * 1.0d0)      ! Solve for saturation
 
         !call print_array(S,1,0,output)
 

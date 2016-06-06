@@ -2,7 +2,7 @@ module matrix
     implicit none
 
     ! export module interface
-    public :: zeros, ones, free_mat, pinverse, myreshape, add_x, spmat_multiply
+    public :: spdiags, disp_spmat, zeros, ones, free_mat, pinverse, myreshape, add_x, spmat_multiply
 
     !
     ! The sparse matrix format
@@ -20,53 +20,66 @@ module matrix
         double precision, dimension(:), pointer :: values
     end type
 
+    interface spdiags
+      module procedure spdiags1
+      module procedure spdiags2
+    end interface spdiags
+
+    interface disp_spmat
+      module procedure disp_spmat1
+      module procedure disp_spmat2
+    end interface disp_spmat
+
     ! Common interface for all the zeros functions
     interface zeros
-        module procedure zeros1
-        module procedure zeros2
-        module procedure zeros3
-        module procedure zeros4
+      module procedure zeros1
+      module procedure zeros2
+      module procedure zeros3
+      module procedure zeros4
     end interface zeros
 
     ! Common interface for all the ones functions
     interface ones
-        module procedure ones1
-        module procedure ones2
-        module procedure ones3
-        module procedure ones4
+      module procedure ones1
+      module procedure ones2
+      module procedure ones3
+      module procedure ones4
     end interface ones
 
     ! Common interface for all the point wise inverse functions
     interface pinverse
-        module procedure pinverse1
-        module procedure pinverse2
-        module procedure pinverse3
-        module procedure pinverse4
+      module procedure pinverse1
+      module procedure pinverse2
+      module procedure pinverse3
+      module procedure pinverse4
     end interface pinverse
 
     ! Common interface for all reshape functions
     interface myreshape
-        module procedure myreshape_1_2
-        module procedure myreshape_2_1
-        module procedure myreshape_1_3
-        module procedure myreshape_3_1
-        module procedure myreshape_1_4
-        module procedure myreshape_4_1
+      module procedure myreshape_1_2
+      module procedure myreshape_2_1
+      module procedure myreshape_1_3
+      module procedure myreshape_3_1
+      module procedure myreshape_1_4
+      module procedure myreshape_4_1
     end interface myreshape
 
     ! Common interface for all free functions
     interface free_mat
-        module procedure free_mat1
-        module procedure free_mat2
-        module procedure free_mat3
-        module procedure free_mat4
-        module procedure free_spmat
+      module procedure free_mat1
+      module procedure free_mat2
+      module procedure free_mat3
+      module procedure free_mat4
+      module procedure free_spmat1
+      module procedure free_spmat2
     end interface free_mat
 
     ! Common interface for all add methods to spmat
     interface add_x
-        module procedure addx_elem
-        module procedure addx_diagonal
+      module procedure addx_elem1
+      module procedure addx_diagonal1
+      module procedure addx_elem2
+      module procedure addx_diagonal2
     end interface add_x
 
     ! Common interface to multiply SPMAT with other vectors, diagonal matrices.
@@ -75,9 +88,12 @@ module matrix
     ! SPMAT * MAT }- These can be implemented by repeatedly calling
     ! MAT * SPMAT }- the vector versions of the method.
     interface spmat_multiply
-        module procedure spmat_multiply_diagonal
-        module procedure spmat_multiply_vector
-        module procedure scalar_multiply_spmat
+      module procedure spmat_multiply_diagonal1
+      module procedure spmat_multiply_vector1
+      module procedure scalar_multiply_spmat1
+      module procedure spmat_multiply_diagonal2
+      module procedure spmat_multiply_vector2
+      module procedure scalar_multiply_spmat2
     end interface
 
 contains
@@ -96,7 +112,7 @@ contains
 ! The structure of the sparse matrix is column-major format
 ! TODO: Extend this to initialize diagonal entries no matter what.
 !
-subroutine spdiags(imatrix, idiags, orows, ocols, omatrix)
+subroutine spdiags1(imatrix, idiags, orows, ocols, omatrix)
     implicit none
     logical :: done
     integer :: orows, ocols, row, col, nnz, k, alloc_err
@@ -153,7 +169,81 @@ subroutine spdiags(imatrix, idiags, orows, ocols, omatrix)
             done = .true.
         end if
     end do
-end subroutine
+end subroutine spdiags1
+
+
+!
+! This routine creates a sparse matrix using the input columns
+! in imatrix.
+! imatrix: the columns of values to be placed in diagonal matrix
+! idiags: the diagonals in which the values would go (sorted)
+! orows: the rows in the output matrix (output/input)
+! ocols: the columns in the output matrix (output/input)
+! onnz: number of nonzeros (output)
+! ocols: number of columns (output)
+! orow_index: row indices (output)
+! ocol_index: col indices (output)
+! ovalues: values (output)
+! The placement of values in the diagonals will follow MATLABs
+! convention: spdiags
+! The structure of the sparse matrix is column-major format
+! TODO: Extend this to initialize diagonal entries no matter what.
+!
+subroutine spdiags2(imatrix, idiags, orows, ocols, onnz, orow_index, ocol_index, ovalues)
+    implicit none
+    logical :: done
+    integer :: orows, ocols, row, col, onnz, k, alloc_err
+    double precision :: elm
+    double precision, dimension(:,:) :: imatrix
+    integer, dimension(:) :: idiags
+    integer, dimension(:), pointer :: orow_index
+    integer, dimension(:), pointer :: ocol_index
+    double precision, dimension(:), pointer :: ovalues
+
+! Skipping validation of arguments
+! *Note*: imatrix should have as many rows as min(orows, ocols)
+!       the number of columns in imatrix should match length of idiags
+!       and should not exceed m + n - 1 (soft requirement)
+!       the values of idiags should range between -orows + 1 to ocols - 1
+
+! Allocate space with min(orows, ocols) rows and size(idiags,1) as columns
+! Ensure omatrix fields are unallocated
+    if (associated(orow_index) .or. &
+        associated(ocol_index) .or. &
+        associated(ovalues)) then
+        stop "The output matrix has already been allocated space in the heap."
+    end if
+
+    call countnnz(imatrix, idiags, orows, ocols, onnz)
+
+    allocate(orow_index(onnz), ocol_index(onnz), &
+             ovalues(onnz), stat = alloc_err)
+
+    if (alloc_err /= 0) then
+        stop "Could not allocate memory for the sparse matrix."
+    end if
+
+    ! initialize k and done.
+    k = 0
+    done = .false.
+
+    ! initialize current row and col
+    row = 0
+    col = 0
+
+    do while (.not. done)
+        call nextnzelm(imatrix, idiags, orows, ocols, row, col, row, col, elm)
+
+        if (row > 0 .and. col > 0) then
+            k = k + 1
+            orow_index(k) = row
+            ocol_index(k) = col
+            ovalues(k) = elm
+        else
+            done = .true.
+        end if
+    end do
+end subroutine spdiags2
 
 
 !
@@ -193,7 +283,7 @@ end subroutine countnnz
 !
 ! Display the matrix entries
 !
-subroutine disp_spmat(imatrix, output)
+subroutine disp_spmat1(imatrix, output)
     implicit none
     integer :: k, output
     type(spmat) :: imatrix
@@ -204,12 +294,31 @@ subroutine disp_spmat(imatrix, output)
                         imatrix%col_index(k), ")", " ", imatrix%values(k)
         end do
     end if
-end subroutine
+end subroutine disp_spmat1
+
+!
+! Display the matrix entries
+!
+subroutine disp_spmat2(irows, icols, innz, irow_index, icol_index, ivalues, output)
+    implicit none
+    integer :: k, output
+    integer :: irows, icols, innz
+    integer, dimension(:) :: irow_index
+    integer, dimension(:) :: icol_index
+    double precision, dimension(:) :: ivalues
+
+    if(output /= 0) then
+        do k = 1, innz
+            write (*, '(a, i7, a, i7, a, a, e23.16)'), "(", irow_index(k), ",", &
+                        icol_index(k), ")", " ", ivalues(k)
+        end do
+    end if
+end subroutine disp_spmat2
 
 !
 ! Deallocate the entries in the sparse matrix
 !
-subroutine free_spmat(imatrix)
+subroutine free_spmat1(imatrix)
     implicit none
     integer :: dealloc_err
     type(spmat) :: imatrix
@@ -238,8 +347,44 @@ subroutine free_spmat(imatrix)
             stop "Could not deallocate memory for the sparse matrix."
         end if
     end if
-end subroutine
+end subroutine free_spmat1
 
+
+!
+! Deallocate the entries in the sparse matrix
+!
+subroutine free_spmat2(irow_index, icol_index, ivalues)
+    implicit none
+    integer :: dealloc_err
+    integer, dimension(:), pointer :: irow_index
+    integer, dimension(:), pointer :: icol_index
+    double precision, dimension(:), pointer :: ivalues
+
+
+    if (associated(irow_index)) then
+        deallocate(irow_index, stat = dealloc_err)
+
+        if (dealloc_err /= 0) then
+            stop "Could not deallocate memory for the sparse matrix."
+        end if
+    end if
+
+    if (associated(icol_index)) then
+        deallocate(icol_index, stat = dealloc_err)
+
+        if (dealloc_err /= 0) then
+            stop "Could not deallocate memory for the sparse matrix."
+        end if
+    end if
+
+    if (associated(ivalues)) then
+        deallocate(ivalues, stat = dealloc_err)
+
+        if (dealloc_err /= 0) then
+            stop "Could not deallocate memory for the sparse matrix."
+        end if
+    end if
+end subroutine free_spmat2
 
 !
 ! Subroutine adds x to a particular element.
@@ -248,7 +393,7 @@ end subroutine
 ! the column matrix. Further the element may be non-existent. Structure of
 ! SPMAT has to be changed to allow arbitrary fill-ins.
 !
-subroutine addx_elem(imatrix, x, row, col)
+subroutine addx_elem1(imatrix, x, row, col)
     implicit none
     integer :: i, row, col
     type(spmat) :: imatrix
@@ -260,7 +405,31 @@ subroutine addx_elem(imatrix, x, row, col)
             exit
         end if
     end do
-end subroutine
+end subroutine addx_elem1
+
+!
+! Subroutine adds x to a particular element.
+! This subroutine is a bit flawed because at the time of construction of SPMAT
+! , for other than the main diagonal, entries are skipped if they are 0.0 in
+! the column matrix. Further the element may be non-existent. Structure of
+! SPMAT has to be changed to allow arbitrary fill-ins.
+!
+subroutine addx_elem2(irows, icols, innz, irow_index, icol_index, ivalues, x, row, col)
+    implicit none
+    integer :: i, row, col
+    integer :: irows, icols, innz
+    integer, dimension(:), pointer :: irow_index
+    integer, dimension(:), pointer :: icol_index
+    double precision, dimension(:), pointer :: ivalues
+    double precision :: x
+
+    do i = 1,innz
+        if(irow_index(i) == row .and. icol_index(i) == col) then
+            ivalues(i) = ivalues(i) + x
+            exit
+        end if
+    end do
+end subroutine addx_elem2
 
 
 !
@@ -269,7 +438,7 @@ end subroutine
 ! , for other than the main diagonal, entries are skipped if they are 0.0 in
 ! the column matrix
 !
-subroutine addx_diagonal(imatrix, x, diag)
+subroutine addx_diagonal1(imatrix, x, diag)
     implicit none
     integer :: i, diag
     type(spmat) :: imatrix
@@ -280,8 +449,30 @@ subroutine addx_diagonal(imatrix, x, diag)
             imatrix%values(i) = imatrix%values(i) + x
         end if
     end do
-end subroutine
+end subroutine addx_diagonal1
 
+
+!
+! Subroutine adds x to a particular diagonal
+! This subroutine is a bit flawed because at the time of construction of SPMAT
+! , for other than the main diagonal, entries are skipped if they are 0.0 in
+! the column matrix
+!
+subroutine addx_diagonal2(irows, icols, innz, irow_index, icol_index, ivalues, x, diag)
+    implicit none
+    integer :: i, diag
+    integer :: irows, icols, innz
+    integer, dimension(:), pointer :: irow_index
+    integer, dimension(:), pointer :: icol_index
+    double precision, dimension(:), pointer :: ivalues
+    double precision :: x
+
+    do i = 1,innz
+        if(icol_index(i) - irow_index(i) == diag) then
+            ivalues(i) = ivalues(i) + x
+        end if
+    end do
+end subroutine addx_diagonal2
 
 !
 ! Returns the next non-zero elm to be filled in the matrix or used
@@ -1028,7 +1219,7 @@ end subroutine free_mat4
 !
 ! This routine pre-multiplies a diagonal matrix by a sparse matrix
 !
-subroutine spmat_multiply_diagonal(amatrix, dmatrix, rmatrix, order)
+subroutine spmat_multiply_diagonal1(amatrix, dmatrix, rmatrix, order)
     implicit none
     integer :: i, alloc_err
     type(spmat) :: amatrix, rmatrix
@@ -1066,14 +1257,64 @@ subroutine spmat_multiply_diagonal(amatrix, dmatrix, rmatrix, order)
             rmatrix%values(i) = amatrix%values(i) * dmatrix(amatrix%row_index(i))
         end do
     end if
-end subroutine spmat_multiply_diagonal
+end subroutine spmat_multiply_diagonal1
 
+!
+! This routine pre-multiplies a diagonal matrix by a sparse matrix
+!
+subroutine spmat_multiply_diagonal2(arows, acols, annz, arow_index, acol_index, avalues, dmatrix, &
+                                    rrows, rcols, rnnz, rrow_index, rcol_index, rvalues, order)
+    implicit none
+    integer :: i, alloc_err
+    integer :: arows, acols, annz
+    integer, dimension(:), pointer :: arow_index
+    integer, dimension(:), pointer :: acol_index
+    double precision, dimension(:), pointer :: avalues
+    integer :: rrows, rcols, rnnz
+    integer, dimension(:), pointer :: rrow_index
+    integer, dimension(:), pointer :: rcol_index
+    double precision, dimension(:), pointer :: rvalues
+    double precision, dimension(:) :: dmatrix
+    character(len = 3) :: order
+
+    ! Ensure rmatrix fields are unallocated
+    if (.not.(associated(rrow_index) .or. &
+              associated(rcol_index) .or. &
+              associated(rvalues))) then
+        allocate(rrow_index(annz), rcol_index(annz), &
+                 rvalues(annz), stat = alloc_err)
+
+        if (alloc_err /= 0) then
+            stop "Could not allocate memory for the sparse matrix."
+        end if
+
+        rnnz = annz
+        rrows = arows
+        rcols = acols
+    end if
+
+    if (order == "PRE") then
+        do i = 1,annz
+            rrow_index(i) = arow_index(i)
+            rcol_index(i) = acol_index(i)
+            ! take combination of columns of amatrix
+            rvalues(i) = avalues(i) * dmatrix(acol_index(i))
+        end do
+    else if (order == "POS") then
+        do i = 1,annz
+            rrow_index(i) = arow_index(i)
+            rcol_index(i) = acol_index(i)
+            ! take combination of rows of amatrix
+            rvalues(i) = avalues(i) * dmatrix(arow_index(i))
+        end do
+    end if
+end subroutine spmat_multiply_diagonal2
 
 
 !
 ! The routine multiplies a vector by a sparse matrix (PRE/POST)
 !
-subroutine spmat_multiply_vector(amatrix, bvector, cvector, order)
+subroutine spmat_multiply_vector1(amatrix, bvector, cvector, order)
     implicit none
     integer :: i
     type(spmat) :: amatrix
@@ -1095,15 +1336,45 @@ subroutine spmat_multiply_vector(amatrix, bvector, cvector, order)
                                 + amatrix%values(i) * bvector(amatrix%row_index(i))
         end do
     end if
-end subroutine spmat_multiply_vector
+end subroutine spmat_multiply_vector1
 
+
+!
+! The routine multiplies a vector by a sparse matrix (PRE/POST)
+!
+subroutine spmat_multiply_vector2(arows, acols, annz, arow_index, acol_index, avalues, bvector, cvector, order)
+    implicit none
+    integer :: i
+    integer :: arows, acols, annz
+    integer, dimension(:), pointer :: arow_index
+    integer, dimension(:), pointer :: acol_index
+    double precision, dimension(:), pointer :: avalues
+    double precision, dimension(:) :: bvector, cvector
+    character(len=3):: order
+
+    cvector = 0.0d0
+
+    if (order == "PRE") then
+        do i = 1,annz
+            ! Combination of the columns of amatrix
+            cvector(arow_index(i)) = cvector(arow_index(i)) &
+                                + avalues(i) * bvector(acol_index(i))
+        end do
+    else if (order == "POS") then
+        do i = 1,annz
+            ! Combination of the rows of amatrix
+            cvector(acol_index(i)) = cvector(acol_index(i)) &
+                                + avalues(i) * bvector(arow_index(i))
+        end do
+    end if
+end subroutine spmat_multiply_vector2
 
 !
 ! This routine multiplies each element of the SPMAT
 ! by a scalar.
 ! Allows amatrix to be the same as rmatrix
 !
-subroutine scalar_multiply_spmat(amatrix, scalar, rmatrix)
+subroutine scalar_multiply_spmat1(amatrix, scalar, rmatrix)
     implicit none
     integer:: i, alloc_err
     double precision :: scalar
@@ -1131,6 +1402,49 @@ subroutine scalar_multiply_spmat(amatrix, scalar, rmatrix)
         rmatrix%col_index(i) = amatrix%col_index(i)
         rmatrix%values(i) = scalar * amatrix%values(i)
     end do
-end subroutine
+end subroutine scalar_multiply_spmat1
+
+!
+! This routine multiplies each element of the SPMAT
+! by a scalar.
+! Allows amatrix to be the same as rmatrix
+!
+subroutine scalar_multiply_spmat2(arows, acols, annz, arow_index, acol_index, avalues, scalar, &
+                                  rrows, rcols, rnnz, rrow_index, rcol_index, rvalues)
+    implicit none
+    integer:: i, alloc_err
+    double precision :: scalar
+    integer :: arows, acols, annz
+    integer, dimension(:), pointer :: arow_index
+    integer, dimension(:), pointer :: acol_index
+    double precision, dimension(:), pointer :: avalues
+    integer :: rrows, rcols, rnnz
+    integer, dimension(:), pointer :: rrow_index
+    integer, dimension(:), pointer :: rcol_index
+    double precision, dimension(:), pointer :: rvalues
+
+    ! Ensure rmatrix fields are unallocated
+    if (.not.(associated(rrow_index) .or. &
+              associated(rcol_index) .or. &
+              associated(rvalues))) then
+
+        allocate(rrow_index(annz), rcol_index(annz), &
+             rvalues(annz), stat = alloc_err)
+
+        if (alloc_err /= 0) then
+            stop "Could not allocate memory for the sparse matrix."
+        end if
+
+        rnnz = annz
+        rrows = arows
+        rcols = acols
+    end if
+
+    do i = 1,annz
+        rrow_index(i) = arow_index(i)
+        rcol_index(i) = acol_index(i)
+        rvalues(i) = scalar * avalues(i)
+    end do
+end subroutine scalar_multiply_spmat2
 
 end module matrix
