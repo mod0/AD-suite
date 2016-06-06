@@ -1,5 +1,4 @@
 module mgmres
-
 contains
 subroutine atx_cr ( n, nz_num, ia, ja, a, x, w )
 
