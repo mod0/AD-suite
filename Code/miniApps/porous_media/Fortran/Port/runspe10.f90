@@ -8,74 +8,50 @@ use print_active
 
 implicit none
 
-integer :: i, j, k, St, Pt, ND
-double precision :: ir, Mw, Mo, Mt
+integer :: St, Pt, ND
+double precision :: ir, Mw, Mo, Mt, mu, sigma, oil
 double precision, dimension(:), pointer :: Tt, S, Q
 double precision, dimension(:,:), pointer :: Pc
 double precision, dimension(:,:,:), pointer :: P
 double precision, dimension(:,:,:,:), pointer :: V
 
-ir = (795.0 * Nx_ * Ny_ * Nz_) / (maxNx * maxNy * maxNz)
+St = 5                              ! Max saturation time step
+Pt = 100                            ! Pressure time step
+ND = 2000                           ! Number of days in simulation
 
-call zeros(N_, Q)
-!Q(1:N_:Nx_*Ny_) = ir
-!Q(Nx_*Ny_:N_:Nx_*Ny_) = -ir
-Q(1) = ir
-Q(N_) = -ir
-
-! setup P and V
+! setup memory for P and V
 call zeros(Nx_, Ny_, Nz_, P)
 
 ! note that V vector has an additional
 ! length in each dimension x,y,z
 call zeros(3, Nx_ + 1, Ny_ + 1, Nz_ + 1, V)
 
+call zeros((ND/St) + 1, Tt)               ! simulation time
+call zeros(2, (ND/St) + 1, Pc)            ! production data
+
+! setup memory for inflow and saturation
+call zeros(N_, Q)
+call zeros(N_, S)
+
 ! Initialize permeability and porosity for testing
 call zeros(3, Nx_, Ny_, Nz_, K_)
 call zeros(N_, Por_)
 call inputKP()                      ! Now read the permeabilities and porosities
 
-St = 5                              ! Max saturation time step
-Pt = 100                            ! Pressure time step
-ND = 2000                           ! Number of days in simulation
+! compute ir
+ir = (795.0 * Nx_ * Ny_ * Nz_) / (maxNx * maxNy * maxNz)
 
-call ones(N_, S)
-S = S * swc_
+!Q(1:N_:Nx_*Ny_) = ir
+!Q(Nx_*Ny_:N_:Nx_*Ny_) = -ir
+!Q(1) = ir
+!Q(N_) = -ir
 
-call zeros((ND/St) + 1, Tt)               ! simulation time
-call zeros(2, (ND/St) + 1, Pc)            ! production data
+! initialize mu
+mu = 0.20d0
+sigma = 1.0d0
 
-Pc(1, 1) = 0.0d0                    ! initial production
-Pc(2, 1) = 1.0d0
-Tt(1) = 0.0d0                       ! initial time.
-
-k = 1
-do i = 1, ND/Pt
-    !call print_array(S,1,0,output)
-    !call print_array(Q,1,0,output)
-    call Pres(S, Q, P, V)                       ! Pressure solver
-    !call print_array(P,1,0,1,0,1,0,output)
-    !call print_array(V,1,0,1,0,1,0,1,0,output)
-    do j = 1, Pt/St
-        k = k + 1
-
-        print *, "Timestep:", k
-
-        ! use NewtRaph1 for sparse matrix structures,
-        ! use NewtRaph2 for sparse matrix structures unrolled for openad
-        call NewtRaph1(S, V, Q, St * 1.0d0)      ! Solve for saturation
-
-        !call print_array(S,1,0,output)
-
-        call RelPerm(S(N_), Mw, Mo)             ! Mobilities in well-block
-
-        Mt = Mw + Mo
-
-        Tt(k) = 1.0d0 * k * St
-        Pc(1,k) = Mw/Mt
-        Pc(2,k) = Mo/Mt
-    end do
-end do
+call inflow_truncated_normal_x_outflow_point(Q, ir, mu, sigma)
+call simulate_reservoir()
 
 ! Set filename to collect results.
 open(unit = 1, file = 'Pc1', &
@@ -198,5 +174,97 @@ subroutine inputKP()
     !print *, K_
     !print *, Por_
 end subroutine inputKP
+
+
+!
+! Initialize inflow and outflow.
+!
+subroutine inflow_truncated_normal_x_outflow_point(Q, ir, mu, sigma)
+!    use gnufor2
+    integer :: i
+!    double precision, dimension(Nx_) :: idx
+    double precision :: x, pi, pdf, mu, sigma, ir, mass
+    double precision, dimension(:), target :: Q
+    double precision, dimension(:), pointer :: Q_x
+
+    ! set Q_x to be only the values along the first plane and x direction
+    Q_x => Q(1:Nx_ * Ny_:Ny_)
+
+    ! value of pi
+    pi = 3.14159265358979323d0
+
+    !initialize the total mass to 0
+    mass = 0.0d0
+
+    ! Note that the portion of the  Standard Normal distribution between
+    ! -3sigma/2 to 3sigma/2 is assumed to fit the 1..Nx
+    do i = 1, Nx_
+        ! get the real x coordinate
+        x = -1.5d0 + ((i - 1) * 3.0d0)/(Nx_ - 1)
+
+        ! Now use mu and sigma to find the pdf value at x
+        pdf = 1.0d0/(sigma * sqrt(2.0d0 * pi)) * exp(-(((x - mu)/sigma)**2.0d0)/2.0d0)
+
+        ! set the value at the index equal to the pdf value at that point
+        Q_x(i) = pdf
+
+        ! increment the mass by the value of the pdf
+        mass = mass + pdf
+
+!        ! index to test initialization by plot
+!        idx(i) = i * 1.0
+    end do
+
+    ! now rescale all the entities
+    Q_x = Q_x/mass * ir
+
+    ! now set the output
+    Q(N_) = -ir
+
+!    !---------------------------------------------------------------------------
+!    ! Call GNUPLOT through the interface module.
+!    ! Uncomment these plot calls after verifying you have GNUPlot installed.
+!    !---------------------------------------------------------------------------
+!    ! Plot the Q and check if it is correct.
+!    call plot(idx, Q_x, terminal='png', filename='inflow.png')
+end subroutine inflow_truncated_normal_x_outflow_point
+
+
+!
+! This subroutine simulates the reservoir
+! model.
+!
+subroutine simulate_reservoir()
+    integer :: i, j, k
+
+    S = swc_                            ! initial saturation
+
+    Pc(1, 1) = 0.0d0                    ! initial production
+    Pc(2, 1) = 1.0d0
+    Tt(1) = 0.0d0                       ! initial time.
+
+    oil = 0.0d0
+
+    k = 1
+    do i = 1, ND/Pt
+        call Pres(S, Q, P, V)                       ! Pressure solver
+
+        do j = 1, Pt/St
+            k = k + 1
+            call NewtRaph1(S, V, Q, St * 1.0d0)      ! Solve for saturation
+            call RelPerm(S(N_), Mw, Mo)             ! Mobilities in well-block
+
+            Mt = Mw + Mo
+
+            Tt(k) = 1.0d0 * k * St
+            Pc(1,k) = Mw/Mt
+            Pc(2,k) = Mo/Mt
+
+            oil = oil + Pc(2, k) * St                     ! Reimann sum
+        end do
+    end do
+
+    print *, "The total oil is ", oil
+end subroutine simulate_reservoir
 
 end program runspe10

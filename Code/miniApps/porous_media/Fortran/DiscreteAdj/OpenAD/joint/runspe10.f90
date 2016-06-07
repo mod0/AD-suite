@@ -3,7 +3,7 @@ use fvm
 use grid
 use fluid
 use matrix
-!use gnufor2
+use gnufor2
 !use print_active
 
 implicit none
@@ -57,25 +57,46 @@ sigma = 1.0d0
 call inflow_truncated_normal_x_outflow_point(Q, ir, mu, sigma)
 call simulate_reservoir()
 
-!! Set filename to collect results.
-!open(unit = 1, file = 'Pc1', &
-!        form = 'unformatted', access = 'stream')
-!
-!! write the production curve 1
-!write(unit=1) Pc(1, :)
-!
-!! close files
-!close(unit=1)
-!
-!! Set filename to collect results.
-!open(unit = 1, file = 'Pc2', &
-!        form = 'unformatted', access = 'stream')
-!
-!! write the production curve 2
-!write(unit=1) Pc(2, :)
-!
-!! close files
-!close(unit=1)
+! Set filename to collect results.
+open(unit = 1, file = 'Pc1', &
+       form = 'unformatted', access = 'stream')
+
+! write the production curve 1
+write(unit=1) Pc(1, :)
+
+! close files
+close(unit=1)
+
+! Set filename to collect results.
+open(unit = 1, file = 'Pc2', &
+       form = 'unformatted', access = 'stream')
+
+! write the production curve 2
+write(unit=1) Pc(2, :)
+
+! close files
+close(unit=1)
+
+
+! Set filename to collect results.
+open(unit = 1, file = 'Pc12', &
+        form = 'unformatted', access = 'stream')
+
+! write the both production curves
+write(unit=1) Pc
+
+! close files
+close(unit=1)
+
+
+! open file to write saturation data
+open(unit=1, file='Sat', &
+          form = 'unformatted', access='stream')
+! Write saturation data
+write(unit=1) S
+
+! close file
+close(unit=1)
 
 !---------------------------------------------------------------------------
 ! Call GNUPLOT through the interface module.
@@ -162,7 +183,7 @@ end subroutine inputKP
 subroutine inflow_truncated_normal_x_outflow_point(Q, ir, mu, sigma)
 !    use gnufor2
     integer :: i
-!    double precision, dimension(Nx_) :: idx
+    double precision, dimension(Nx_) :: idx
     double precision :: x, pi, pdf, mu, sigma, ir, mass
     double precision, dimension(:), target :: Q
     double precision, dimension(:), pointer :: Q_x
@@ -191,8 +212,8 @@ subroutine inflow_truncated_normal_x_outflow_point(Q, ir, mu, sigma)
         ! increment the mass by the value of the pdf
         mass = mass + pdf
 
-!        ! index to test initialization by plot
-!        idx(i) = i * 1.0
+        ! index to test initialization by plot
+        idx(i) = i * 1.0
     end do
 
     ! now rescale all the entities
@@ -201,12 +222,12 @@ subroutine inflow_truncated_normal_x_outflow_point(Q, ir, mu, sigma)
     ! now set the output
     Q(N_) = -ir
 
-!    !---------------------------------------------------------------------------
-!    ! Call GNUPLOT through the interface module.
-!    ! Uncomment these plot calls after verifying you have GNUPlot installed.
-!    !---------------------------------------------------------------------------
-!    ! Plot the Q and check if it is correct.
-!    call plot(idx, Q_x, terminal='png', filename='inflow.png')
+   !---------------------------------------------------------------------------
+   ! Call GNUPLOT through the interface module.
+   ! Uncomment these plot calls after verifying you have GNUPlot installed.
+   !---------------------------------------------------------------------------
+   ! Plot the Q and check if it is correct.
+   call plot(idx, Q_x, terminal='png', filename='inflow.png')
 end subroutine inflow_truncated_normal_x_outflow_point
 
 
@@ -231,7 +252,7 @@ subroutine simulate_reservoir()
 
         do j = 1, Pt/St
             k = k + 1
-            call NewtRaph(S, V, Q, St * 1.0d0)      ! Solve for saturation
+            call NewtRaph2(S, V, Q, St * 1.0d0)      ! Solve for saturation
             call RelPerm(S(N_), Mw, Mo)             ! Mobilities in well-block
 
             Mt = Mw + Mo
@@ -243,6 +264,8 @@ subroutine simulate_reservoir()
             oil = oil + Pc(2, k) * St                     ! Reimann sum
         end do
     end do
+
+    print *, "Total oil is ", oil
 end subroutine simulate_reservoir
 
 end program runspe10

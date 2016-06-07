@@ -256,6 +256,8 @@ subroutine Pres(S, Q, P, V)
     ! point-wise multiply
     KM = KM * K_
 
+    ! Use tpfa if sparse matrix user defined type is desired
+    ! Use tpfa2 if the type has to be flattented out.
     call tpfa2(KM, Q, P, V)
 end subroutine
 

@@ -7,7 +7,7 @@ module grid
     integer :: maxNx, maxNy, maxNz
     parameter(maxNx=60, maxNy=220, maxNz=85)
 
-    parameter(Nx_ = 4, &                   ! Dimension in x-direction
+    parameter(Nx_ = 20, &                   ! Dimension in x-direction
               Ny_ = 4, &                  ! Dimension in y-direction
               Nz_ = 2, &                    ! Dimension in z-direction
               hx_ = 20.0d0 * 0.3048d0, &    ! step size in x-direction
