@@ -124,8 +124,8 @@ subroutine read_permeability_and_porosity()
     integer, dimension(3 * Nx_ * Ny_ * Nz_) :: Kindices
 
     ! initialize porosity and permeability to zero
-    K_ = 0.0d0
-    Por_ = 0.0d0
+    PERM = 0.0d0
+    POR = 0.0d0
 
     ! read KUr
     open(1,file='KUr.txt',status='old')
@@ -151,7 +151,7 @@ subroutine read_permeability_and_porosity()
     end do
 
     ! then reshape 1 dimension to 4 dimension (hack for time being)
-    call myreshape_1_4(KUrl(Kindices), K_)
+    call myreshape_1_4(KUrl(Kindices), PERM)
 
     ! read KUr
     open(1,file='pUr.txt',status='old')
@@ -169,7 +169,8 @@ subroutine read_permeability_and_porosity()
         end do
     end do
 
-    Por_ = max(pUr(Pindices), 1.0d-3)
+    !POR = max(pUr(Pindices), 1.0d-3)
+    call mymax_1_0_double(pUr(Pindices), 1.0d-3, POR)
 end subroutine read_permeability_and_porosity
 
 
@@ -181,8 +182,8 @@ subroutine init_flw_trnc_norm_xin_pt_out(ir, mu, sigma, Q)
     integer :: i, j
     double precision, dimension(Nx_) :: idx
     double precision :: x, pi, pdf, mass
-    double precision, INTENT(IN) :: mu, sigma, ir
-    double precision, dimension(N_), INTENT(OUT) :: Q
+    double precision :: mu, sigma, ir
+    double precision, dimension(N_) :: Q
     double precision, dimension(Nx_) :: Q_x
 
     ! value of pi
@@ -242,7 +243,7 @@ subroutine simulate_reservoir(Q, S, P, V, St, Pt, Tt, ND, Mw, Mo, Mt, Pc, oil)
     use fluid
     integer :: i, j, k, ND, St, Pt
     double precision :: Mw, Mo, Mt, tempoil1, tempoil2
-    double precision, INTENT(OUT) ::  oil
+    double precision ::  oil
     double precision, dimension((ND/St) + 1) :: Tt
     double precision, dimension(N_) :: S
     double precision, dimension(N_) :: Q
@@ -264,7 +265,7 @@ subroutine simulate_reservoir(Q, S, P, V, St, Pt, Tt, ND, Mw, Mo, Mt, Pc, oil)
 
         do j = 1, Pt/St
             k = k + 1
-            call NewtRaph(S, V, Q, St * 1.0d0)      ! Solve for saturation
+            call NewtRaph(S, V, Q, St)      ! Solve for saturation
             call RelPerm(S(N_), Mw, Mo)             ! Mobilities in well-block
 
             Mt = Mw + Mo
@@ -285,8 +286,8 @@ end subroutine simulate_reservoir
 
 subroutine update_oil(Pc, k, St, oilin, oilout)
   integer :: St, k
-  double precision, INTENT(IN) ::  oilin
-  double precision, INTENT(OUT) ::  oilout
+  double precision ::  oilin
+  double precision ::  oilout
   double precision, dimension(2, (ND/St) + 1) :: Pc
 
   oilout = oilin +  Pc(2, k) * St                     ! Reimann sum

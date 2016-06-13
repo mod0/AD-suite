@@ -2,15 +2,15 @@ module matrix
     implicit none
 
     ! export module interface
-    public :: spdiags, disp_spmat, myreshape, add_x, spmat_multiply, mymin, mymax
+    public :: spdiags,  myreshape, add_x, spmat_multiply, mymin, mymax !,disp_spmat
 
     interface spdiags
       module procedure spdiags2
     end interface spdiags
 
-    interface disp_spmat
-      module procedure disp_spmat2
-    end interface disp_spmat
+    ! interface disp_spmat
+    !   module procedure disp_spmat2
+    ! end interface disp_spmat
 
     ! Common interface for all reshape functions
     interface myreshape
@@ -798,7 +798,7 @@ subroutine mymin_1_0_double(vectorin, scalarin, vectorout)
   double precision, dimension(:) :: vectorin, vectorout
 
   do i = 1, size(vectorin, 1)
-    if (vectorin(i) .gte. scalarin) then
+    if (vectorin(i) >= scalarin) then
       vectorout(i) = scalarin
     else
       vectorout(i) = vectorin(i)
@@ -811,7 +811,7 @@ subroutine mymin_1_1_double(vectorin1, vectorin2, vectorout)
   double precision, dimension(:) :: vectorin1, vectorin2, vectorout
 
   do i = 1, size(vectorin1, 1)
-    if (vectorin1(i) .gte. vectorin2(i)) then
+    if (vectorin1(i) >= vectorin2(i)) then
       vectorout(i) = vectorin2(i)
     else
       vectorout(i) = vectorin1(i)
@@ -825,7 +825,7 @@ subroutine mymax_1_0_double(vectorin, scalarin, vectorout)
   double precision, dimension(:) :: vectorin, vectorout
 
   do i = 1, size(vectorin, 1)
-    if (vectorin(i) .lte. scalarin) then
+    if (vectorin(i) <= scalarin) then
       vectorout(i) = scalarin
     else
       vectorout(i) = vectorin(i)
@@ -838,7 +838,7 @@ subroutine mymax_1_1_double(vectorin1, vectorin2, vectorout)
   double precision, dimension(:) :: vectorin1, vectorin2, vectorout
 
   do i = 1, size(vectorin1, 1)
-    if (vectorin1(i) .lte. vectorin2(i)) then
+    if (vectorin1(i) <= vectorin2(i)) then
       vectorout(i) = vectorin2(i)
     else
       vectorout(i) = vectorin1(i)

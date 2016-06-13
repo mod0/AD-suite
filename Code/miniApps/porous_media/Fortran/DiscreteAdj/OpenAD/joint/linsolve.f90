@@ -45,6 +45,7 @@ subroutine sparse_jacobi_method2(arows, acols, annz, alen, arow_index, acol_inde
     double precision, dimension(arows) :: b
     double precision, dimension(arows) :: x
     double precision, dimension(arows) :: x_old
+    double precision, dimension(arows) :: residual
     double precision, dimension(arows) :: main_diag
 
 
@@ -71,8 +72,11 @@ subroutine sparse_jacobi_method2(arows, acols, annz, alen, arow_index, acol_inde
         ! divide by the diagonal entries
         x = x/main_diag
 
+        ! Get the residual between the old and new values
+        residual = (x - x_old)
+
         ! get the norm
-        call dnrm2((x - x_old), arows, nrm)
+        call dnrm2(residual, arows, nrm)
 
         ! Exit when converged.
         if (nrm < 1.0d-8) then
@@ -101,6 +105,7 @@ subroutine sparse_gauss_seidel_method2(arows, acols, annz, alen, arow_index, &
     double precision, dimension(arows) :: b
     double precision, dimension(arows) :: x
     double precision, dimension(arows) :: x_old
+    double precision, dimension(arows) :: residual
     double precision, dimension(arows) :: main_diag
 
     do k = 1, 100000      ! Max iterations
@@ -139,8 +144,12 @@ subroutine sparse_gauss_seidel_method2(arows, acols, annz, alen, arow_index, &
             x(i) = x(i)/main_diag(i)
         end do
 
+
+        ! Get the residual between the old and new values
+        residual = (x - x_old)
+
         ! get the norm
-        call dnrm2((x - x_old), arows, nrm)
+        call dnrm2(residual, arows, nrm)
 
         ! Exit when converged.
         if (nrm < 1.0d-8) then

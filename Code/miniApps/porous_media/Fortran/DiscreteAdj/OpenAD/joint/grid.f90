@@ -13,6 +13,6 @@ module grid
               N_ = Nx_ * Ny_ * Nz_, &       ! Total number of grid cells
               V_ = hx_ * hy_ * hz_)         ! Volume of each grid cell
 
-    double precision, dimension(N_) :: Por_      ! Porosities
-    double precision, dimension(3, Nx_, Ny_, Nz_) :: K_  ! Permeabilities
+    double precision, dimension(N_) :: POR      ! Porosities
+    double precision, dimension(3, Nx_, Ny_, Nz_) :: PERM  ! Permeabilities
 end module grid

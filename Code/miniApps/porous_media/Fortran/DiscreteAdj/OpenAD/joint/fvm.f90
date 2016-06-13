@@ -24,8 +24,8 @@ subroutine NewtRaph(S, V, Q, St)
     !use print_active
     implicit none
     integer :: i, j, it
+    integer :: St                             ! Maximum saturation Time Step
     logical :: converged
-    double precision :: St                             ! Maximum saturation Time Step
     double precision :: dt, dsn
 
     double precision, dimension(N_) :: S
@@ -74,12 +74,14 @@ subroutine NewtRaph(S, V, Q, St)
     it = 0
 
     do while(.not. converged)
-        dt = St/(2**it)
-        dtx = dt/(V_ * Por_)
-		fi = max(Q, 0.0d0) * dtx
+        dt = (1.0d0 * St)/(2**it)
+        dtx = dt/(V_ * POR)
+
+        call mymax_1_0_double(Q, 0.0d0, fi)
+		    fi = fi * dtx
 
         ! Matrix-diagonal matrix product
-        call spmat_multiply(arows, acols, annz, 7 * N_, arow_index, acol_index, avalues, dtx, &
+        call spmat_multiply_diagonal2(arows, acols, annz, 7 * N_, arow_index, acol_index, avalues, dtx, &
                             brows, bcols, bnnz, 7 * N_, brow_index, bcol_index, bvalues, "POS")
 
         i = 0
@@ -96,15 +98,15 @@ subroutine NewtRaph(S, V, Q, St)
                 dF = dMw/(Mw + Mo) - (Mw/((Mw + Mo)**2) * (dMw + dMo))
 
                 ! Matrix-diagonal matrix product
-                call spmat_multiply(brows, bcols, bnnz, 7 * N_, brow_index, bcol_index, bvalues, dF, &
+                call spmat_multiply_diagonal2(brows, bcols, bnnz, 7 * N_, brow_index, bcol_index, bvalues, dF, &
                                     dgrows, dgcols, dgnnz, 7 * N_, dgrow_index, dgcol_index, dgvalues, "PRE")
 
-                call add_x(dgrows, dgcols, dgnnz, 7 * N_, dgrow_index, dgcol_index, dgvalues, -1.0d0, 0)
+                call addx_diagonal2(dgrows, dgcols, dgnnz, 7 * N_, dgrow_index, dgcol_index, dgvalues, -1.0d0, 0)
 
                 fw = Mw / (Mw + Mo)
 
                 ! Matrix-vector matrix product
-                call spmat_multiply(brows, bcols, bnnz, 7 * N_, brow_index, bcol_index, bvalues, fw, bfw, "PRE")
+                call spmat_multiply_vector2(brows, bcols, bnnz, 7 * N_, brow_index, bcol_index, bvalues, fw, bfw, "PRE")
 
                 G = S - S_iter_copy - bfw - fi
 
@@ -159,10 +161,10 @@ subroutine Pres(S, Q, P, V)
       M(3 + (i - 1) * 3) = M(1 + (i - 1) * 3)
     end do
 
-    call myreshape(M, KM)
+    call myreshape_1_4(M, KM)
 
     ! point-wise multiply
-    KM = KM * K_
+    KM = KM * PERM
 
     call tpfa(KM, Q, P, V)
 end subroutine
@@ -234,32 +236,32 @@ subroutine GenA(V, Q, arows, acols, annz, arow_index, acol_index, avalues)
 
     ! reshape arrays first
     VXYZ = V(3,1:Nx_, 1:Ny_, 2:Nz_ + 1)
-    call myreshape(VXYZ, diags(:, 1)) ! z2
+    call myreshape_3_1(VXYZ, diags(:, 1)) ! z2
     VXYZ = V(2,1:Nx_, 2:Ny_ + 1, 1:Nz_)
-    call myreshape(VXYZ, diags(:, 2)) ! y2
+    call myreshape_3_1(VXYZ, diags(:, 2)) ! y2
     VXYZ = V(1,2:Nx_ + 1, 1:Ny_, 1:Nz_)
-    call myreshape(VXYZ, diags(:, 3)) ! x2
+    call myreshape_3_1(VXYZ, diags(:, 3)) ! x2
     VXYZ = V(1,1:Nx_, 1:Ny_, 1:Nz_)
-    call myreshape(VXYZ, diags(:, 5)) ! x1
+    call myreshape_3_1(VXYZ, diags(:, 5)) ! x1
     VXYZ = V(2,1:Nx_, 1:Ny_, 1:Nz_)
-    call myreshape(VXYZ, diags(:, 6)) ! y1
+    call myreshape_3_1(VXYZ, diags(:, 6)) ! y1
     VXYZ = V(3,1:Nx_, 1:Ny_, 1:Nz_)
-    call myreshape(VXYZ, diags(:, 7)) ! z1
+    call myreshape_3_1(VXYZ, diags(:, 7)) ! z1
 
-    call mymax(diags(:,1), 0.0d0, diags(:, 1))
-    call mymax(diags(:,2), 0.0d0, diags(:, 2))
-    call mymax(diags(:,3), 0.0d0, diags(:, 3))
+    call mymax_1_0_double(diags(:,1), 0.0d0, diags(:, 1))
+    call mymax_1_0_double(diags(:,2), 0.0d0, diags(:, 2))
+    call mymax_1_0_double(diags(:,3), 0.0d0, diags(:, 3))
 
-    call mymin(diags(:,5), 0.0d0, diags(:, 5))
+    call mymin_1_0_double(diags(:,5), 0.0d0, diags(:, 5))
     diags(:, 5) = -diags(:,5)
 
-    call mymin(diags(:,6), 0.0d0, diags(:, 6))
+    call mymin_1_0_double(diags(:,6), 0.0d0, diags(:, 6))
     diags(:, 6) = -diags(:,6)
 
-    call mymin(diags(:,7), 0.0d0, diags(:, 7))
+    call mymin_1_0_double(diags(:,7), 0.0d0, diags(:, 7))
     diags(:, 7) = -diags(:,7)
 
-    call mymin(Q, 0.0d0, diags(:, 4))
+    call mymin_1_0_double(Q, 0.0d0, diags(:, 4))
     diags(:, 4) = diags(:, 4) - diags(:, 5) - diags(:, 3) &
                               - diags(:, 6) - diags(:, 2) &
                               - diags(:, 7) - diags(:, 1)
@@ -337,17 +339,17 @@ subroutine tpfa(K, Q, P, V)
     diags = 0.0d0
 
     TXYZ = -TX(1:Nx_,1:Ny_,1:Nz_)
-    call myreshape(TXYZ, diags(:, 5))          ! -x1
+    call myreshape_3_1(TXYZ, diags(:, 5))          ! -x1
     TXYZ = -TY(1:Nx_,1:Ny_,1:Nz_)
-    call myreshape(TXYZ, diags(:, 6))          ! -y1
+    call myreshape_3_1(TXYZ, diags(:, 6))          ! -y1
     TXYZ = -TZ(1:Nx_,1:Ny_,1:Nz_)
-    call myreshape(TXYZ, diags(:, 7))          ! -z1
+    call myreshape_3_1(TXYZ, diags(:, 7))          ! -z1
     TXYZ = -TX(2:Nx_ + 1,1:Ny_,1:Nz_)
-    call myreshape(TXYZ, diags(:, 3))      ! -x2
+    call myreshape_3_1(TXYZ, diags(:, 3))      ! -x2
     TXYZ = -TY(1:Nx_,2:Ny_ + 1,1:Nz_)
-    call myreshape(TXYZ, diags(:, 2))      ! -y2
+    call myreshape_3_1(TXYZ, diags(:, 2))      ! -y2
     TXYZ = -TZ(1:Nx_,1:Ny_,2:Nz_ + 1)
-    call myreshape(TXYZ, diags(:, 1))      ! -z2
+    call myreshape_3_1(TXYZ, diags(:, 1))      ! -z2
 
     ! Assemble discretization matrix
     diags(:, 4) = -(diags(:,1) + diags(:,2) + diags(:,3) &
@@ -371,15 +373,15 @@ subroutine tpfa(K, Q, P, V)
 
 
     ! Increment the 1,1 element of A
-    call add_x(arows, acols, annz, 7 * N_, arow_index, acol_index, avalues, &
-                    K_(1,1,1,1) + K_(2,1,1,1) + K_(3,1,1,1), 1, 1)
+    call addx_elem2(arows, acols, annz, 7 * N_, arow_index, acol_index, avalues, &
+                    PERM(1,1,1,1) + PERM(2,1,1,1) + PERM(3,1,1,1), 1, 1)
 
     ! solve the linear system
     ! Pass the rows_index, cols_index, values separately.
     call solve(arows, acols, annz, 7 * N_, arow_index, acol_index, avalues, Q, u)
 
     ! reshape the solution
-    call myreshape(u, P)
+    call myreshape_1_3(u, P)
 
     ! V.x
     V(1, 2:Nx_, 1:Ny_, 1:Nz_) = (P(1:Nx_ - 1, :, :) - P(2:Nx_, :, :)) * TX(2:Nx_,:,:)
