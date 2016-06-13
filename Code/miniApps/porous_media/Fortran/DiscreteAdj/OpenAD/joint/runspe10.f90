@@ -46,15 +46,17 @@ ir = (795.0 * Nx_ * Ny_ * Nz_) / (maxNx * maxNy * maxNz)
 !Q(1) = ir
 !Q(N_) = -ir
 
-!$openad independent(mu)
-!$openad independent(sigma)
+! openad independent(mu)
+! openad independent(sigma)
+!
+! ! initialize mu
+! mu = 0.0d0
+! sigma = 1.0d0
+!
+! call init_flw_trnc_norm_xin_pt_out(ir, mu, sigma, Q)
+! call simulate_reservoir(Q, S, P, V, St, Pt, Tt, ND, Mw, Mo, Mt, Pc, totaloil)
 
-! initialize mu
-mu = 0.0d0
-sigma = 1.0d0
-
-call init_flw_trnc_norm_xin_pt_out(ir, mu, sigma, Q)
-call simulate_reservoir(Q, S, P, V, St, Pt, Tt, ND, Mw, Mo, Mt, Pc, totaloil)
+call wrapper(ir, mu, sigma, Q, S, P, V, St, Pt, Tt, ND, Mw, Mo, Mt, Pc, totaloil)
 
 ! ! Set filename to collect results.
 ! open(unit = 1, file = 'Pc1', &
@@ -292,5 +294,31 @@ subroutine update_oil(Pc, k, St, oilin, oilout)
 
   oilout = oilin +  Pc(2, k) * St                     ! Reimann sum
 end subroutine update_oil
+
+subroutine wrapper(ir, mu, sigma, Q, S, P, V, St, Pt, Tt, ND, Mw, Mo, Mt, Pc, oil)
+  use grid
+  use fluid
+  integer :: ND, St, Pt
+  double precision :: mu, sigma, ir
+  double precision :: Mw, Mo, Mt
+  double precision :: oil
+  double precision, dimension((ND/St) + 1) :: Tt
+  double precision, dimension(N_) :: S
+  double precision, dimension(N_) :: Q
+  double precision, dimension(2, (ND/St) + 1) :: Pc
+  double precision, dimension(Nx_, Ny_, Nz_) :: P
+  double precision, dimension(3, Nx_ + 1, Ny_ + 1, Nz_ + 1) :: V
+
+  !$openad independent(mu)
+  !$openad independent(sigma)
+  !$openad dependent(oil)
+
+  ! initialize mu
+  mu = 0.0d0
+  sigma = 1.0d0
+
+  call init_flw_trnc_norm_xin_pt_out(ir, mu, sigma, Q)
+  call simulate_reservoir(Q, S, P, V, St, Pt, Tt, ND, Mw, Mo, Mt, Pc, oil)
+end subroutine wrapper
 
 end program runspe10

@@ -40,11 +40,13 @@ module matrix
     end interface
 
     interface mymin
+      module procedure mymin_0_0_double
       module procedure mymin_1_0_double
       module procedure mymin_1_1_double
     end interface mymin
 
     interface mymax
+      module procedure mymax_0_0_double
       module procedure mymax_1_0_double
       module procedure mymax_1_1_double
     end interface mymax
@@ -791,6 +793,15 @@ subroutine scalar_multiply_spmat2(arows, acols, annz, alen, arow_index, acol_ind
     end do
 end subroutine scalar_multiply_spmat2
 
+subroutine mymin_0_0_double(scalarin1, scalarin2, scalarout)
+  double precision :: scalarin1, scalarin2, scalarout
+
+  if (scalarin2 >= scalarin1) then
+    scalarout = scalarin1
+  else
+    scalarout = scalarin2
+  end if
+end subroutine mymin_0_0_double
 
 subroutine mymin_1_0_double(vectorin, scalarin, vectorout)
   integer :: i
@@ -819,6 +830,16 @@ subroutine mymin_1_1_double(vectorin1, vectorin2, vectorout)
   end do
 end subroutine mymin_1_1_double
 
+subroutine mymax_0_0_double(scalarin1, scalarin2, scalarout)
+  double precision :: scalarin1, scalarin2, scalarout
+
+  if (scalarin2 <= scalarin1) then
+    scalarout = scalarin1
+  else
+    scalarout = scalarin2
+  end if
+end subroutine mymax_0_0_double
+
 subroutine mymax_1_0_double(vectorin, scalarin, vectorout)
   integer :: i
   double precision :: scalarin
@@ -845,6 +866,8 @@ subroutine mymax_1_1_double(vectorin1, vectorin2, vectorout)
     end if
   end do
 end subroutine mymax_1_1_double
+
+
 
 
 end module matrix
