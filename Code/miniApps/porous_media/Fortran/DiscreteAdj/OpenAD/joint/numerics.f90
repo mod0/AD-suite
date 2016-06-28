@@ -623,7 +623,7 @@ subroutine sparse_dummy_method(n, annz, alen, arow_index, arow_compressed, &
   integer :: i
   logical :: verbose
   integer :: solver_inner, solver_outer
-  double precision :: sum
+  double precision :: summe
   integer :: n, annz, alen
   integer, dimension(alen) :: arow_index
   integer, dimension(alen) :: acol_index
@@ -632,14 +632,16 @@ subroutine sparse_dummy_method(n, annz, alen, arow_index, arow_compressed, &
   
   double precision, dimension(n) :: b
   double precision, dimension(n) :: x
-
-  x = 0.0d0
-  sum = 0.0d0
-  do i = 1, annz
-      sum = sum + avalues(i)
-  end do
-
-  x = b/sum
+! 
+!   x(:) = 0.0d0
+!   summe = 0.0d0
+!   do i = 1, annz
+!       summe = summe + avalues(i)
+!   end do
+! 
+!   x(:) = b(:)*summe
+  call spmat_multiply_vector2(annz, arow_index, arow_compressed, &
+                              acol_index, avalues, b, x, "PRE")
 end subroutine sparse_dummy_method
 
 
@@ -1105,8 +1107,7 @@ subroutine spdiags_fvm(imatrix, onnz, orow_index, &
     integer :: i, j, start_row_imatrix, end_row_imatrix, row, col
 
     double precision, dimension(N_, 7) :: imatrix
-    integer, parameter, dimension(7) :: idiags = (/-Nx_ * Ny_, -Nx_, -1, &
-                                                   0, 1, Nx_, Nx_ * Ny_/)
+    integer, dimension(7) :: idiags
                                                    
     integer :: onnz
     integer, dimension(7 * N_) :: orow_index
@@ -1114,7 +1115,13 @@ subroutine spdiags_fvm(imatrix, onnz, orow_index, &
     double precision, dimension(7 * N_) :: ovalues
     integer, dimension(N_ + 1) :: orow_compressed
 
-
+    idiags(1) = -Nx_ * Ny_
+    idiags(2) =  -Nx_
+    idiags(3) = -1
+    idiags(4) = 0
+    idiags(5) = 1
+    idiags(6) = Nx_
+    idiags(7) = Nx_ * Ny_
     
     onnz = 0
     orow_compressed = 0
@@ -1154,8 +1161,7 @@ subroutine spdiags_fvm_csr(imatrix, onnz, orow_index,&
     integer :: i, j, rownnz
 
     double precision, dimension(N_, 7) :: imatrix
-    integer, parameter, dimension(7) :: idiags = (/-Nx_ * Ny_, -Nx_, -1, &
-                                                   0, 1, Nx_, Nx_ * Ny_/)
+    integer, dimension(7) :: idiags 
     integer, dimension(7) :: start_row_imatrix, end_row_imatrix
     integer, dimension(7) :: row_diag, col_diag      ! row, column along diagonal
 
@@ -1167,6 +1173,13 @@ subroutine spdiags_fvm_csr(imatrix, onnz, orow_index,&
     integer, dimension(N_ + 1) :: orow_compressed
 
 
+    idiags(1) = -Nx_ * Ny_
+    idiags(2) =  -Nx_
+    idiags(3) = -1
+    idiags(4) = 0
+    idiags(5) = 1
+    idiags(6) = Nx_
+    idiags(7) = Nx_ * Ny_
 
     onnz = 0
     orow_compressed(1) = 1                      ! compressed row storage
