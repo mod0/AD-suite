@@ -311,7 +311,6 @@ subroutine wrapper(ir, mu, sigma, Q, S, P, V, St, Pt, Tt, ND, Mw, Mo, Mt, Pc, oi
 
   !$openad independent(mu)
   !$openad independent(sigma)
-  !$openad dependent(oil)
 
   ! initialize mu
   mu = 0.0d0
@@ -319,6 +318,8 @@ subroutine wrapper(ir, mu, sigma, Q, S, P, V, St, Pt, Tt, ND, Mw, Mo, Mt, Pc, oi
 
   call init_flw_trnc_norm_xin_pt_out(ir, mu, sigma, Q)
   call simulate_reservoir(Q, S, P, V, St, Pt, Tt, ND, Mw, Mo, Mt, Pc, oil)
+
+  !$openad dependent(oil)
 end subroutine wrapper
 
 end program runspe10

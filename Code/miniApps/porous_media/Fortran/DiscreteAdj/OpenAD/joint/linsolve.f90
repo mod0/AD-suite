@@ -28,7 +28,7 @@ subroutine sparse_solve2(arows, acols, annz, alen, arow_index, acol_index, avalu
     if(1 .ne. 0) then
         x = 0.0d0
     end if
-    call sparse_dummy_method2(arows, acols, annz, alen, arow_index, acol_index, avalues, b, x)
+    call sparse_gauss_seidel_method2(arows, acols, annz, alen, arow_index, acol_index, avalues, b, x)
 end subroutine sparse_solve2
 
 !

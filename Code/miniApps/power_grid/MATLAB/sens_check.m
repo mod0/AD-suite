@@ -1,7 +1,7 @@
 % Script to check sensitivities
-function [costfunction,adjsens] = sens_check(pm,tend)
+function [costfunction,adjsens,tfwd,fsoln,tbak,bsoln] = sens_check(pm,tend)
   global  pmax omegaB omegaS H D thetaS t0 tf tcl beta c
-  global g dg dt adjsens tempder epsilon
+  global g dg dt adjsens tempder epsilon phimax pmmax
 
   pmax = 2.0877;
   omegaB = 120*pi;
@@ -36,11 +36,18 @@ function [costfunction,adjsens] = sens_check(pm,tend)
                    @(t,x)ForwardOdeRHSJacobian(t,x,pm),'OutputFcn',@ForwardOdeOutputFcn);
   [tout, yout] = int_method(@(t,x)ForwardOdeRhs(t,x,pm),tspan, ...
                             xinit,options);
+  tfwd = tout;
+  fsoln = yout;
+
+  if max(fsoln(:,1)) > phimax
+    phimax = max(fsoln(:,1));
+    pmmax = pm
+  end
 % 
-  figure(1);
-  plot(tout,yout(:,1))
-  figure(2);
-  plot(tout,yout(:,2))
+%  figure(1);
+%  plot(tout,yout(:,1))
+%  figure(2);
+%  plot(tout,yout(:,2))
   %hold on
   %plot(tout,thetaS);
 
@@ -71,10 +78,10 @@ function [costfunction,adjsens] = sens_check(pm,tend)
   %%%%%%%
 
 % 
-  figure(3);
-  plot(tb,yb(:,1))
-  figure(4);
-  plot(tb,yb(:,2))
+%  figure(3);
+%  plot(tb,yb(:,1))
+%  figure(4);
+%  plot(tb,yb(:,2))
   
   % figure(3);
   % plot(tb,yb);
@@ -83,9 +90,12 @@ function [costfunction,adjsens] = sens_check(pm,tend)
   % plot(yb(:,1),yb(:,2));
   % xlabel('lambda_1');
   % ylabel('lambda_2');
-  pm
-  adjsens
-  costfunction=-pm+g
+  pm;
+  adjsens;
+  costfunction=-pm+g;
+  
+  tbak = tb;
+  bsoln = yb;
 end
 
 

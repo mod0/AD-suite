@@ -18,7 +18,13 @@ z1 = reshape(TZ(:,:,1:Nz),N,1); z2 = reshape(TZ(:,:,2:Nz+1),N,1);
 DiagVecs = [-z2,-y2,-x2,x1+x2+y1+y2+z1+z2,-x1,-y1,-z1];
 DiagIndx = [-Nx*Ny,-Nx,-1,0,1,Nx,Nx*Ny];
 A = spdiags(DiagVecs,DiagIndx,N,N);
-A(1,1) = A(1,1)+sum(Grid.K(:,1,1,1));
+
+%A(1,1) = A(1,1)+sum(Grid.K(:,1,1,1));
+for i = 1:Ny:Nx*Ny
+ A(i, :) = 0;
+ A(i, i) = 1;
+end
+    
 
 % Solve linear system and extract interface fluxes.
 u = A\q;
