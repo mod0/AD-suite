@@ -1,4 +1,5 @@
 module linsolve
+use grid
 use matrix
 use mathutil
 
@@ -17,157 +18,79 @@ contains
 !
 ! Calls a specific solver - here the jacobi method
 !
-subroutine sparse_solve(A, b, x)
-    implicit none
-    integer :: i
-    type(spmat) :: A
-    double precision, dimension(:) :: b
-    double precision, dimension(:) :: x
-    if(1 .ne. 0) then
-        x = 0.0d0
-    end if
-    
-    !call sparse_mgmres_method(A, b, x)
-       
-    ! dummy relationship
-    do i = 1, A%nnz
-       x(i) = A%values(i) * b(A%row_index(i))
-    end do
+subroutine sparse_solve(annz, arow_index, arow_compressed, &
+                        acol_index, avalues, b, x, solver_inner, solver_outer, verbose)
+  implicit none
+  logical :: verbose
+  integer :: solver_inner, solver_outer
+  
+  integer :: annz
+  integer, parameter :: matdim = N_
+  integer, parameter :: maxlen = 7 * matdim
+  integer, dimension(7 * N_) :: arow_index
+  integer, dimension(7 * N_) :: acol_index
+  double precision, dimension(7 * N_) :: avalues
+  integer, dimension(N_ + 1) :: arow_compressed
+
+  double precision, dimension(N_) :: b
+  double precision, dimension(N_) :: x
+
+  call sparse_dummy_method(matdim, annz, maxlen, arow_index, arow_compressed,&
+                           acol_index, avalues, b, x, solver_inner, solver_outer, verbose)
 end subroutine sparse_solve
 
 !
-! The subroutine assumes the diagonals are non-zero
+! A method to test OpenAD without solver
 !
-subroutine sparse_jacobi_method(A, b, x)
-    implicit none
-    integer :: i, j
-    type(spmat) :: A
-    double precision :: nrm
-    double precision, dimension(A%rows) :: b, x, x_old, main_diag
+subroutine sparse_dummy_method(n, annz, alen, arow_index, arow_compressed, &
+                               acol_index, avalues, b, x, solver_inner, solver_outer, verbose)
+  integer :: i
+  logical :: verbose
+  integer :: solver_inner, solver_outer
+  double precision :: sum
+  integer :: n, annz, alen
+  integer, dimension(alen) :: arow_index
+  integer, dimension(alen) :: acol_index
+  double precision, dimension(alen) :: avalues
+  integer, dimension(n + 1) :: arow_compressed
+  
+  double precision, dimension(n) :: b
+  double precision, dimension(n) :: x
+
+  x = 0.0d0
+  sum = 0.0d0
+  do i = 1, annz
+      sum = sum + avalues(i)
+  end do
+
+  x = b/sum
+end subroutine sparse_dummy_method
 
 
-    do i = 1, 100000      ! Max iterations
-
-        x_old = x
-        ! start x with right hand side
-        x = b
-
-!$omp parallel
-        do j = 1, A%nnz
-            ! Not the main diagonal
-            if (A%row_index(j) /= A%col_index(j)) then
-                ! update the new iterate at the corresponding row
-                x(A%row_index(j)) = x(A%row_index(j)) &
-                                    - A%values(j) * x_old(A%col_index(j))
-            else
-                ! place the entry in the corresponding diagonal.
-                main_diag(A%row_index(j)) = A%values(j)
-            end if
-        end do
-!$omp end parallel
-
-        ! divide by the diagonal entries
-        x = x/main_diag
-
-        ! get the norm
-        call dnrm2((x - x_old), A%rows, nrm)
-
-        ! Exit when converged.
-        if (nrm < 1.0d-8) then
-            !print *, "Converged in norm"
-            exit
-        end if
-    end do
-
-    if (i > 5000) then
-        print *, "Norm: ", nrm
-    end if
-end subroutine sparse_jacobi_method
-
-
+! a wrapper for mgmres
 !
-! The subroutine assumes the diagonals are non-zero
-!
-subroutine sparse_gauss_seidel_method(A, b, x)
-    implicit none
-    integer :: i, j, k
-    type(spmat) :: A
-    double precision :: nrm
-    double precision, dimension(A%rows) :: b, x, x_old, main_diag
-
-    do k = 1, 100000      ! Max iterations
-        ! start with old x
-        x_old = x
-
-        ! start x with right hand side
-        x = b
-
-        do j = 1, A%nnz
-            ! Not the main diagonal
-            ! This is same as Jacobi (upper triangle part of A)
-            if (A%row_index(j) < A%col_index(j)) then
-                ! update the new iterate at the corresponding row
-                x(A%row_index(j)) = x(A%row_index(j)) &
-                                    - A%values(j) * x_old(A%col_index(j))
-            else
-                ! place the entry in the corresponding diagonal.
-                main_diag(A%row_index(j)) = A%values(j)
-            end if
-        end do
-
-        do i = 1,A%rows                 ! An artificial bound for the row
-            do j = 1,A%nnz
-                if(A%row_index(j) == i .and. A%col_index(j) < i) then ! 1st part not required.
-                    ! Use the new solution upto row < i
-                    x(A%row_index(j)) = x(A%row_index(j)) &
-                                    - A%values(j) * x(A%col_index(j))
-                else if(A%col_index(j) >= i) then
-                    ! exit when the column is more than or equal i
-                    exit
-                end if
-            end do
-
-            ! Divide the ith component of soln by the ith component of maindiag
-            x(i) = x(i)/main_diag(i)
-        end do
-
-        ! get the norm
-        call dnrm2((x - x_old), A%rows, nrm)
-
-        ! Exit when converged.
-        if (nrm < 1.0d-8) then
-!            print *, "Iterations: ", k
-!            print *, "Converged in norm"
-            exit
-        end if
-    end do
-
-    if (k > 5000) then
-        print *, "Norm: ", nrm
-    end if
-end subroutine sparse_gauss_seidel_method
-
-!
-! A wrapper for mgmres
-!
-subroutine sparse_mgmres_method(A, b, x)
-    !use mgmres
-    implicit none
-    type(spmat) :: A
-    integer :: itr_max, mr
-    double precision :: tol_abs, tol_rel
-    double precision, dimension(:) :: b, x
-
-
-    tol_abs = 1.0d-6
-    tol_rel = 1.0d-6
-    itr_max = 5
-    mr = (A%rows)
-
-    !call mgmres_st ( A%rows, A%nnz, A%row_index, A%col_index, A%values, x, b, &
-    !                itr_max, mr, tol_abs, tol_rel )
-
-end subroutine sparse_mgmres_method
-
-
+! subroutine sparse_mgmres_method(annz, arow_index, arow_compressed, &
+!                                  acol_index, avalues, b, x)
+!   use mgmres
+!   implicit none
+!   integer :: itr_max, mr
+!   double precision :: tol_abs, tol_rel
+!   integer :: annz
+!   integer, dimension(7 * N_) :: arow_index
+!   integer, dimension(7 * N_) :: acol_index
+!   double precision, dimension(7 * N_) :: avalues
+!   integer, dimension(N_ + 1) :: arow_compressed
+!   double precision, dimension(N_) :: b
+!   double precision, dimension(N_) :: x
+! 
+!   tol_abs = 1.0d-8
+!   tol_rel = 1.0d-8
+!   itr_max = int(sqrt(N_ * 1.0)) + 1
+!   mr = min(N_, 100)
+! 
+!   x = 0.0d0
+! 
+!   call mgmres_st (N_, annz, arow_index, acol_index, avalues, x, b, &
+!                   itr_max, mr, tol_abs, tol_rel )
+! end subroutine sparse_mgmres_method
 end module linsolve
