@@ -1,0 +1,29 @@
+This code is ported from the MATLAB version associated with the publication:
+
+Aarnes, Jørg E., Tore Gimse, and Knut-Andreas Lie. "An introduction to the numerics of
+flow in porous media using Matlab." Geometric modelling, numerical simulation, and 
+optimization. Springer Berlin Heidelberg, 2007. 265-306.
+
+Known limitations:
+-----------------
+At the moment, only the function evaluation works and derivatives are yet to be got
+from OpenAD. There is some manual effort involved in copying over the undifferenti-
+ated PMGMRES solver over from its template filet in the corresponding location and
+writing a driver to run the function.
+
+Editing:
+-------
+Recommended workflow for editing is :
+
+Edit individual files and concatenate using paste command as below to produce numerics
+file which can later be passed to Tapenade.
+
+
+paste --delimiter=\\n --serial fluid.f90 grid.f90 mathutil.f90 matrix.f90 linsolve.f90 fvm.f90 head.f90 > numerics.f90 
+
+
+TODO:
+-----
+Need to differentiate using OpenAD (works but does not compile)
+Need to fix all the interface issues as we would like for the test-suite.
+Need to rearrange the files according to the needs of the test-suite.
