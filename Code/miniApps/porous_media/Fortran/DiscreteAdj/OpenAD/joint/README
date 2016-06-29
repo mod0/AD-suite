@@ -16,7 +16,7 @@ Editing:
 Recommended workflow for editing is :
 
 Edit individual files and concatenate using paste command as below to produce numerics
-file which can later be passed to Tapenade.
+file which can later be passed to OpenAD
 
 
 paste --delimiter=\\n --serial fluid.f90 grid.f90 mathutil.f90 matrix.f90 linsolve.f90 fvm.f90 head.f90 > numerics.f90 
