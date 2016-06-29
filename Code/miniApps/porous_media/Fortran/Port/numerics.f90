@@ -611,36 +611,44 @@ subroutine sparse_solve(annz, arow_index, arow_compressed, &
   double precision, dimension(N_) :: b
   double precision, dimension(N_) :: x
 
-  call sparse_dummy_method(matdim, annz, maxlen, arow_index, arow_compressed,&
+  call sparse_pmgmres_method(matdim, annz, maxlen, arow_index, arow_compressed,&
                            acol_index, avalues, b, x, solver_inner, solver_outer, verbose)
 end subroutine sparse_solve
 
 !
-! A method to test OpenAD without solver
+! a wrapper for pmgmres_ilu_cr
 !
-subroutine sparse_dummy_method(n, annz, alen, arow_index, arow_compressed, &
-                               acol_index, avalues, b, x, solver_inner, solver_outer, verbose)
-  integer :: i
-  logical :: verbose
-  integer :: solver_inner, solver_outer
-  double precision :: sum
-  integer :: n, annz, alen
-  integer, dimension(alen) :: arow_index
-  integer, dimension(alen) :: acol_index
-  double precision, dimension(alen) :: avalues
-  integer, dimension(n + 1) :: arow_compressed
-  
-  double precision, dimension(n) :: b
-  double precision, dimension(n) :: x
+subroutine sparse_pmgmres_method(n, annz, alen, arow_index, arow_compressed, &
+                                  acol_index, avalues, b, x, solver_inner, &
+                                  solver_outer, verbose)
+    use mgmres
+    use mathutil
+    implicit none
+    integer :: itr_max, mr
+    logical :: verbose
+    integer :: solver_inner, solver_outer
+    double precision :: tol_abs, tol_rel, nrm
+    integer :: n,  annz, alen
+    integer, dimension(alen) :: arow_index
+    integer, dimension(alen) :: acol_index
+    double precision, dimension(alen) :: avalues
+    integer, dimension(n + 1) :: arow_compressed
+    double precision, dimension(n) :: b
+    double precision, dimension(n) :: x
 
-  x = 0.0d0
-  sum = 0.0d0
-  do i = 1, annz
-      sum = sum + avalues(i)
-  end do
-
-  x = b/sum
-end subroutine sparse_dummy_method
+    tol_abs = 1.0d-8
+    tol_rel = 1.0d-8
+    itr_max = solver_outer
+    mr = solver_inner
+    
+    call dnrm2(b, n, nrm)
+    x = 0.0d0   
+    if(nrm /= 0.0d0) then
+       call pmgmres_ilu_cr (n, annz, arow_compressed, acol_index, avalues, &
+                  x, b, itr_max, mr, tol_abs, tol_rel, verbose)
+    endif
+    return
+end subroutine sparse_pmgmres_method
 
 
 ! a wrapper for mgmres

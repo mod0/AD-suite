@@ -1,11 +1,11 @@
 program runspe10
 use utils
-use fvm_d
-use grid_d
-use fluid_d
-use matrix_d
+use fvm
+use grid
+use fluid
+use matrix
 use gnufor2
-use head_d
+use head
 
 
 implicit none
@@ -15,12 +15,11 @@ integer :: solver_inner, solver_outer
 integer, dimension(3) :: solver_inner_values
 integer, dimension(1) :: solver_outer_values
 double precision :: start_time, end_time
-double precision :: ir, Mw, Mo, Mt, mu, mud, sigma, sigmad, totaloil, totaloild, dummyTotalOil
+double precision :: ir, Mw, Mo, Mt, mu, sigma, totaloil 
 double precision, dimension((ND/St) + 1) :: Tt
 double precision, dimension(N_) :: S
 double precision, dimension(N_) :: Q
 double precision, dimension(2, (ND/St) + 1) :: Pc
-double precision, dimension(2, (ND/St) + 1) :: Pcd
 double precision, dimension(Nx_, Ny_, Nz_) :: P
 double precision, dimension(3, Nx_ + 1, Ny_ + 1, Nz_ + 1) :: V
 
@@ -29,8 +28,6 @@ integer :: sigma_count
 parameter(mu_count = 10, sigma_count = 10)
 double precision, dimension(mu_count) :: mus
 double precision, dimension(sigma_count) :: sigmas
-
-character(len = 30) :: filename
 
 solver_inner_values = (/ 64, 128, 256/)
 solver_outer_values = (/ 1000000 /)

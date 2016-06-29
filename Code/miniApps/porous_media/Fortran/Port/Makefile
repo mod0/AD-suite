@@ -2,13 +2,12 @@
 FORT=gfortran
 FFLAGS=-g -O0
 
-TARGET = pm
+OBJS90=gnufor2.o utils.o mgmres.o numerics.o
+MAINS=main.o main_oil_vs_mu_sigma.o
 
-OBJS90=fluid.o grid.o mathutil.o \
-     matrix.o mgmres.o linsolve.o \
-     fvm.o gnufor2.o runspe10.o
-
-OBJS77=print_active.o
+all:  ${OBJS90} ${MAINS}
+	${FORT} ${FFLAGS} ${OBJS90} main.o -o porous_media
+	${FORT} ${FFLAGS} ${OBJS90} main_oil_vs_mu_sigma.o -o porous_oil_mu_vs_sigma
 
 %.o : %.f
 	${FORT} -cpp ${FFLAGS} -c $< -o $@
@@ -16,12 +15,6 @@ OBJS77=print_active.o
 %.o : %.f90
 	${FORT} -cpp ${FFLAGS} -c $< -o $@
 
-
-all: ${TARGET}
-
-pm: ${OBJS77} ${OBJS90}
-	${FORT} ${FFLAGS} $^ -o porous_media
-
 clean:
-	rm *.o *.mod porous_media
+	rm *.o *.mod porous_media porous_oil_mu_vs_sigma
 
