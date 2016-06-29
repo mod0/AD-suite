@@ -519,8 +519,8 @@ subroutine ilu_cr ( n, nz_num, ia, ja, a, ua, l )
       iw(ja(k)) = k
     end do
 
-    do j = ia(i), ia(i+1) - 1
-      jrow = ja(j)
+    do j = ia(i), ia(i+1) - 1                  ! ith row entries
+      jrow = ja(j)                             ! column corresponding to each entry
       if ( i <= jrow ) then
         exit
       end if
@@ -654,7 +654,7 @@ subroutine lus_cr ( n, nz_num, ia, ja, l, ua, r, z )
   return
 end
 subroutine mgmres_st ( n, nz_num, ia, ja, a, x, rhs, itr_max, mr, tol_abs, &
-  tol_rel )
+  tol_rel, verbose )
 
 !*****************************************************************************80
 !
@@ -771,7 +771,7 @@ subroutine mgmres_st ( n, nz_num, ia, ja, a, x, rhs, itr_max, mr, tol_abs, &
   real ( kind = 8 ) tol_abs
   real ( kind = 8 ) tol_rel
   real ( kind = 8 ) v(1:n,1:mr+1)
-  logical, parameter :: verbose = .false.
+  logical :: verbose 
   real ( kind = 8 ) x(1:n)
   real ( kind = 8 ) y(1:mr+1)
 
@@ -895,6 +895,7 @@ subroutine mgmres_st ( n, nz_num, ia, ja, a, x, rhs, itr_max, mr, tol_abs, &
     write ( *, '(a)'       ) 'MGMRES_ST:'
     write ( *, '(a,i8)'    ) '  Iterations = ', itr_used
     write ( *, '(a,g14.6)' ) '  Final residual = ', rho
+    write ( *, '(a)'       ) ' '
   end if
 
   return
@@ -977,7 +978,7 @@ subroutine mult_givens ( c, s, k, g )
   return
 end
 subroutine pmgmres_ilu_cr ( n, nz_num, ia, ja, a, x, rhs, itr_max, mr, &
-  tol_abs, tol_rel )
+  tol_abs, tol_rel, verbose )
 
 !*****************************************************************************80
 !
@@ -1099,7 +1100,7 @@ subroutine pmgmres_ilu_cr ( n, nz_num, ia, ja, a, x, rhs, itr_max, mr, &
   real ( kind = 8 ) tol_rel
   integer ( kind = 4 ) ua(n)
   real ( kind = 8 ) v(n,mr+1);
-  logical, parameter :: verbose = .true.
+  logical :: verbose
   real ( kind = 8 ) x(n)
   real ( kind = 8 ) y(mr+1)
 
