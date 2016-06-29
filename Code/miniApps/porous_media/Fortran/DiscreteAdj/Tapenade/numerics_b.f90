@@ -1041,10 +1041,7 @@ SUBROUTINE SPARSE_PMGMRES_METHOD_B(n, annz, alen, arow_index,   &
   tol_rel = 1.0d-8
   itr_max = solver_outer
   mr = solver_inner
-
-  x = 0.0d0
-  incrbb = 0.0d0
-  
+ 
   ! Transpose the matrix A
   ! First get the columns and its indices
   DO i = 1,annz
@@ -1090,7 +1087,7 @@ SUBROUTINE SPARSE_PMGMRES_METHOD_B(n, annz, alen, arow_index,   &
   ENDIF
   
   call dnrm2(xb,n, nrm)
-  
+  incrbb = 0.0d0
   if(nrm /= 0.0d0) then
     CALL PMGMRES_ILU_CR (n, annz, arow_compressed_transposed, &
                         acol_index_transposed, avalues_transposed, &
@@ -1098,8 +1095,12 @@ SUBROUTINE SPARSE_PMGMRES_METHOD_B(n, annz, alen, arow_index,   &
     bb = bb + incrbb
   endif
     
-  CALL PMGMRES_ILU_CR (n, annz, arow_compressed, acol_index, avalues, &
+  CALL DNRM2(b, n, nrm)
+  x = 0.0d0
+  IF(nrm /= 0.0d0) THEN  
+    CALL PMGMRES_ILU_CR (n, annz, arow_compressed, acol_index, avalues, &
                 x, b, itr_max, mr, tol_abs, tol_rel, verbose)
+  ENDIF
   
   DO i = 1,annz
     avaluesb(i) = avaluesb(i) - x(acol_index(i)) * incrbb(arow_index(i))
@@ -1134,11 +1135,10 @@ SUBROUTINE SPARSE_PMGMRES_METHOD(n, annz, alen, arow_index, arow_compressed, &
     tol_rel = 1.0d-8
     itr_max = solver_outer
     mr = solver_inner
-    x = 0.0d0
     
     CALL DNRM2(b, n, nrm)
-    
-    IF(nrm .ne. 0.0d0) THEN
+    x = 0.0d0   
+    IF(nrm /= 0.0d0) THEN
        CALL PMGMRES_ILU_CR (n, annz, arow_compressed, acol_index, avalues, &
                   x, b, itr_max, mr, tol_abs, tol_rel, verbose)
     ENDIF
