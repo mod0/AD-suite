@@ -1429,15 +1429,8 @@ subroutine wrapper(ir, mu, sigma, Q, S, P, V, St, Pt, Tt, ND, Mw, Mo, &
   double precision, dimension(Nx_, Ny_, Nz_) :: P
   double precision, dimension(3, Nx_ + 1, Ny_ + 1, Nz_ + 1) :: V
 
-  !$openad independent(mu)
-  !$openad independent(sigma)
-  !$openad independent(ir)
-
-
   call init_flw_trnc_norm_xin_pt_out(ir, mu, sigma, Q)
   call simulate_reservoir(Q, S, P, V, St, Pt, Tt, ND, Mw, Mo, Mt, Pc, &
 &                         oil, solver_inner, solver_outer, verbose)
-
-  !$openad dependent(oil)
 end subroutine wrapper
 end module head
