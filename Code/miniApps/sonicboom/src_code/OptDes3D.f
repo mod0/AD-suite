@@ -324,7 +324,7 @@ C [llh]         WRITE(6, *) ' Resolution des equations d"Euler afin de'
 C [llh]         WRITE(6, *) ' calculer la pression cible'
 c         CALL ETAT(CTRL,KTMAX)
 c         CALL PRESDESTUY(CTRL)
-         if (igicc.eq.0) CALL CLCIBLE(CTRL)
+         if (igicc.eq.0) CALL ETAT(CTRL,ktmax)
 c
       ENDIF
 c
@@ -345,12 +345,11 @@ c    de calculer CL stocke dans CLTARGET.
 c    NPRES=2, CONTR=3 et ITRANS=0
 c
       IF (COEFM1.NE.10) THEN
-c
 
+         if (igicc.eq.0) CALL ETAT(CTRL,ktmax)
 
-         if (igicc.eq.0) CALL CLCIBLE(CTRL)
-c
       ENDIF
+      STOP
 c
 c*** Verification qu'avant l'entree dans la boucle d'optimisation le contole
 c    CTRl est bien egal a 0.
@@ -467,13 +466,6 @@ c
      .  mod(ktopt,kmvcou).eq.0 .and. itopt.gt.1) then        
 c
 c*** Move mesh
-        
-        WRITE(6, *) '************************************************'
-        WRITE(6, *) '************************************************'
-        WRITE(6, *) '    --->> BRUNO IS MOVING THE MESH!!! <<---'
-        WRITE(6, *) '************************************************'
-        WRITE(6, *) '************************************************'
-        
         
 c... 1. Smooth surface displacement vector
 c... add surface displacement to coorp and erase ctrl
@@ -603,38 +595,17 @@ c
 
             if (testder.eq.1) then 
                CALL TESTDERCOUT(CTRL)
-C [llh]               print*,'Fin normale apres verification de la derivee'
-C [llh]               print*,'de la fonctionnelle'
                stop
             endif
 c
          if (testadj.eq.1) then
             CALL TESTADJOINT
-C [llh]               print*,'Fin normale apres verification de '
-C [llh]               print*,'l"etat-adjoint'
             stop
          endif
-c
-c*** Calcul de l'etat-adjoint Pi. Sortie : Piadj
-c
-c   debug
-c      do is=2201,2203
-c      if(is.eq.3603)then
-c        print*,'hola optdes3d:        IS=',IS
-c        print*,'hola optdes3d: diag=',
-c     $DIAG(IS,1,1),DIAG(IS,2,2),DIAG(IS,3,3),DIAG(IS,4,4)
-c      endif
-c      enddo
 
+C         call flunow(6)
 
-
-c         write(6,*) 'holaaaa',diag(3603,1,1), vols(3603)/dtl(3603)
-
-
-
-         call flunow(6)
-
-         CALL ETATADJOINT(ctrl)
+C         CALL ETATADJOINT(ctrl)
 c
 c***  Calcul du gradient. Sortie : Grad
 c
@@ -642,7 +613,7 @@ c
       WRITE(6, *) 'Calcul du gradient '
       WRITE(6, *) '------------------ '
 c
-         CALL GRADIENT(CTRL)
+C         CALL GRADIENT(CTRL)
 c
 c
                          ELSE
