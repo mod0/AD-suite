@@ -19,7 +19,6 @@ c---------------------------------------------------------------------
 c     Local variables definition
 c
       INTEGER ivar , i, is , ia, ib,isp, tempsmax, iprint
-C [llh:NaN]      REAL*4  t00  , t4
       REAL*8    aux
       REAL*8    pi
       REAL*8    tetaA, domega, cl
@@ -45,9 +44,6 @@ c llh: needed for derivatives by DD:
 C
 c     Initialisations
 c
-
-
-C [llh:NaN]      call second(ct1)
 
       ctrlno=0.d0
       do isp=1,nsp
@@ -75,10 +71,6 @@ c
 c
 c      REWIND(17)
       REWIND(19)
-c
-C [llh:NaN]      CALL SECOND(t00)
-c
-c
 c
 c     Boucle non lineaire en temps
 c     ============================
@@ -124,12 +116,6 @@ C$DOACROSS LOCAL(ISEG)
           stmat(iseg)               = 0.0
         END DO
       end if
-c     Initialisation des tableaux utilises dans Jacobi
-c
-
-c
-
-c      CALL VISCDT
 
 c
 c     Computing psi
@@ -169,41 +155,11 @@ C$DOACROSS LOCAL(IS),SHARE(CE)
         
         
       ELSE if (iflux.eq.2) then                             !roe
-        
-cccccccccc
-c
-c
-c     test with finite differences of the inverse mode:
-c
-c     
-c     let's evaluate psiroe_gamma_b(ctrl,ctrlb,ctrlno)
-c
-c     inputs:
-c
-c         ce_b = v     (dim(v)=dim(ce)=dim(ce_b) = n )
-c
-c         ctrl_b = 0   (dim(ctrl_b) = dim(ctrl)  = p )
-c
-c
-c     outputs:
-c
-c         ce_b = ?
-c
-c         ctrl_b =  ( d(psi) / d(ctrl) )^T  *  ce_b
-c
-c         s_da = ctrl_b^T * dgamma
-c           
-c
-c     finite differences:
-c
-c         s_fd = v^T  *  ( psi(ctrl + epsilon*dgamma) -  psi(ctrl - epsilon*dgamma) )  /  (2 epsilon)
-c         
-c
-c     test:  compare s_fd and s_da!!!!    
-c
-c
-cccccccccc
 
+C**************************************************************
+C This is the call of the function you want to differentiate,
+C Suggestion: differentiate it for iteration kt==5.
+C**************************************************************
 C      VALIDATION BETWEEN DIVIDED DIFFERENCES, FORWARD MODE AD, AND REVERSE MODE AD
 C      To activate at time step N, put (kt.eq.N) :
         if (kt.eq.5) then
@@ -345,6 +301,8 @@ C The resolution is now broken by the tests above: we can't go on...
 
        call psiroe(ctrl,ctrlno)
 
+C**************************************************************
+
 1001  format(a,e26.20,a,e8.2,a)
 1002  format(a,e26.20)
 1003  format(a,f5.2,a,f5.2)
@@ -401,7 +359,6 @@ c
       som                          = som/som1
       dro                          = dro/dro1
 c
-C [llh]      WRITE(6, 1918)kt,som
  1918 FORMAT(10x,'Iteration en temps:',I4,
      $' residu non lineaire:',e13.6)
 c
@@ -490,8 +447,6 @@ C$DOACROSS LOCAL(IS,IA)
 c
       IETAT = 1
 c
-C [llh:NaN]      call second(ct3)
-
       IF (iflux.eq.1) THEN
           IF (irlax .EQ. 1) THEN 
              IF (ONESHOT.EQ.1) THEN
@@ -527,9 +482,6 @@ c
          ENDIF
       ENDIF
 
-C [llh:NaN]      call second(ct4)
-C [llh Nan]      ctjet= ctjet+ct4-ct3
-      
 c
 c     Updating the physical solution
 c
@@ -601,8 +553,6 @@ c
      &    (ABS(t - tmax) .GT. 1.0e-06) .AND.
      &    (som .GT. resf)) GOTO 1000
 c
-C [llh:NaN]      CALL SECOND(t4)
-c
       IPRINT=1
       IF(IPRINT.EQ.1)CALL RESU3D
 c
@@ -633,83 +583,11 @@ c
 c
 116   FORMAT(2e15.8)
 c
-C [llh Nan]      WRITE(6, *) 
-C [llh Nan]     &   '------------------------------------------------------------'
-C [llh Nan]      WRITE(6, 3000) ' Temps CPU pour resoudre un etat : ', t4 - t00
-C [llh Nan]      WRITE(6, *) 
-C [llh Nan]     &   '------------------------------------------------------------'
 c
 3000  FORMAT(a38,f12.6)
 c
 c      CLOSE(17)
       CLOSE(19)
-c
-      WRITE(6,*) 'Calcul de la matrice implicite Van Leer'
-c
-C [llh:NaN]      call second(t00)
-c
-C$DOACROSS LOCAL(IS,IA,IB),SHARE(DIAG)
-      DO  is=1,ns
-         DO  ia=1,5
-            DO  ib=1,5
-               diag(is,ia,ib)      = 0.0
-            END DO
-         END DO
-      END DO
-c
-C$DOACROSS LOCAL(ISEG,I,J),SHARE(ZM)
-      DO iseg = 1,nseg
-         Do i = 1,5
-            Do j =1,5
-               ZM(i,j,1,iseg) = 0.
-               ZM(i,j,2,iseg) = 0.
-            End Do
-         End Do
-      End Do
-c
-      CALL MATVL(NEQUATION, NSMAX, NSGMAX, 
-     &  NUBO, VNOCL, GAM, 
-     &  UA, DIAG,ZM,ns,nseg)
-c
-c
-      CALL CONDBORDS(ctrlno)
-      IF (itrans.eq.1 .and. ctrlno.gt.1.0d-10)
-     .  CALL IMPTRANSPIRATION(CTRL)
-      CALL CDMAT(NEQUATION,NSMAX,NSGMAX,NUBO,LOGFR,ZM,DIAG,ns,nseg)   
 
-c      if (bound.eq.1) then
-c        CALL CONDBORDS(ctrlno)
-c        IF (itrans.eq.1 .and. ctrlno.gt.1.0d-10)
-c     .    CALL IMPTRANSPIRATION(CTRL)
-c      endif
-c      if (diric.eq.1) then
-c         CALL CONDBORDS(ctrlno)
-c         IF (itrans.eq.1 .and. ctrlno.gt.1.0d-10)
-c     .     CALL IMPTRANSPIRATION(CTRL)
-c         CALL CDMAT(NEQUATION,NSMAX,NSGMAX,NUBO,LOGFR,ZM,DIAG,ns,nseg)   
-c      endif
-
-c
-      if (Newton.eq.0) CALL DIAGAJOUT
-C
-c     Inversion des termes diagonaux
-c
-      CALL INVERSION
-c
-C [llh:NaN]      call second(t4)
-c
-C [llh:NaN]      WRITE(6, *) 
-C [llh:NaN]     &   '------------------------------------------------------------'
-C [llh:NaN]      WRITE(6, *) ' Temps CPU pour calculer la matrice implicite : '
-C [llh:NaN]      WRITE(6,* )  t4 - t00
-C [llh:NaN]      WRITE(6, *) 
-C [llh:NaN]     &   '------------------------------------------------------------'
-C [llh:NaN]c
-C [llh:NaN]      WRITE(6, *) 'Sortie de la procedure Etat '
-C [llh:NaN]      WRITE(6, *) ' '
-
-C [llh:NaN]      call second(ct2)
-C [llh:NaN]      cteto = cteto+ct2-ct1
-c
       RETURN
       END

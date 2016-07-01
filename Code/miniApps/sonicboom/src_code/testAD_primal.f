@@ -12,28 +12,17 @@ c computation of the diffusive fluxes
 c---------------------------------------------------------------------   
       INCLUDE 'Param3D.h'
       INCLUDE 'Paramopt3D.h'
-      REAL*8 uad(5, nsmax)
-      REAL*8 ced(5, nsmax)
-      REAL*8 dxd(5, nsmax), dyd(5, nsmax), dzd(5, nsmax)
-      REAL*8 und(5, nsmax)
-      COMMON /rsol1_d/ uad, und, ced, dxd, dyd, dzd
-
+      INCLUDE 'DiffCall_flow_d.h'
 c      INCLUDE 'DiffCall_gamma_b.h'
-      REAL*8 dxb(5, nsmax), dyb(5, nsmax), dzb(5, nsmax)
-      REAL*8 uab(5, nsmax)
-      REAL*8 ceb(5, nsmax)
-      REAL*8 unb(5, nsmax)
-      COMMON /rsol1_b/ uab, unb, ceb, dxb, dyb, dzb
-
+      INCLUDE 'DiffCall_flow_b.h'
 c---------------------------------------------------------------------
 c     Local variables definition
 c
       INTEGER ivar , i, is , ia, ib,isp, tempsmax, iprint
-C [llh:NaN]      REAL*4  t00  , t4
       REAL*8    aux
       REAL*8    pi
       REAL*8    tetaA, domega, cl
-      REAL*8    tetaTd,ctrlno, ctrlnod, ctrlnob
+      REAL*8    tetaTd,ctrlno
       REAL*8    ceeps(5, nsmax), diffdiv
 c
       INTEGER j,iseg, niter, IETAT, jj
@@ -56,12 +45,7 @@ C
 c     Initialisations
 c
 
-
-C [llh:NaN]      call second(ct1)
-
       ctrlno=0.d0
-      ctrlnod=0.d0
-      ctrlnob=0.d0
       do isp=1,nsp
         ctrlno= ctrlno+ctrl(isp)*ctrl(isp)
       end do
@@ -87,10 +71,6 @@ c
 c
 c      REWIND(17)
       REWIND(19)
-c
-C [llh:NaN]      CALL SECOND(t00)
-c
-c
 c
 c     Boucle non lineaire en temps
 c     ============================
@@ -136,12 +116,6 @@ C$DOACROSS LOCAL(ISEG)
           stmat(iseg)               = 0.0
         END DO
       end if
-c     Initialisation des tableaux utilises dans Jacobi
-c
-
-c
-
-c      CALL VISCDT
 
 c
 c     Computing psi
@@ -181,183 +155,13 @@ C$DOACROSS LOCAL(IS),SHARE(CE)
         
         
       ELSE if (iflux.eq.2) then                             !roe
-        
-cccccccccc
-c
-c
-c     test with finite differences of the inverse mode:
-c
-c     
-c     let's evaluate psiroe_gamma_b(ctrl,ctrlb,ctrlno)
-c
-c     inputs:
-c
-c         ce_b = v     (dim(v)=dim(ce)=dim(ce_b) = n )
-c
-c         ctrl_b = 0   (dim(ctrl_b) = dim(ctrl)  = p )
-c
-c
-c     outputs:
-c
-c         ce_b = ?
-c
-c         ctrl_b =  ( d(psi) / d(ctrl) )^T  *  ce_b
-c
-c         s_da = ctrl_b^T * dgamma
-c           
-c
-c     finite differences:
-c
-c         s_fd = v^T  *  ( psi(ctrl + epsilon*dgamma) -  psi(ctrl - epsilon*dgamma) )  /  (2 epsilon)
-c         
-c
-c     test:  compare s_fd and s_da!!!!    
-c
-c
-cccccccccc
 
-C      VALIDATION BETWEEN DIVIDED DIFFERENCES, FORWARD MODE AD, AND REVERSE MODE AD
-C      To activate at time step N, put (kt.eq.N) :
-        if (kt.eq.5) then
-          
-          write (6,*) 'VALIDATION TESTS FOR vazquez-sonicboom:'
-C Snapshot the initial (current) state:          
-          do isp=1,nsp
-            ctrlSave(isp) = ctrl(isp)
-          end do
-          do is=1,ns
-             do jj=1,5
-                uaSave(jj,is) = ua(jj,is)
-                ceSave(jj,is) = ce(jj,is)
-             enddo
-          enddo
-C Snapshot the input forward derivatives:
-          do is=1,ns
-             do jj=1,5
-                uadSave(jj,is)= 1.0
-                cedSave(jj,is)= 1.0
-             enddo
-          enddo
-C Initialise the input forward derivatives :
-          do is=1,ns
-             do jj=1,5
-                uad(jj,is)=uadSave(jj,is)
-                ced(jj,is)=cedSave(jj,is)
-             enddo
-          enddo
-C Divided differences: build initial state, with epsilon modification, from the snapshot:
-          ddeps = 1.d-6
-          do isp=1,nsp
-            ctrl(isp) = ctrlSave(isp)
-          enddo
-          do is=1,ns
-             do jj=1,5
-                ua(jj,is) = uaSave(jj,is) + ddeps*uadSave(jj,is)
-             enddo
-          enddo
-C Divided differences: run the original code at point x+epsilon
-          call cputim(tt0)
-          call psiroe(ctrl,ctrlno)
-          call cputim(cpuOrig)
-          cpuOrig = cpuOrig-tt0
-          write (6,*) 'Time of  original  function: ',cpuOrig
-C Divided differences: save the result, i.e. f(x+eps)
-          do is=1,ns
-             do jj=1,5
-                ceeps(jj,is) = ce(jj,is)
-             enddo
-          enddo
-C Divided differences: rebuild the initial state,
-C  without the epsilon modification, from the snapshot:
-          do isp=1,nsp
-            ctrl(isp) = ctrlSave(isp)
-            ctrld(isp) = 0.0
-            ctrlb(isp) = 0.0
-          enddo
-          do is=1,ns
-             do jj=1,5
-                ua(jj,is) = uaSave(jj,is)
-                ce(jj,is) = ceSave(jj,is)
-             enddo
-          enddo
-C Divided differences: Re-initialise the input forward derivatives :
-          do is=1,ns
-             do jj=1,5
-                uad(jj,is)=uadSave(jj,is)
-                ced(jj,is)=cedSave(jj,is)
-             enddo
-          enddo
-C Divided differences: run the fwd AD code at point x
-          call cputim(tt0)
-          call psiroe_d(ctrl,ctrld,ctrlno,ctrlnod)
-          call cputim(cpuTgt)
-          cpuTgt = cpuTgt-tt0
-          write (6,*) 'Time of tangent AD function: ',cpuTgt
-C Divided differences: compute the square norm of f(x+eps)-f(x)/eps:
-          scalTest1=0.0     
-          do is=1,ns
-             do jj=1,5
-                diffdiv = (ceeps(jj,is) - ce(jj,is))/ddeps
-                scalTest1=scalTest1+diffdiv*diffdiv
-             enddo
-          enddo
-C Forward AD mode: compute the square norm of \dot{f}(x), which should be the same:
-          scalTest2=0.0          
-          do is=1,ns
-            do jj=1,5
-              scalTest2=scalTest2+ced(jj,is)*ced(jj,is)
-            end do
-          end do
-C Reverse AD mode: rebuild the initial state:
-          do isp=1,nsp
-            ctrl(isp) = ctrlSave(isp)
-          enddo
-          do is=1,ns
-             do jj=1,5
-                ua(jj,is) = uaSave(jj,is)
-                ce(jj,is) = ceSave(jj,is)
-             enddo
-          enddo
-C Reverse AD mode used for the dot-product test:
-C  initialize the input reverse derivatives with the output fwd derivatives:
-          do is=1,ns
-             do jj=1,5
-                uab(jj,is) = 0.0
-                ceb(jj,is) = ced(jj,is)
-             enddo
-          enddo
-C Reverse AD mode: run the reverse AD code at point x and print time and stack:
-          call cputim(tt0)
-          call psiroe_b(ctrl,ctrlb,ctrlno,ctrlnob)
-          call cputim(cpuAdj)
-          cpuAdj = cpuAdj-tt0
-          write (6,*) 'Time of adjoint AD function: ',cpuAdj
-
-          if (cpuOrig.ne.0.0)
-     +        write (6,1003) 
-     +            ' Slowdown factors: tangent',cpuTgt/cpuOrig,
-     +            '    adjoint',cpuAdj/cpuOrig
-          call printstackmax()
-          call PRINTTRAFFIC()
-
-C Reverse AD mode: dot-product test: display <xb|xd>, should be the same
-C  as the above <yd|yd>.
-          scalTest3=0.0
-          do is=1,ns
-            do jj=1,5
-              scalTest3=scalTest3+uab(jj,is)*uadSave(jj,is)
-            end do
-          end do
-          write (6,*) ''
-          write (6,1001) 'Divided differences   = ',scalTest1,
-     +         ' (epsilon=',ddeps,')'
-          write (6,1002) 'AD Forward derivative = ',scalTest2 
-          write (6,1002) 'AD Reverse <xb|xd>    = ',scalTest3
-C The resolution is now broken by the tests above: we can't go on...
-          stop
-       endif
-
+C**************************************************************
+C This is the call of the function you want to differentiate,
+C Suggestion: differentiate it for iteration kt==5.
+C**************************************************************
        call psiroe(ctrl,ctrlno)
+C**************************************************************
 
 1001  format(a,e26.20,a,e8.2,a)
 1002  format(a,e26.20)
@@ -415,7 +219,6 @@ c
       som                          = som/som1
       dro                          = dro/dro1
 c
-C [llh]      WRITE(6, 1918)kt,som
  1918 FORMAT(10x,'Iteration en temps:',I4,
      $' residu non lineaire:',e13.6)
 c
@@ -504,8 +307,6 @@ C$DOACROSS LOCAL(IS,IA)
 c
       IETAT = 1
 c
-C [llh:NaN]      call second(ct3)
-
       IF (iflux.eq.1) THEN
           IF (irlax .EQ. 1) THEN 
              IF (ONESHOT.EQ.1) THEN
@@ -541,9 +342,6 @@ c
          ENDIF
       ENDIF
 
-C [llh:NaN]      call second(ct4)
-C [llh Nan]      ctjet= ctjet+ct4-ct3
-      
 c
 c     Updating the physical solution
 c
@@ -615,8 +413,6 @@ c
      &    (ABS(t - tmax) .GT. 1.0e-06) .AND.
      &    (som .GT. resf)) GOTO 1000
 c
-C [llh:NaN]      CALL SECOND(t4)
-c
       IPRINT=1
       IF(IPRINT.EQ.1)CALL RESU3D
 c
@@ -647,83 +443,11 @@ c
 c
 116   FORMAT(2e15.8)
 c
-C [llh Nan]      WRITE(6, *) 
-C [llh Nan]     &   '------------------------------------------------------------'
-C [llh Nan]      WRITE(6, 3000) ' Temps CPU pour resoudre un etat : ', t4 - t00
-C [llh Nan]      WRITE(6, *) 
-C [llh Nan]     &   '------------------------------------------------------------'
 c
 3000  FORMAT(a38,f12.6)
 c
 c      CLOSE(17)
       CLOSE(19)
-c
-      WRITE(6,*) 'Calcul de la matrice implicite Van Leer'
-c
-C [llh:NaN]      call second(t00)
-c
-C$DOACROSS LOCAL(IS,IA,IB),SHARE(DIAG)
-      DO  is=1,ns
-         DO  ia=1,5
-            DO  ib=1,5
-               diag(is,ia,ib)      = 0.0
-            END DO
-         END DO
-      END DO
-c
-C$DOACROSS LOCAL(ISEG,I,J),SHARE(ZM)
-      DO iseg = 1,nseg
-         Do i = 1,5
-            Do j =1,5
-               ZM(i,j,1,iseg) = 0.
-               ZM(i,j,2,iseg) = 0.
-            End Do
-         End Do
-      End Do
-c
-      CALL MATVL(NEQUATION, NSMAX, NSGMAX, 
-     &  NUBO, VNOCL, GAM, 
-     &  UA, DIAG,ZM,ns,nseg)
-c
-c
-      CALL CONDBORDS(ctrlno)
-      IF (itrans.eq.1 .and. ctrlno.gt.1.0d-10)
-     .  CALL IMPTRANSPIRATION(CTRL)
-      CALL CDMAT(NEQUATION,NSMAX,NSGMAX,NUBO,LOGFR,ZM,DIAG,ns,nseg)   
 
-c      if (bound.eq.1) then
-c        CALL CONDBORDS(ctrlno)
-c        IF (itrans.eq.1 .and. ctrlno.gt.1.0d-10)
-c     .    CALL IMPTRANSPIRATION(CTRL)
-c      endif
-c      if (diric.eq.1) then
-c         CALL CONDBORDS(ctrlno)
-c         IF (itrans.eq.1 .and. ctrlno.gt.1.0d-10)
-c     .     CALL IMPTRANSPIRATION(CTRL)
-c         CALL CDMAT(NEQUATION,NSMAX,NSGMAX,NUBO,LOGFR,ZM,DIAG,ns,nseg)   
-c      endif
-
-c
-      if (Newton.eq.0) CALL DIAGAJOUT
-C
-c     Inversion des termes diagonaux
-c
-      CALL INVERSION
-c
-C [llh:NaN]      call second(t4)
-c
-C [llh:NaN]      WRITE(6, *) 
-C [llh:NaN]     &   '------------------------------------------------------------'
-C [llh:NaN]      WRITE(6, *) ' Temps CPU pour calculer la matrice implicite : '
-C [llh:NaN]      WRITE(6,* )  t4 - t00
-C [llh:NaN]      WRITE(6, *) 
-C [llh:NaN]     &   '------------------------------------------------------------'
-C [llh:NaN]c
-C [llh:NaN]      WRITE(6, *) 'Sortie de la procedure Etat '
-C [llh:NaN]      WRITE(6, *) ' '
-
-C [llh:NaN]      call second(ct2)
-C [llh:NaN]      cteto = cteto+ct2-ct1
-c
       RETURN
       END
