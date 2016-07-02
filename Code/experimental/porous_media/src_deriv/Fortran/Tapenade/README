@@ -1,0 +1,43 @@
+This code is ported from the MATLAB version associated with the publication:
+
+Aarnes, Jørg E., Tore Gimse, and Knut-Andreas Lie. "An introduction to the numerics of
+flow in porous media using Matlab." Geometric modelling, numerical simulation, and 
+optimization. Springer Berlin Heidelberg, 2007. 265-306.
+
+Known limitations:
+-----------------
+At the moment, there are differentiated versions in both forward and reverse AD mode
+using Tapenade. However, there is some manual effort involved in copying over the
+differentiated/undifferentiated PMGMRES solver over from their template files in the
+respective locations and changing the call from dummy method to these methods.
+
+Also, any time the size of the problem is changes, the above procedure needs to be 
+repeated by first running through Tapenade to produce the differentiated code and
+replacing the linear solver routines.
+
+Another limitation is that the Z-dimension and probably X and Y too should be atleast
+size 2 during the simulation. 
+
+Editing:
+-------
+Recommended workflow for editing is :
+
+Edit individual files and concatenate using paste command as below to produce numerics
+file which can later be passed to Tapenade.
+
+
+paste --delimiter=\\n --serial fluid.f90 grid.f90 mathutil.f90 matrix.f90 linsolve.f90 fvm.f90 head.f90 > numerics.f90 
+
+Main routines:
+--------------
+main_deriv_check_adj.f90               - Check the adjoint derivatives against finite difference
+main_deriv_check_tanglin.f90           - Check derivative from tangent linear model against finite difference
+main_oil_vs_mu_sigma.f90               - Write the total oil output from the simulation as a function of mu, sigma in a space separated format.
+main_solver_tuning_adj.f90             - For each problem size, tune the linear solver inner and outer iteration parameters 
+main_solver_tuning_tanglin.f90         - For each problem size, tune the linear solver inner and outer iteration parameters
+main_tanglin.f90                       - Driver calls both forward and tangent linear model.
+
+TODO:
+-----
+Need to fix all the interface issues as we would like for the test-suite.
+Need to rearrange the files according to the needs of the test-suite.

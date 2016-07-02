@@ -1,0 +1,67 @@
+This directory contains Matlab scripts and data files used in the paper
+
+  An introduction to the numerics of flow in porous media using Matlab
+  by J.E. Aarnes, T. Gimse, and K.-A. Lie, SINTEF
+
+The files are located in four subdirectories:
+
+  2phase - saturation solver and driver routines for the 2-phase
+           reservoir simulator
+  data   - model 2 from the 10th SPE Comparative Solution Project
+  MFEM   - the mixed finite element method
+  TPFA   - the two-point flux approximation method
+
+Please feel free to use and modify the scripts for educational
+purposes. Suggestions for improvements are welcome (send an email to
+Knut-Andreas.Lie@sintef.no)
+
+----------------------------------------------------------------------------
+
+The examples in the paper can be reproduced as follows (notice that all examples
+involving the SPE 10 data set may run slow due to the huge amount of data
+contained in the "data/spe10.mat" file):
+
+EXAMPLE 1:
+
+>> cd TPFA
+>> ex=1; run;
+>> ex=2; run;
+
+This will produce plots as in Fig. 1 in the paper.
+
+EXAMPLE 2:
+
+>> cd MFEM
+>> runSPE10; plotsl
+
+This will produce the left plot in Fig. 5 in the paper. To produce the
+right plot, change "Layer" in the code to 85.
+
+EXAMPLE 3:
+
+>> cd 2phase;
+>> addpath('../TPFA');
+>> runq5;
+
+This will produce an animation of the advancing water front in a
+quarter-five spot, as illustrated in Fig. 6 in the paper.
+
+EXAMPLE 4:
+
+>> cd 2phase;
+>> addpath('../TPFA');
+>> runspe10wplot;
+
+This will produce an animation of the advancing water front in a
+quarter-five spot, as illustrated in Fig. 7 in the paper.
+
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+* Disclaimer *
+
+The collection of Matlab scripts is provided 'as is' without warranty of any
+kind. The use of the scripts downloaded through this site is done at your own
+discretion and risk and with agreement that you will be solely responsible for
+any damage to your computer system or loss of data that results from such
+activities.
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

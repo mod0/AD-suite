@@ -1,0 +1,12 @@
+Nx=Grid.Nx; Ny=Grid.Ny; Nz=Grid.Nz; N=Nx*Ny*Nz;
+hx=Grid.hx; hy=Grid.hy; hz=Grid.hz;
+U = [zeros(1,Ny); vx; zeros(1,Ny)]; U=0.5*(U(1:end-1,:)+U(2:end,:));
+V = [zeros(Nx,1), vy, zeros(Nx,1)]; V=0.5*(V(:,1:end-1)+V(:,2:end));
+[Y,X]=meshgrid([1:Ny]*hy-0.5*hy,[1:Nx]*hx-0.5*hx);
+sy = linspace(0.5*hy, (Ny-0.5)*hy, 20);
+sx = (Nx-0.5)*hx/((Ny-0.5)*hy)*( (Ny-0.5)*hy - sy );
+pcolor(Y,X,log10(squeeze(Grid.K(1,:,:)))); shading flat;
+hp=streamline(Y,X,V,U,sy,sx);
+hn=streamline(Y,X,-V,-U,sy,sx);
+set([hp, hn],'Color','k','LineWidth',1.5);
+axis equal; axis tight; axis off;

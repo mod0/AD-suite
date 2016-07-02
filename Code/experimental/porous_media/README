@@ -1,0 +1,31 @@
+This code is ported from the MATLAB version associated with the publication:
+
+Aarnes, Jørg E., Tore Gimse, and Knut-Andreas Lie. "An introduction to the numerics of
+flow in porous media using Matlab." Geometric modelling, numerical simulation, and 
+optimization. Springer Berlin Heidelberg, 2007. 265-306.
+
+Known limitations:
+-----------------
+This folder only has the function evaluation/simulation of the MATLAB code ported.
+
+Editing:
+-------
+Recommended workflow for editing is :
+
+Edit individual files and concatenate using paste command as below to produce numerics
+file which can later be compiled along with one of the driver files.
+
+
+paste --delimiter=\\n --serial fluid.f90 grid.f90 mathutil.f90 matrix.f90 linsolve.f90 fvm.f90 head.f90 > numerics.f90 
+
+DRIVER FILES:
+-------------
+main.f90                  - runs the forward model and produces production curve graph
+main_oil_vs_mu_sigma.f90  - runs the forward model for varying sigma, mu input to produce data needed for
+                            surface plot of oil wrt mu and sigma
+
+
+TODO:
+-----
+Need to fix all the interface issues as we would like for the test-suite.
+Need to rearrange the files according to the needs of the test-suite.
