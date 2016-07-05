@@ -28,8 +28,12 @@ Tt = 0.0d0               ! simulation time
 Pc = 0.0d0               ! production data
 totaloil = 0.0d0         ! total oil
 
-call initialize_scenario(1, mu, sigma, Q, S, P, V)
+! initialize solver parameters
+solver_inner = 64
+solver_outer = 1000000
+verbose = .false.
 
+call initialize_scenario(1, mu, sigma, Q, S, P, V)
 call wrapper(mu, sigma, Q, S, P, V, Tt, Pc, totaloil)
 
 write (*,*) mu, sigma, totaloil
