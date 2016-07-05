@@ -1,20 +1,34 @@
-# setup the compiler and flags
+# setup Fortran compiler and flags
 FORT=gfortran
 FFLAGS=-g -O0
 
-OBJS90=gnufor2.o utils.o mgmres.o numerics.o
-MAINS=main.o main_oil_vs_mu_sigma.o
+# setup C compiler and flags
+CC=gcc
+CFLAGS=-g -O0
 
-all:  ${OBJS90} ${MAINS}
-	${FORT} ${FFLAGS} ${OBJS90} main.o -o porous_media
-	${FORT} ${FFLAGS} ${OBJS90} main_oil_vs_mu_sigma.o -o porous_oil_mu_vs_sigma
+# Include OPENAD Path. If package depends on specific version
+# of OPENAD, mention it in a comment.
+OPENAD_PATH=
 
-%.o : %.f
-	${FORT} -cpp ${FFLAGS} -c $< -o $@
+# Include TAPENADE Path. If package depends on specific version
+# of TAPENADE, mention it in a comment.
+TAPENADE_PATH=
 
-%.o : %.f90
-	${FORT} -cpp ${FFLAGS} -c $< -o $@
+# Include variables for other third party packages that the app
+# depends on in this top level Makefile. This will give a hint
+# to the user of the app that they need to have these tools
+# installed someplace
+
+# export variables to submakefiles
+export 
+
+all:  
+	make -C src_code/Fortran
+	make -C src_deriv/Fortran/Tapenade
+	make -C src_deriv/Fortran/OpenAD
 
 clean:
-	rm *.o *.mod porous_media porous_oil_mu_vs_sigma
+	make -C src_code/Fortran clean
+	make -C src_deriv/Fortran/Tapenade clean
+	make -C src_deriv/Fortran/OpenAD clean
 

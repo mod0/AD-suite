@@ -19,9 +19,7 @@ double precision :: totaloil
 double precision, dimension((ND/St) + 1) :: Tt
 double precision, dimension(2, (ND/St) + 1) :: Pc
 
-
 character(len = 30) :: filename
-
 
 ! initialize simulation output
 Tt = 0.0d0               ! simulation time
