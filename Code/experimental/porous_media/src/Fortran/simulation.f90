@@ -28,7 +28,7 @@ subroutine read_permeability_and_porosity(PERM, POR)
     POR = 0.0d0
 
     ! read KUr
-    open(1,file='../../data/shared/KUr.txt',status='old')
+    open(1,file=permeability_file,status='old')
     read(1,*) ((KUr(i,j), j=1,maxNy * maxNz), i=1,3 * maxNx)
     close(1)
 
@@ -54,7 +54,7 @@ subroutine read_permeability_and_porosity(PERM, POR)
     call myreshape_1_4(KUrl(Kindices), PERM)
 
     ! read KUr
-    open(1,file='../../data/shared/pUr.txt',status='old')
+    open(1,file=porosity_file,status='old')
     read(1,*) (pUr(i), i=1,maxNx * maxNy * maxNz)
     close(1)
 
@@ -140,16 +140,18 @@ subroutine simulate_reservoir(Q, S, P, V, Tt, Pc, oil)
     double precision, dimension(Nx_, Ny_, Nz_) :: P
     double precision, dimension(3, Nx_ + 1, Ny_ + 1, Nz_ + 1) :: V
     
-    double precision, dimension(N_) :: S_current
-    double precision, dimension(Nx_, Ny_, Nz_) :: P_current
-    double precision, dimension(3, Nx_ + 1, Ny_ + 1, Nz_ + 1) :: V_current
-    
     double precision, dimension((ND/St) + 1) :: Tt   
     double precision, dimension(2, (ND/St) + 1) :: Pc
     double precision ::  oil
     
     integer :: i, j, k
     double precision :: Mw, Mo, Mt, tempoil1, tempoil2
+
+    
+    double precision, dimension(N_) :: S_next
+    double precision, dimension(Nx_, Ny_, Nz_) :: P_next
+    double precision, dimension(3, Nx_ + 1, Ny_ + 1, Nz_ + 1) :: V_next
+
 
     S = swc_                            ! initial saturation
 
@@ -167,10 +169,11 @@ subroutine simulate_reservoir(Q, S, P, V, Tt, Pc, oil)
             k = k + 1
             
             if (j == 1) then
-              call stepforward(.true., Q, S, P, V, Mw, Mo)
+              call stepforward(.true., Q, S, P, V, Mw, Mo, S_next, P_next, V_next)
             else
-              call stepforward(.false., Q, S, P, V, Mw, Mo)            
+              call stepforward(.false., Q, S, P, V, Mw, Mo, S_next, P_next, V_next)            
             endif
+
             
             ! update quantites
             Mt = Mw + Mo
@@ -186,20 +189,24 @@ subroutine simulate_reservoir(Q, S, P, V, Tt, Pc, oil)
     oil = tempoil2
 end subroutine simulate_reservoir
 
-subroutine stepforward(pressure_step, Q, S, P, V, Mw, Mo)
+subroutine stepforward(pressure_step, Q, S, P, V, Mw, Mo, S_next, P_next, V_next)
   logical :: pressure_step
   double precision, dimension(N_) :: Q
   double precision, dimension(N_) :: S
   double precision, dimension(Nx_, Ny_, Nz_) :: P
   double precision, dimension(3, Nx_ + 1, Ny_ + 1, Nz_ + 1) :: V
   double precision :: Mw, Mo
+
+  double precision, dimension(N_) :: S_next
+  double precision, dimension(Nx_, Ny_, Nz_) :: P_next
+  double precision, dimension(3, Nx_ + 1, Ny_ + 1, Nz_ + 1) :: V_next
   
   if (pressure_step .eqv. .true.) then
     ! solve pressure
-    call Pres(Q, S, P, V)                   ! Pressure solver
+    call Pres(Q, S, P, V)    ! Pressure solver
   endif
 
-  call NewtRaph(Q, V, S)              ! Solve for saturation
+  call NewtRaph(Q, V, S)      ! Solve for saturation
   call RelPerm(S(N_), Mw, Mo)         ! Mobilities in well-block
 end subroutine stepforward
 

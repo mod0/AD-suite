@@ -167,7 +167,7 @@ subroutine Pres(Q, S, P, V)
   KM = KM * PERM
 
   call TPFA(KM, Q, P, V)
-end subroutine
+end subroutine Pres
 
 
 !
@@ -184,7 +184,6 @@ subroutine RelPerm_vector(S, Mw, Mo, dMw, dMo)
     double precision, dimension(N_), optional :: dMo
 
     S_temp = (S - swc_)/(1.0d0 - swc_ - sor_)   ! rescale saturation
-
     Mw = S_temp**2/vw_
     Mo = (1 - S_temp)**2/vo_
 
@@ -216,7 +215,6 @@ end subroutine RelPerm_scalar
 ! Generate A matrix
 !
 subroutine GenA(V, Q,  annz, arow_index, arow_compressed, acol_index, avalues)
-  !use print_active
   implicit none
 
   integer, dimension(7) :: idiags

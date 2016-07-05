@@ -31,6 +31,12 @@ module parameters
             Pt = 100,          &                  ! Pressure time step
             ND = 2000)                            ! Number of days in simulation
 
+  ! filenames
+  character(*), parameter :: data_directory = "../../data/"
+  character(*), parameter :: porosity_file = data_directory//"/shared/pUr.txt"
+  character(*), parameter :: permeability_file = data_directory//"/shared/KUr.txt"
+ 
+
   ! PARAMETERS READ FROM FILE
   ! porosity and permeability parameters
   double precision, dimension(N_) :: POR      ! Porosities
