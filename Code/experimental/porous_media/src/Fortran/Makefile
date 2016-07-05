@@ -24,5 +24,7 @@ numerics.f90: parameters.f90 mathutil.f90 matrix.f90 linsolve.f90 finitevolume.f
 
 
 clean:
-	rm *.o *.mod porous_media 
+	rm -f *.o *.mod porous_media 
+	rm -i *.png
+	rm -i *.txt
 

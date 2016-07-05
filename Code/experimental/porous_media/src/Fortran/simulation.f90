@@ -69,7 +69,6 @@ subroutine read_permeability_and_porosity(PERM, POR)
         end do
     end do
 
-    !POR = max(pUr(Pindices), 1.0d-3)
     call mymax_1_0_double(pUr(Pindices), 1.0d-3, POR)
 end subroutine read_permeability_and_porosity
 
@@ -147,12 +146,6 @@ subroutine simulate_reservoir(Q, S, P, V, Tt, Pc, oil)
     integer :: i, j, k
     double precision :: Mw, Mo, Mt, tempoil1, tempoil2
 
-    
-    double precision, dimension(N_) :: S_next
-    double precision, dimension(Nx_, Ny_, Nz_) :: P_next
-    double precision, dimension(3, Nx_ + 1, Ny_ + 1, Nz_ + 1) :: V_next
-
-
     S = swc_                            ! initial saturation
 
     Pc(1, 1) = 0.0d0                    ! initial production
@@ -169,9 +162,9 @@ subroutine simulate_reservoir(Q, S, P, V, Tt, Pc, oil)
             k = k + 1
             
             if (j == 1) then
-              call stepforward(.true., Q, S, P, V, Mw, Mo, S_next, P_next, V_next)
+              call stepforward(.true., Q, S, P, V, Mw, Mo)
             else
-              call stepforward(.false., Q, S, P, V, Mw, Mo, S_next, P_next, V_next)            
+              call stepforward(.false., Q, S, P, V, Mw, Mo)            
             endif
 
             
@@ -189,17 +182,13 @@ subroutine simulate_reservoir(Q, S, P, V, Tt, Pc, oil)
     oil = tempoil2
 end subroutine simulate_reservoir
 
-subroutine stepforward(pressure_step, Q, S, P, V, Mw, Mo, S_next, P_next, V_next)
+subroutine stepforward(pressure_step, Q, S, P, V, Mw, Mo)
   logical :: pressure_step
   double precision, dimension(N_) :: Q
   double precision, dimension(N_) :: S
   double precision, dimension(Nx_, Ny_, Nz_) :: P
   double precision, dimension(3, Nx_ + 1, Ny_ + 1, Nz_ + 1) :: V
   double precision :: Mw, Mo
-
-  double precision, dimension(N_) :: S_next
-  double precision, dimension(Nx_, Ny_, Nz_) :: P_next
-  double precision, dimension(3, Nx_ + 1, Ny_ + 1, Nz_ + 1) :: V_next
   
   if (pressure_step .eqv. .true.) then
     ! solve pressure
