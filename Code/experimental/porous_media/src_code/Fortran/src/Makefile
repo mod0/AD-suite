@@ -1,5 +1,5 @@
-OBJ_DIR = ../app_obj
-MOD_DIR = ../app_mod
+OBJ_DIR = ../obj
+MOD_DIR = ../modules
 OBJS_SUPP = supporting_routines.o
 OBJS_SIM = numerics.o
 OBJS= ${OBJS_SUPP} ${OBJS_SIM}
