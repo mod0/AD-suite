@@ -5,16 +5,15 @@ module parameters
   double precision :: hx_, hy_, hz_, V_, ir
   integer :: maxNx, maxNy, maxNz
 
-  parameter(maxNx=60, maxNy=220, maxNz=85)
-
-  parameter(Nx_ = 10, &              ! Dimension in x-direction
+  parameter(maxNx=60, maxNy=220, maxNz=85, &
+       Nx_ = 10, &                   ! Dimension in x-direction
        Ny_ = 10, &                   ! Dimension in y-direction
        Nz_ = 2, &                    ! Dimension in z-direction
        hx_ = 20.0d0 * 0.3048d0, &    ! step size in x-direction
        hy_ = 10.0d0 * 0.3048d0, &    ! step size in y-direction
        hz_ = 2.0d0 * 0.3048d0, &     ! step size in z-direction
        N_ = Nx_ * Ny_ * Nz_, &       ! Total number of grid cells
-       V_ = hx_ * hy_ * hz_, &        ! Volume of each grid cell
+       V_ = hx_ * hy_ * hz_, &       ! Volume of each grid cell
        ir = (795.0 * Nx_ * Ny_ * Nz_) / (maxNx * maxNy * maxNz)) ! Magic number
 
   ! fluid parameters
@@ -26,7 +25,6 @@ module parameters
 
   ! timestepping parameters
   integer :: St, Pt, ND
-
   parameter(St = 5,            &                  ! Max saturation time step
             Pt = 100,          &                  ! Pressure time step
             ND = 2000)                            ! Number of days in simulation

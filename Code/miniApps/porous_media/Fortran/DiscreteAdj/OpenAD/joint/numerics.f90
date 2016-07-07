@@ -1342,7 +1342,9 @@ subroutine init_flw_trnc_norm_xin_pt_out(ir, mu, sigma, Q)
     end do
 
     ! now rescale all the entities
-    Q_x = Q_x/mass * ir
+    do i = 1,Nx_
+       Q_x(i) = Q_x(i)/mass * ir
+    end do   
 
     ! Assign Q_x to Q
     j = 1

@@ -34,36 +34,36 @@ subroutine sparse_solve(annz, arow_index, arow_compressed, &
   double precision, dimension(N_) :: b
   double precision, dimension(N_) :: x
 
-  call sparse_dummy_method(matdim, annz, maxlen, arow_index, arow_compressed,&
+  call sparse_dummy_method(N_, annz, 7*N_, arow_index, arow_compressed,&
                            acol_index, avalues, b, x, solver_inner, solver_outer, verbose)
 end subroutine sparse_solve
 
-!%>LINSOLVE
-!
-! A method to test OpenAD without solver
-!
-subroutine sparse_dummy_method(n, annz, alen, arow_index, arow_compressed, &
-                               acol_index, avalues, b, x, solver_inner, solver_outer, verbose)
-  integer :: i
-  logical :: verbose
-  integer :: solver_inner, solver_outer
-  double precision :: sum
-  integer :: n, annz, alen
-  integer, dimension(alen) :: arow_index
-  integer, dimension(alen) :: acol_index
-  double precision, dimension(alen) :: avalues
-  integer, dimension(n + 1) :: arow_compressed
+! !%>LINSOLVE
+! !
+! ! A method to test OpenAD without solver
+! !
+! subroutine sparse_dummy_method(n, annz, alen, arow_index, arow_compressed, &
+!                                acol_index, avalues, b, x, solver_inner, solver_outer, verbose)
+!   integer :: i
+!   logical :: verbose
+!   integer :: solver_inner, solver_outer
+!   double precision :: sum
+!   integer :: n, annz, alen
+!   integer, dimension(alen) :: arow_index
+!   integer, dimension(alen) :: acol_index
+!   double precision, dimension(alen) :: avalues
+!   integer, dimension(n + 1) :: arow_compressed
   
-  double precision, dimension(n) :: b
-  double precision, dimension(n) :: x
+!   double precision, dimension(n) :: b
+!   double precision, dimension(n) :: x
 
-  x = 0.0d0
-  sum = 0.0d0
-  do i = 1, annz
-      sum = sum + avalues(i)
-  end do
+!   x = 0.0d0
+!   sum = 0.0d0
+!   do i = 1, annz
+!       sum = sum + avalues(i)
+!   end do
 
-  x = b/sum
-end subroutine sparse_dummy_method
-!%<LINSOLVE
+!   x = b/sum
+! end subroutine sparse_dummy_method
+! !%<LINSOLVE
 end module linsolve
