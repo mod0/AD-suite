@@ -8,8 +8,6 @@ OBJS90=fluid.o grid.o mathutil.o \
      matrix.o mgmres.o linsolve.o \
      fvm.o gnufor2.o runspe10.o
 
-OBJS77=print_active.o
-
 %.o : %.f
 	${FORT} -cpp ${FFLAGS} -c -g $< -o $@
 
@@ -19,7 +17,7 @@ OBJS77=print_active.o
 
 all: ${TARGET}
 
-pm: ${OBJS77} ${OBJS90}
+pm: ${OBJS90}
 	${FORT} ${FFLAGS} $^ -g -o porous_media
 
 clean:

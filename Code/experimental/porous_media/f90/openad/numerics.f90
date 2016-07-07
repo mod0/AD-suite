@@ -678,7 +678,7 @@ use fluid
 use matrix
 use linsolve
 use mathutil
-!use print_active
+
 implicit none
 
 interface RelPerm
@@ -695,7 +695,7 @@ contains
 ! Performs Newton Raphson to solve for saturations
 !
 subroutine NewtRaph(S, V, Q, St, solver_inner, solver_outer, verbose)
-  !use print_active
+  
   implicit none
   logical :: verbose
   integer :: solver_inner, solver_outer
@@ -825,7 +825,7 @@ end subroutine NewtRaph
 ! Pressure Solver
 !
 subroutine Pres(S, Q, P, V, solver_inner, solver_outer, verbose)
-    !use print_active
+    
     logical :: verbose
     integer :: solver_inner, solver_outer
     
@@ -864,7 +864,7 @@ end subroutine
 ! Relative Permeabilities
 !
 subroutine RelPerm_vector(S, Mw, Mo, dMw, dMo)
-    !use print_active
+    
     implicit none
     double precision, dimension(N_) :: S
     double precision, dimension(N_) :: Mw
@@ -906,7 +906,7 @@ end subroutine RelPerm_scalar
 ! Generate A matrix
 !
 subroutine GenA(V, Q,  annz, arow_index, arow_compressed, acol_index, avalues)
-  !use print_active
+  
   implicit none
 
   integer, dimension(7) :: idiags
@@ -985,7 +985,7 @@ end subroutine GenA
 ! Two point flux approximation.
 !
 subroutine tpfa(K, Q, P, V, solver_inner, solver_outer, verbose)
-    !use print_active
+    
     implicit none
     logical :: verbose
     integer :: solver_inner, solver_outer
