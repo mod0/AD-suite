@@ -1,7 +1,3 @@
-FORT= gfortran
-CC= gcc
-FFLAGS= -g -O0
-CFLAGS= -g -O0
 OBJS= gnufor2.o utils.o mgmres.o adBuffer.o adStack.o
 DIFFS= numerics_d.o numerics_b.o
 MAINS= main_solver_tuning_tanglin.o main_deriv_check_tanglin.o \

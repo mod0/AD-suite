@@ -1,34 +1,32 @@
-# setup Fortran compiler and flags
-FORT=gfortran
-FFLAGS=-g -O0
+include make.config
 
-# setup C compiler and flags
-CC=gcc
-CFLAGS=-g -O0
+define HELP_BODY
+This makefile has the following Options and
+corresponding values that can be passed to 
+it from the command line while calling make.
 
-# Include OPENAD Path. If package depends on specific version
-# of OPENAD, mention it in a comment.
-OPENAD_PATH=
++-------------------------------------+
+|              OPTIONS                |
++-------------------------------------+
+LANG     =   <ALL/F90/MATLAB>
+DERIV    =   <ALL/TAPENADE/OPENAD>
+endef
 
-# Include TAPENADE Path. If package depends on specific version
-# of TAPENADE, mention it in a comment.
-TAPENADE_PATH=
+export HELP_BODY
 
-# Include variables for other third party packages that the app
-# depends on in this top level Makefile. This will give a hint
-# to the user of the app that they need to have these tools
-# installed someplace
+# Space separated list of folders to build
+BUILDS = f90 matlab
 
-# export variables to submakefiles
-export 
+.PHONY: all build help clean
 
-all:  
-	make -C src_code/Fortran
-	make -C src_deriv/Fortran/Tapenade
-	make -C src_deriv/Fortran/OpenAD
+all: build
 
-clean:
-	make -C src_code/Fortran clean
-	make -C src_deriv/Fortran/Tapenade clean
-	make -C src_deriv/Fortran/OpenAD clean
+build: ${BUILDS}
+	$(foreach d, $^, make -C $(d) build;)
+
+help:
+	@echo "$$HELP_BODY"
+
+clean: ${BUILDS}
+	$(foreach d, $^, make -C $(d) clean;)
 
