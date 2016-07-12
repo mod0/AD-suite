@@ -1,9 +1,10 @@
 include ../make.config
 
-BUILDS = original_code openad tapenade
+BUILDS = original_code #openad tapenade
 
 build:${BUILDS}
-	$(foreach d, $^, make -c $(d) build;)
+	$(foreach d, $^, make -C $(d) build;)
 
 clean:${BUILDS}
-	$(foreach d, $^, make -c $(d) clean;)
+	$(foreach d, $^, make -C $(d) clean;)
+	rm -i *.png *.jpg *.txt

@@ -10,6 +10,7 @@ it from the command line while calling make.
 +-------------------------------------+
 LANG     =   <ALL/F90/MATLAB>
 DERIV    =   <ALL/TAPENADE/OPENAD>
+SCENARIO =   <1>
 endef
 
 export HELP_BODY

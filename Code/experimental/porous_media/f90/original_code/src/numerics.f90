@@ -32,9 +32,9 @@ module parameters
             ND = 2000)                            ! Number of days in simulation
 
   ! filenames
-  character(*), parameter :: data_directory = "../../data/"
-  character(*), parameter :: porosity_file = data_directory//"/shared/pUr.txt"
-  character(*), parameter :: permeability_file = data_directory//"/shared/KUr.txt"
+  character(*), parameter :: data_directory = "../data/data_1/"
+  character(*), parameter :: porosity_file = data_directory//"pUr.txt"
+  character(*), parameter :: permeability_file = data_directory//"KUr.txt"
  
 
   ! PARAMETERS READ FROM FILE

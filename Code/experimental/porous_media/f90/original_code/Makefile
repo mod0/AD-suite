@@ -1,15 +1,21 @@
+include ../../make.config
+
 OBJ_DIR = obj
 MOD_DIR = modules
 APP_SRC_DIR = src
 OBJS_SUPP = supporting_routines.o
 OBJS_SIM = numerics.o
-OBJS= ${OBJS_SUPP} ${OBJS_SIM}
-MAINS=driver1.o 
+OBJS = ${OBJS_SUPP} ${OBJS_SIM}
+OBJS_MAIN = eval_original_code.o  
 
-.PHONY: all src clean
+.PHONY: cdir build src clean
 
-all: src ${MAINS}
-	${FORT} ${FFLAGS} $(addprefix ${OBJ_DIR}/, ${OBJS}) ${OBJ_DIR}/driver1.o -o driver1 -J${MOD_DIR}
+build: cdir src ${OBJS_MAIN}
+	${FORT} ${FFLAGS} $(addprefix ${OBJ_DIR}/, ${OBJS}) ${OBJ_DIR}/eval_original_code.o -o ../eval_original_code -J${MOD_DIR}
+
+cdir: 
+	mkdir -p ${OBJ_DIR}
+	mkdir -p ${MOD_DIR}
 
 src:
 	make -C ${APP_SRC_DIR}
@@ -22,7 +28,6 @@ src:
 
 clean:
 	make -C ${APP_SRC_DIR} clean
-	rm -f driver1
-	rm -if *.txt
-	rm -if *.png
+	rm -f ../eval_original_code
+
 

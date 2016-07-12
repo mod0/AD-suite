@@ -1,5 +1,8 @@
+include ../../../make.config
+
 OBJ_DIR = ../obj
 MOD_DIR = ../modules
+PARAMS_FILE = ../../../data/data_${SCENARIO}/parameters.f90
 OBJS_SUPP = supporting_routines.o
 OBJS_SIM = numerics.o
 OBJS= ${OBJS_SUPP} ${OBJS_SIM}
@@ -14,7 +17,7 @@ all:  numerics.f90 supporting_routines.f90 ${OBJS} ${MAINS}
 %.o: %.f90
 	${FORT} -cpp ${FFLAGS} -c $< -o ${OBJ_DIR}/$@ -J${MOD_DIR}
 
-numerics.f90: parameters.f90 mathutil.f90 matrix.f90 linsolve.f90 finitevolume.f90 simulation.f90
+numerics.f90: ${PARAMS_FILE} mathutil.f90 matrix.f90 linsolve.f90 finitevolume.f90 simulation.f90
 	@echo "Creating a single numerics file from all the other application files"
 	paste --delimiter=\\n --serial $^ > $@
 	@echo "Replacing the dummy linear solver inside the numerics file with that from the template"
