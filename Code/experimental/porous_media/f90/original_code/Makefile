@@ -8,14 +8,19 @@ OBJS_SIM = numerics.o
 OBJS = ${OBJS_SUPP} ${OBJS_SIM}
 OBJS_MAIN = eval_original_code.o  
 
-.PHONY: cdir build src clean
+.PHONY: cdir cpmod src build link clean
 
-build: cdir src ${OBJS_MAIN}
-	${FORT} ${FFLAGS} $(addprefix ${OBJ_DIR}/, ${OBJS}) ${OBJ_DIR}/eval_original_code.o -o ../eval_original_code -J${MOD_DIR}
+build: cdir cpmod src ${OBJS_MAIN} link
+
+link:
+	${FORT} ${FFLAGS} $(addprefix ${OBJ_DIR}/, ${OBJS}) ${OBJ_DIR}/eval_original_code.o -o ../eval_original_code -J${MOD_DIR} $(addprefix -, ${F90_LIBS})
 
 cdir: 
 	mkdir -p ${OBJ_DIR}
 	mkdir -p ${MOD_DIR}
+
+cpmod:
+	cp ${NETCDF_F90_MOD} ${MOD_DIR}
 
 src:
 	make -C ${APP_SRC_DIR}

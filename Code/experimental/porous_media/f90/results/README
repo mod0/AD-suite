@@ -1,1 +1,8 @@
-This folder contains the results from running each executable in this directory.
+This folder contains the results from running each executable in this directory 
+in the netCDF format.
+
+Running ncdump will produce a text file with all values.
+
+Example:
+
+ncdump file.nc > file.txt

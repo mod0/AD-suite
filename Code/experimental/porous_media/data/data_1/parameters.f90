@@ -1,13 +1,13 @@
 module parameters
   ! FIXED PARAMETERS
   ! grid parameters 
-  integer :: Nx_, Ny_, Nz_, N_
+  integer :: Nx_, Ny_, Nz_, N_, scenario_id
   double precision :: hx_, hy_, hz_, V_, ir
   integer :: maxNx, maxNy, maxNz
 
   parameter(maxNx=60, maxNy=220, maxNz=85)
-
-  parameter(Nx_ = 10, &              ! Dimension in x-direction
+  parameter(scenario_id = 1, &
+       Nx_ = 10, &              ! Dimension in x-direction
        Ny_ = 10, &                   ! Dimension in y-direction
        Nz_ = 2, &                    ! Dimension in z-direction
        hx_ = 20.0d0 * 0.3048d0, &    ! step size in x-direction
@@ -26,16 +26,17 @@ module parameters
 
   ! timestepping parameters
   integer :: St, Pt, ND
-
   parameter(St = 5,            &                  ! Max saturation time step
             Pt = 100,          &                  ! Pressure time step
             ND = 2000)                            ! Number of days in simulation
 
   ! filenames
   character(*), parameter :: data_directory = "../data/data_1/"
+  character(*), parameter :: results_directory = "results/"
   character(*), parameter :: porosity_file = data_directory//"pUr.txt"
   character(*), parameter :: permeability_file = data_directory//"KUr.txt"
- 
+  character(*), parameter :: results_eval_original_code = &
+       results_directory//"results_eval_original_code.nc"
 
   ! PARAMETERS READ FROM FILE
   ! porosity and permeability parameters
@@ -46,4 +47,8 @@ module parameters
   ! linear solver parameters
   logical :: verbose
   integer :: solver_inner, solver_outer
+
+  parameter(verbose = .false.,   &              ! Verbose solver output
+       solver_inner = 64,        &              ! Number of inner iterations
+       solver_outer = 100000)                   ! Number of outer iterations
 end module parameters

@@ -1,35 +1,52 @@
-OBJS= gnufor2.o utils.o mgmres.o adBuffer.o adStack.o
-DIFFS= numerics_d.o numerics_b.o
-MAINS= main_solver_tuning_tanglin.o main_deriv_check_tanglin.o \
-       main_tanglin.o main_solver_tuning_adj.o main_deriv_check_adj.o\
-       main_oil_vs_mu_sigma.o
-LIBS= -lgfortran -lm
+include ../../make.config
 
-all:$(OBJS) $(DIFFS) $(MAINS)
-	${FORT} ${FFLAGS} ${OBJS} numerics_d.o main_tanglin.o  ${LIBS} -o porous_tanglin
-	${FORT} ${FFLAGS} ${OBJS} numerics_d.o main_solver_tuning_tanglin.o ${LIBS} -o porous_solver_tuning_tanglin
-	${FORT} ${FFLAGS} ${OBJS} numerics_d.o main_deriv_check_tanglin.o ${LIBS} -o porous_deriv_check_tanglin
-	${FORT} ${FFLAGS} ${OBJS} numerics_b.o main_solver_tuning_adj.o ${LIBS} -o porous_solver_tuning_adj
-	${FORT} ${FFLAGS} ${OBJS} numerics_b.o main_deriv_check_adj.o ${LIBS} -o porous_deriv_check_adj
-	${FORT} ${FFLAGS} ${OBJS} numerics_d.o main_oil_vs_mu_sigma.o ${LIBS} -o porous_mu_sigma_oil
+OBJ_DIR = obj
+MOD_DIR = modules
+APP_SRC_DIR = src
+OBJS_SUPP = supporting_routines.o
+OBJS_SIM = numerics_d.o numerics_b.o
+OBJS = ${OBJS_SUPP} ${OBJS_SIM}
+OBJS_MAIN = eval_deriv_tapenade_1_forward.o eval_deriv_tapenade_1_reverse.o  
 
-%.o : %.f90
-	${FORT} ${FFLAGS} -c $< -o $@
+# Determine if this directory needs to be built
+# Refer: http://stackoverflow.com/a/28790801/1220493
+IS_FORTRAN=$(shell echo ${LANG}|grep -i -c F90)
+IS_TAPENADE=$(shell echo ${DERIV}|grep -i -c TAPENADE)
+IS_ALL_LANG=$(shell echo ${LANG}|grep -i -c ALL)
+IS_ALL_DERIV=$(shell echo ${DERIV}|grep -i -c ALL)
+FLAG=$(shell echo $$(((${IS_FORTRAN} + ${IS_ALL_LANG}) * (${IS_TAPENADE} * ${IS_ALL_DERIV}))))
 
-%.o : %.f
-	${FORT} ${FFLAGS} -c $< -o $@
+# Add targets if directory needs to be built
+CONDITIONAL_BUILD =
+ifneq	(${FLAG}, 0)
+	CONDITIONAL_BUILD += cdir cpmod src ${OBJS_MAIN} link
+endif
+
+.PHONY: cdir cpmod src build link clean
+
+build: ${CONDITIONAL_BUILD}
+
+link:
+	${FORT} ${FFLAGS} $(addprefix ${OBJ_DIR}/, ${OBJS}) ${OBJ_DIR}/eval_deriv_tapenade_1_forward.o -o ../eval_deriv_tapenade_1_forward -J${MOD_DIR} $(addprefix -, ${F90_LIBS})
+	${FORT} ${FFLAGS} $(addprefix ${OBJ_DIR}/, ${OBJS}) ${OBJ_DIR}/eval_deriv_tapenade_1_reverse.o -o ../eval_deriv_tapenade_1_forward -J${MOD_DIR} $(addprefix -, ${F90_LIBS})
+
+cdir: 
+	mkdir -p ${OBJ_DIR}
+	mkdir -p ${MOD_DIR}
+
+cpmod:
+	cp ${NETCDF_F90_MOD} ${MOD_DIR}
+
+src:
+	make -C ${APP_SRC_DIR}
+
+%.o: %.f
+	${FORT} -cpp ${FFLAGS} -c $< -o ${OBJ_DIR}/$@ -J${MOD_DIR}
+
+%.o: %.f90
+	${FORT} -cpp ${FFLAGS} -c $< -o ${OBJ_DIR}/$@ -J${MOD_DIR}
 
 clean:
-	rm -f *.o
-	rm -f *.mod-whirl
-	rm -f *.mod
-	rm -f porous_tanglin
-	rm -f porous_solver_tuning_tanglin
-	rm -f porous_deriv_check_tanglin
-	rm -f porous_solver_tuning_adj
-	rm -f porous_deriv_check_adj
-	rm -f porous_mu_sigma_oil
-	rm -i *~
-	rm -i *.msg
-	rm -i *test.txt
-	rm -i test*.txt
+	make -C ${APP_SRC_DIR} clean
+	rm -f ../eval_deriv_tapenade_1_forward.o
+	rm -f ../eval_deriv_tapenade_1_reverse.o

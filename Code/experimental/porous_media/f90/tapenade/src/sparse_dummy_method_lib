@@ -1,0 +1,40 @@
+subroutine sparse_dummy_method:
+  external:
+  shape:(param 1,
+         param 2,
+         param 3,
+    	 param 4,
+    	 param 5,
+    	 param 6,
+    	 param 7,
+    	 param 8,
+    	 param 9,
+    	 param 10,
+    	 param 11,
+    	 param 12)
+  type :(ident integer,
+         ident integer,
+         ident integer,
+         arrayType(ident integer, dimColons(dimColon(none(), none()))),
+         arrayType(ident integer, dimColons(dimColon(none(), none()))),
+         arrayType(ident integer, dimColons(dimColon(none(), none()))),
+         arrayType(modifiedTypeName(modifiers(ident double), ident real), dimColons(dimColon(none(), none()))),
+         arrayType(modifiedTypeName(modifiers(ident double), ident real), dimColons(dimColon(none(), none()))),
+         arrayType(modifiedTypeName(modifiers(ident double), ident real), dimColons(dimColon(none(), none()))),
+         ident integer,
+         ident integer,
+         ident boolean)
+  ReadNotWritten:     (1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1)
+  ReadThenWritten :   (0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0)
+  deps: (id,
+         id,
+         id,
+         id,
+         id,
+         id,
+         id,
+         id,
+         0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0,
+         id,
+         id,
+         id)
