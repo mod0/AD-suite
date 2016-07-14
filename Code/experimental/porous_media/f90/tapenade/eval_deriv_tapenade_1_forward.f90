@@ -13,6 +13,7 @@ integer :: i, j, k
 
 ! input/intermediate variables
 double precision :: mu, sigma
+double precision :: mud, sigmad
 double precision, dimension(N_) :: Q
 double precision, dimension(N_) :: S
 double precision, dimension(Nx_, Ny_, Nz_) :: P
@@ -20,39 +21,85 @@ double precision, dimension(3, Nx_ + 1, Ny_ + 1, Nz_ + 1) :: V
 
 ! output variables
 double precision :: totaloil
+double precision :: totaloil_mud
+double precision :: totaloil_sigmad
 double precision, dimension((ND/St) + 1) :: Tt
 double precision, dimension(2, (ND/St) + 1) :: Pc
 
 ! netCDF variables
-integer :: ncid                                                  ! file handle
-integer :: dim_time_id                                           ! time dimension id
-integer :: var_time_id                                           ! time variable id
-integer, parameter :: dim_time_len = (ND/St) + 1                 ! time dimension length
-character(len = *), parameter :: dim_time_name = "Time"          ! time dimension name
-integer :: dim_mobility_id                                       ! mobility dimension id
-integer :: var_mobility_id                                       ! mobility variable id
-integer, parameter :: dim_mobility_len = 2                       ! mobility dimension length
-character(len = *), parameter :: dim_mobility_name = "Mobility"  ! mobility dimension name
-integer, dimension(2) :: dimids                                  ! id of dimensions
-integer :: var_oil_id                                            ! oil variable id
-character(len = *), parameter :: var_oil_name = "Oil"            ! oil variable name
+integer :: ncid                                                     ! file handle
+integer :: var_scene_id                                             ! scene variable id
+character(len = *), parameter :: var_scene_name = "Scenario"        ! scene variable name
+integer :: var_nx_id                                                ! nx variable id
+character(len = *), parameter :: var_nx_name = "NX"                 ! nx variable name
+integer :: var_ny_id                                                ! ny variable id
+character(len = *), parameter :: var_ny_name = "NY"                 ! ny variable name
+integer :: var_nz_id                                                ! nz variable id
+character(len = *), parameter :: var_nz_name = "NZ"                 ! nz variable name
+integer :: var_mu_id                                                ! mu variable id
+character(len = *), parameter :: var_mu_name = "Mu"                 ! mu variable name
+integer :: var_sigma_id                                             ! sigma variable id
+character(len = *), parameter :: var_sigma_name = "Sigma"           ! sigma variable name
+integer :: dim_time_id                                              ! time dimension id
+integer :: var_time_id                                              ! time variable id
+integer, parameter :: dim_time_len = (ND/St) + 1                    ! time dimension length
+character(len = *), parameter :: dim_time_name = "Time"             ! time dimension name
+integer :: dim_mobility_id                                          ! mobility dimension id
+integer :: var_mobility_id                                          ! mobility variable id
+integer, parameter :: dim_mobility_len = 2                          ! mobility dimension length
+character(len = *), parameter :: dim_mobility_name = "Mobility"     ! mobility dimension name
+integer, dimension(2) :: dimids                                     ! id of dimensions
+integer :: var_oil_id                                               ! oil variable id
+character(len = *), parameter :: var_oil_name = "Oil"               ! oil variable name
+integer :: var_oil_mud_id                                           ! oil_mu variable id
+character(len = *), parameter :: var_oil_mud_name = "Oil_mu"        ! oil_mu variable name
+integer :: var_oil_sigmad_id                                        ! oil_sigma variable id
+character(len = *), parameter :: var_oil_sigmad_name = "Oil_sigma"  ! oil_sigma variable name
+
 
 ! initialize simulation output
 Tt = 0.0d0               ! simulation time
 Pc = 0.0d0               ! production data
 totaloil = 0.0d0         ! total oil
 
+! initialize mu direction
+mud = 1.0d0
+sigmad = 0.0d0
+totaloil_mud = 0.0d0
+
 call initialize_scenario(1, mu, sigma, Q, S, P, V)
-call wrapper(mu, sigma, Q, S, P, V, Tt, Pc, totaloil)
+call wrapper_d(mu, mud, sigma, sigmad, Q, S, P, V, Tt, Pc, totaloil, totaloil_mud)
  
+! initialize sigma direction
+mud = 0.0d0
+sigmad = 1.0d0
+totaloil_sigmad = 0.0d0
+
+call initialize_scenario(1, mu, sigma, Q, S, P, V)
+call wrapper_d(mu, mud, sigma, sigmad, Q, S, P, V, Tt, Pc, totaloil, totaloil_sigmad)
+
 ! Start writing netCDF file having all the computed values
 ! Open file
 call iserror(nf90_create(results_eval_deriv_tapenade_1_fwd, nf90_clobber, ncid))
 
+! Define all dimension
 ! Define time dimensions
 call iserror(nf90_def_dim(ncid, dim_time_name, dim_time_len, dim_time_id))
 ! Define mobility dimensions
 call iserror(nf90_def_dim(ncid, dim_mobility_name, dim_mobility_len, dim_mobility_id))
+
+! Define scalar scenario input
+call iserror(nf90_def_var(ncid, var_scene_name, NF90_INT, var_scene_id))
+! Define scalar nx input
+call iserror(nf90_def_var(ncid, var_nx_name, NF90_INT, var_nx_id))
+! Define scalar ny input
+call iserror(nf90_def_var(ncid, var_ny_name, NF90_INT, var_ny_id))
+! Define scalar nz input
+call iserror(nf90_def_var(ncid, var_nz_name, NF90_INT, var_nz_id))
+! Define scalar mu input
+call iserror(nf90_def_var(ncid, var_mu_name, NF90_DOUBLE, var_mu_id))
+! Define scalar sigma input
+call iserror(nf90_def_var(ncid, var_sigma_name, NF90_DOUBLE, var_sigma_id))
 
 ! Define the time variables. Varid is returned.
 call iserror(nf90_def_var(ncid, dim_time_name, NF90_DOUBLE, dim_time_id, var_time_id))
@@ -64,9 +111,21 @@ call iserror(nf90_def_var(ncid, dim_mobility_name, NF90_DOUBLE, dimids, var_mobi
 
 ! Define scalar oil output
 call iserror(nf90_def_var(ncid, var_oil_name, NF90_DOUBLE, var_oil_id))
+! Define scalar oil sensitivity in mu direction
+call iserror(nf90_def_var(ncid, var_oil_mud_name, NF90_DOUBLE, var_oil_mud_id))
+! Define scalar oil sensitivity in sigma direction
+call iserror(nf90_def_var(ncid, var_oil_sigmad_name, NF90_DOUBLE, var_oil_sigmad_id))
 
 ! End define mode.
 call iserror(nf90_enddef(ncid))
+
+! Write scalar inputs
+call iserror(nf90_put_var(ncid, var_scene_id, scenario_id))
+call iserror(nf90_put_var(ncid, var_nx_id, Nx_))
+call iserror(nf90_put_var(ncid, var_ny_id, Ny_))
+call iserror(nf90_put_var(ncid, var_nz_id, Nz_))
+call iserror(nf90_put_var(ncid, var_mu_id, mu))
+call iserror(nf90_put_var(ncid, var_sigma_id, sigma))
 
 ! Write the time data. 
 call iserror(nf90_put_var(ncid, var_time_id, Tt))
@@ -76,6 +135,8 @@ call iserror(nf90_put_var(ncid, var_time_id, Tt))
 ! the netCDF variables we have defined.
 call iserror(nf90_put_var(ncid, var_mobility_id, Pc))
 call iserror(nf90_put_var(ncid, var_oil_id, totaloil))
+call iserror(nf90_put_var(ncid, var_oil_mud_id, totaloil_mud))
+call iserror(nf90_put_var(ncid, var_oil_sigmad_id, totaloil_sigmad))
 
 ! Close the file.
 call iserror(nf90_close(ncid))
