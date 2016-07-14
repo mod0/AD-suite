@@ -43,6 +43,10 @@ MODULE PARAMETERS_B
 &   'KUr.txt'
   CHARACTER(len=*), PARAMETER :: results_eval_original_code=&
 &   results_directory//'results_eval_original_code.nc'
+  CHARACTER(len=*), PARAMETER :: results_eval_deriv_tapenade_1_fwd=&
+&   results_directory//'results_eval_deriv_tapenade_1_forward.nc'
+  CHARACTER(len=*), PARAMETER :: results_eval_deriv_tapenade_1_rev=&
+&   results_directory//'results_eval_deriv_tapenade_1_reverse.nc'
 ! PARAMETERS READ FROM FILE
 ! porosity and permeability parameters
 ! Porosities

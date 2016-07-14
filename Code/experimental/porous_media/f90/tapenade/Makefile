@@ -3,9 +3,10 @@ include ../../make.config
 OBJ_DIR = obj
 MOD_DIR = modules
 APP_SRC_DIR = src
-OBJS_SUPP = supporting_routines.o
+OBJS_SUPP = supporting_routines.o 
+OBJS_AD_SUPP = adBuffer.o adStack.o
 OBJS_SIM = numerics_d.o numerics_b.o
-OBJS = ${OBJS_SUPP} ${OBJS_SIM}
+OBJS = ${OBJS_SUPP} ${OBJS_AD_SUPP} ${OBJS_SIM}
 OBJS_MAIN = eval_deriv_tapenade_1_forward.o eval_deriv_tapenade_1_reverse.o  
 
 # Determine if this directory needs to be built
@@ -29,7 +30,7 @@ build: ${CONDITIONAL_BUILD}
 
 link:
 	${FORT} ${FFLAGS} $(addprefix ${OBJ_DIR}/, ${OBJS}) ${OBJ_DIR}/eval_deriv_tapenade_1_forward.o -o ../eval_deriv_tapenade_1_forward -J${MOD_DIR} $(addprefix -, ${F90_LIBS})
-	${FORT} ${FFLAGS} $(addprefix ${OBJ_DIR}/, ${OBJS}) ${OBJ_DIR}/eval_deriv_tapenade_1_reverse.o -o ../eval_deriv_tapenade_1_forward -J${MOD_DIR} $(addprefix -, ${F90_LIBS})
+	${FORT} ${FFLAGS} $(addprefix ${OBJ_DIR}/, ${OBJS}) ${OBJ_DIR}/eval_deriv_tapenade_1_reverse.o -o ../eval_deriv_tapenade_1_reverse -J${MOD_DIR} $(addprefix -, ${F90_LIBS})
 
 cdir: 
 	mkdir -p ${OBJ_DIR}

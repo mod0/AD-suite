@@ -1,188 +1,123 @@
 program runspe10
-use fvm_b
-use grid_b
-use fluid_b
-use matrix_b
+use parameters_b
 use gnufor2
-use head_b
 use utils
+use matrix_b
+use finitevolume_b
+use simulation_b
+use netcdf
 
 implicit none
 
 integer :: i, j, k
-integer :: solver_inner, solver_outer
-integer, dimension(3) :: solver_inner_values
-integer, dimension(1) :: solver_outer_values
-double precision :: start_time, end_time
-double precision :: ir, Mw, Mo, Mt, mu, mub, sigma, sigmab, totaloil, &
-                    totaloilb, dummyTotalOil
-double precision, dimension((ND/St) + 1) :: Tt
-double precision, dimension(N_) :: S
+
+! input/intermediate variables
+double precision :: mu, sigma
 double precision, dimension(N_) :: Q
-double precision, dimension(2, (ND/St) + 1) :: Pc
-double precision, dimension(2, (ND/St) + 1) :: Pcb
+double precision, dimension(N_) :: S
 double precision, dimension(Nx_, Ny_, Nz_) :: P
 double precision, dimension(3, Nx_ + 1, Ny_ + 1, Nz_ + 1) :: V
 
-character(len = 30) :: filename
+! output variables
+double precision :: totaloil
+double precision, dimension((ND/St) + 1) :: Tt
+double precision, dimension(2, (ND/St) + 1) :: Pc
 
-solver_inner_values = (/64, 128, 256/)
-solver_outer_values = (/ 1000000 /)
+! netCDF variables
+integer :: ncid                                                  ! file handle
+integer :: dim_time_id                                           ! time dimension id
+integer :: var_time_id                                           ! time variable id
+integer, parameter :: dim_time_len = (ND/St) + 1                 ! time dimension length
+character(len = *), parameter :: dim_time_name = "Time"          ! time dimension name
+integer :: dim_mobility_id                                       ! mobility dimension id
+integer :: var_mobility_id                                       ! mobility variable id
+integer, parameter :: dim_mobility_len = 2                       ! mobility dimension length
+character(len = *), parameter :: dim_mobility_name = "Mobility"  ! mobility dimension name
+integer, dimension(2) :: dimids                                  ! id of dimensions
+integer :: var_oil_id                                            ! oil variable id
+character(len = *), parameter :: var_oil_name = "Oil"            ! oil variable name
 
-! Now read the permeabilities and porosities
-call read_permeability_and_porosity(PERM, POR)
+! initialize simulation output
+Tt = 0.0d0               ! simulation time
+Pc = 0.0d0               ! production data
+totaloil = 0.0d0         ! total oil
 
-! compute ir
-ir = (795.0 * Nx_ * Ny_ * Nz_) / (maxNx * maxNy * maxNz)
+call initialize_scenario(1, mu, sigma, Q, S, P, V)
+call wrapper(mu, sigma, Q, S, P, V, Tt, Pc, totaloil)
+ 
+! Start writing netCDF file having all the computed values
+! Open file
+call iserror(nf90_create(results_eval_deriv_tapenade_1_rev, nf90_clobber, ncid))
 
-!Q(1:N_:Nx_*Ny_) = ir
-!Q(Nx_*Ny_:N_:Nx_*Ny_) = -ir
-!Q(1) = ir
-!Q(N_) = -ir
-k = 1
-do i = 1,3
-  do j = 1,1
-    if (solver_inner_values(i) <= N_) then
-      ! initialize memory for P and V
-      P = 0.0d0
+! Define time dimensions
+call iserror(nf90_def_dim(ncid, dim_time_name, dim_time_len, dim_time_id))
+! Define mobility dimensions
+call iserror(nf90_def_dim(ncid, dim_mobility_name, dim_mobility_len, dim_mobility_id))
 
-      ! note that V vector has an additional
-      ! length in each dimension x,y,z
-      V = 0.0d0
+! Define the time variables. Varid is returned.
+call iserror(nf90_def_var(ncid, dim_time_name, NF90_DOUBLE, dim_time_id, var_time_id))
 
-      Tt = 0.0d0               ! simulation time
-      Pc = 0.0d0               ! production data
+! Define the netCDF variables. The dimids array is used to pass the
+! dimids of the dimensions of the netCDF variables.
+dimids = (/ dim_mobility_id, dim_time_id /)
+call iserror(nf90_def_var(ncid, dim_mobility_name, NF90_DOUBLE, dimids, var_mobility_id))
 
-      ! initialize memory for inflow and saturation
-      Q = 0.0d0
-      S = 0.0d0
+! Define scalar oil output
+call iserror(nf90_def_var(ncid, var_oil_name, NF90_DOUBLE, var_oil_id))
 
-      ! initialize mu
-      mu = 0.0d0
-      sigma = 1.0d0
-      !
+! End define mode.
+call iserror(nf90_enddef(ncid))
 
-      solver_inner = solver_inner_values(i)
-      solver_outer = solver_outer_values(j)
+! Write the time data. 
+call iserror(nf90_put_var(ncid, var_time_id, Tt))
 
-      write (*,*) "Function Evaluation: Inner: ", solver_inner, "Outer: ", solver_outer
+! Write the data. This will write our mobility and oil data.
+! The arrays of data are the same size as
+! the netCDF variables we have defined.
+call iserror(nf90_put_var(ncid, var_mobility_id, Pc))
+call iserror(nf90_put_var(ncid, var_oil_id, totaloil))
 
-      !
-      call cpu_time(start_time)
-      call wrapper(ir, mu, sigma, Q, S, P, V, St, Pt, Tt, ND, Mw, Mo, Mt,&
-                   Pc, totaloil, solver_inner, solver_outer, verbose = .true.)
-      call cpu_time(end_time)
-      ! ---------------------------------------------------------------------------
-      ! Call GNUPLOT through the interface module.
-      ! Uncomment these plot calls after verifying you have GNUPlot installed.
-      ! ---------------------------------------------------------------------------
-      ! Plot the final solution for the forward trajectory
-      call plot(Tt, Pc(1,:), Tt, Pc(2,:), terminal='png', filename='WaterOilProductionCurves.png')
-
-      write (*,*) "Total oil is ", totaloil
-      
-      write(filename, '(A17, I1)') "Pc1_solver_tuning", k
-      ! Set filename to collect results.
-      open(unit = 1, file = filename, &
-            form = 'unformatted', access = 'stream')
-      write(unit=1) Pc(1, :)
-      close(unit=1)
-
-      write(filename, '(A17, I1)') "Pc2_solver_tuning", k
-      ! Set filename to collect results.
-      open(unit = 1, file = filename, &
-            form = 'unformatted', access = 'stream')
-      write(unit=1) Pc(2, :)
-      close(unit=1)
-
-      write (*,*)  "End of function evaluation. Elapsed time is", (end_time - start_time)
-     
-      k = k + 1
-    endif
-  enddo
-enddo
-
-
-k = 1
-do i = 1,3
-  do j = 1,1
-    if (solver_inner_values(i) <= N_) then
-      ! initialize memory for P and V
-      P = 0.0d0
-
-      ! note that V vector has an additional
-      ! length in each dimension x,y,z
-      V = 0.0d0
-
-      Tt = 0.0d0               ! simulation time
-      Pc = 0.0d0               ! production data
-
-      ! initialize memory for inflow and saturation
-      Q = 0.0d0
-      S = 0.0d0
-
-      ! Set mu and sigma
-      mu = 0.0
-      sigma = 1.0
-      
-      Pcb = 0.0d0
-      mub = 0.0d0
-      sigmab = 0.0d0
-      
-      ! Set the adjoint direction
-      totaloilb = 1.0d0
-      
-      solver_inner = solver_inner_values(i)
-      solver_outer = solver_outer_values(j)
-      
-      write (*,*) "Derivative Evaluation: Inner: ", solver_inner, "Outer: ", solver_outer
-
-      call cpu_time(start_time)
-      
-      call wrapper_b(ir, mu, mub, sigma, sigmab, Q, S, P, V, St, Pt, &
-&         Tt, ND, Mw, Mo, Mt, Pc, Pcb, dummyTotalOil, totaloilb, &
-&         solver_inner, solver_outer, verbose = .true.)
-      
-      call cpu_time(end_time)
-      
-      write (*,*) "Total oil (computed in adjoint mode) is ", dummyTotalOil
-      write (*,*) "Directional derivative of total oil in mu direction is ", mub
-      write (*,*) "Directional derivative of total oil in sigma direction is ", sigmab
-
-      ! Set filename to collect results.
-      write(filename, '(A7, I1)') "Pc1_adj", k
-      open(unit = 1, file = filename, &
-            form = 'unformatted', access = 'stream')
-      write(unit=1) Pc(1, :)
-      close(unit=1)
-
-      ! Set filename to collect results.
-      write(filename, '(A7, I1)') "Pc2_adj", k
-      open(unit = 1, file = filename, &
-            form = 'unformatted', access = 'stream')
-      write(unit=1) Pc(2, :)
-      close(unit=1)
-
-      ! Set filename to collect results.
-      write(filename, '(A8, I1)') "Pcb1_adj", k
-      open(unit = 1, file = filename, &
-            form = 'unformatted', access = 'stream')
-      write(unit=1) Pcb(1, :)
-      close(unit=1)
-
-      ! Set filename to collect results.
-      write(filename, '(A8, I1)') "Pcb2_adj", k
-      open(unit = 1, file = filename, &
-            form = 'unformatted', access = 'stream')
-      write(unit=1) Pcb(2, :)
-      close(unit=1)
-      
-      write (*,*)  "End of derivative evaluation. Elapsed time is", (end_time - start_time)
-     
-      k = k + 1
-    endif
-  enddo
-enddo
+! Close the file.
+call iserror(nf90_close(ncid))
 
 return
+contains
+
+subroutine initialize_scenario(scenario_no, mu, sigma, Q, S, P, V)
+  integer :: scenario_no
+  double precision :: mu, sigma
+  double precision, dimension(N_) :: Q
+  double precision, dimension(N_) :: S
+  double precision, dimension(Nx_, Ny_, Nz_) :: P
+  double precision, dimension(3, Nx_ + 1, Ny_ + 1, Nz_ + 1) :: V
+
+  ! initialize mu
+  mu = 0.0d0
+  sigma = 1.0d0
+
+  ! initialize memory for inflow and saturation
+  Q = 0.0d0
+  S = 0.0d0
+
+  ! initialize memory for P and V
+  P = 0.0d0
+
+  ! note that V vector has an additional
+  ! length in each dimension x,y,z
+  V = 0.0d0
+  
+  ! Now read the permeabilities and porosities which are global
+  call read_permeability_and_porosity(PERM, POR)
+end subroutine
+
+! netCDF Error Check Routine
+subroutine iserror(status)
+  integer, intent ( in) :: status
+
+  if(status /= nf90_noerr) then 
+     print *, trim(nf90_strerror(status))
+     stop "Error encountered. Stopped."
+  end if
+end subroutine iserror
+
 end program runspe10

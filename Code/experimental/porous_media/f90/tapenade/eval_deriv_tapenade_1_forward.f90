@@ -1,203 +1,123 @@
 program runspe10
-use utils
+use parameters_d
 use gnufor2
-use fvm_d
-use grid_d
-use fluid_d
+use utils
 use matrix_d
-use head_d
-
+use finitevolume_d
+use simulation_d
+use netcdf
 
 implicit none
 
 integer :: i, j, k
-integer :: solver_inner, solver_outer
-integer, dimension(3) :: solver_inner_values
-integer, dimension(1) :: solver_outer_values
-double precision :: start_time, end_time
-double precision :: ir, Mw, Mo, Mt, mu, mud, sigma, sigmad, totaloil, totaloild, dummyTotalOil
-double precision, dimension((ND/St) + 1) :: Tt
-double precision, dimension(N_) :: S
+
+! input/intermediate variables
+double precision :: mu, sigma
 double precision, dimension(N_) :: Q
-double precision, dimension(2, (ND/St) + 1) :: Pc
-double precision, dimension(2, (ND/St) + 1) :: Pcd
+double precision, dimension(N_) :: S
 double precision, dimension(Nx_, Ny_, Nz_) :: P
 double precision, dimension(3, Nx_ + 1, Ny_ + 1, Nz_ + 1) :: V
 
-integer :: eps_values_count
-parameter(eps_values_count = 20)
-double precision, dimension(eps_values_count) :: eps
-double precision, dimension(eps_values_count) :: totaloil_mu_perturbed
-double precision, dimension(eps_values_count) :: totaloil_sigma_perturbed
-double precision, dimension(eps_values_count) :: finite_difference
+! output variables
+double precision :: totaloil
+double precision, dimension((ND/St) + 1) :: Tt
+double precision, dimension(2, (ND/St) + 1) :: Pc
 
-character(len = 30) :: filename
-! setup step sizes for the experiment
-eps = &
-(/ 1.000000000000000e-09, 3.359818286283788e-09, &
-   1.128837891684688e-08, 3.792690190732253e-08, &
-   1.274274985703132e-07, 4.281332398719396e-07, &
-   1.438449888287663e-06, 4.832930238571752e-06, &
-   1.623776739188721e-05, 5.455594781168514e-05, &
-   1.832980710832438e-04, 6.158482110660266e-04, &
-   2.069138081114790e-03, 6.951927961775605e-03, &
-   2.335721469090121e-02, 7.847599703514607e-02, &
-   2.636650898730356e-01, 8.858667904100832e-01, &
-   2.976351441631313e+00, 1.000000000000000e+01/)
+! netCDF variables
+integer :: ncid                                                  ! file handle
+integer :: dim_time_id                                           ! time dimension id
+integer :: var_time_id                                           ! time variable id
+integer, parameter :: dim_time_len = (ND/St) + 1                 ! time dimension length
+character(len = *), parameter :: dim_time_name = "Time"          ! time dimension name
+integer :: dim_mobility_id                                       ! mobility dimension id
+integer :: var_mobility_id                                       ! mobility variable id
+integer, parameter :: dim_mobility_len = 2                       ! mobility dimension length
+character(len = *), parameter :: dim_mobility_name = "Mobility"  ! mobility dimension name
+integer, dimension(2) :: dimids                                  ! id of dimensions
+integer :: var_oil_id                                            ! oil variable id
+character(len = *), parameter :: var_oil_name = "Oil"            ! oil variable name
 
-solver_inner_values = (/32, 128, 256/)
-
-solver_outer_values = (/ 1000000 /)
-                       
-! Now read the permeabilities and porosities
-call read_permeability_and_porosity(PERM, POR)
-
-! compute ir
-ir = (795.0 * Nx_ * Ny_ * Nz_) / (maxNx * maxNy * maxNz)
-
-!Q(1:N_:Nx_*Ny_) = ir
-!Q(Nx_*Ny_:N_:Nx_*Ny_) = -ir
-!Q(1) = ir
-!Q(N_) = -ir
-! initialize memory for P and V
-P = 0.0d0
-
-! note that V vector has an additional
-! length in each dimension x,y,z
-V = 0.0d0
-
+! initialize simulation output
 Tt = 0.0d0               ! simulation time
 Pc = 0.0d0               ! production data
+totaloil = 0.0d0         ! total oil
 
-! initialize memory for inflow and saturation
-Q = 0.0d0
-S = 0.0d0
+call initialize_scenario(1, mu, sigma, Q, S, P, V)
+call wrapper(mu, sigma, Q, S, P, V, Tt, Pc, totaloil)
+ 
+! Start writing netCDF file having all the computed values
+! Open file
+call iserror(nf90_create(results_eval_deriv_tapenade_1_fwd, nf90_clobber, ncid))
 
-! initialize mu
-mu = 0.0d0
-sigma = 1.0d0
+! Define time dimensions
+call iserror(nf90_def_dim(ncid, dim_time_name, dim_time_len, dim_time_id))
+! Define mobility dimensions
+call iserror(nf90_def_dim(ncid, dim_mobility_name, dim_mobility_len, dim_mobility_id))
 
-solver_inner = solver_inner_values(1)  ! 32
-solver_outer = solver_outer_values(1)  ! 1000000
-!
-call cpu_time(start_time)
-call wrapper(ir, mu, sigma, Q, S, P, V, St, Pt, Tt, ND, Mw, Mo, Mt, &
-&            Pc, totaloil, solver_inner, solver_outer, verbose = .false.)
-call cpu_time(end_time)
-! ---------------------------------------------------------------------------
-! Call GNUPLOT through the interface module.
-! Uncomment these plot calls after verifying you have GNUPlot installed.
-! ---------------------------------------------------------------------------
-! Plot the final solution for the forward trajectory
-! call plot(Tt, Pc(1,:), Tt, Pc(2,:), terminal='png', filename='WaterOilProductionCurves.png')
+! Define the time variables. Varid is returned.
+call iserror(nf90_def_var(ncid, dim_time_name, NF90_DOUBLE, dim_time_id, var_time_id))
 
-write (*,*) "Total oil is ", totaloil, " and elapsed time is", (end_time - start_time)
+! Define the netCDF variables. The dimids array is used to pass the
+! dimids of the dimensions of the netCDF variables.
+dimids = (/ dim_mobility_id, dim_time_id /)
+call iserror(nf90_def_var(ncid, dim_mobility_name, NF90_DOUBLE, dimids, var_mobility_id))
 
+! Define scalar oil output
+call iserror(nf90_def_var(ncid, var_oil_name, NF90_DOUBLE, var_oil_id))
 
-write (*,*) "Computing the directional derivative with respect to mu using tangent linear model"
-! 
-! initialize memory for P and V
-P = 0.0d0
+! End define mode.
+call iserror(nf90_enddef(ncid))
 
-! note that V vector has an additional
-! length in each dimension x,y,z
-V = 0.0d0
+! Write the time data. 
+call iserror(nf90_put_var(ncid, var_time_id, Tt))
 
-Tt = 0.0d0               ! simulation time
-Pc = 0.0d0               ! production data
+! Write the data. This will write our mobility and oil data.
+! The arrays of data are the same size as
+! the netCDF variables we have defined.
+call iserror(nf90_put_var(ncid, var_mobility_id, Pc))
+call iserror(nf90_put_var(ncid, var_oil_id, totaloil))
 
-! initialize memory for inflow and saturation
-Q = 0.0d0
-S = 0.0d0
-
-! Perturb mu and get the total oil
-mud = 1.0
-sigmad = 0.0
-call wrapper_d(ir, mu, mud, sigma, sigmad, Q, S, P, V, St, Pt, &
- &   Tt, ND, Mw, Mo, Mt, Pc, Pcd, dummyTotalOil, totaloild, solver_inner, &
- &   solver_outer, verbose = .false.)
-
-write (*,*) "Total oil from tangent linear model (mu) is ", dummyTotalOil
-write (*,*) "Directional derivative of total oil in mu direction is ", totaloild
-
-! Set filename to collect results.
-open(unit = 1, file = 'Pc1_mu_tanglin', &
-       form = 'unformatted', access = 'stream')
-write(unit=1) Pc(1, :)
-close(unit=1)
-
-! Set filename to collect results.
-open(unit = 1, file = 'Pc2_mu_tanglin', &
-       form = 'unformatted', access = 'stream')
-write(unit=1) Pc(2, :)
-close(unit=1)
-
-! Set filename to collect results.
-open(unit = 1, file = 'Pcd1_mu_tanglin', &
-       form = 'unformatted', access = 'stream')
-write(unit=1) Pcd(1, :)
-close(unit=1)
-
-! Set filename to collect results.
-open(unit = 1, file = 'Pcd2_mu_tanglin', &
-       form = 'unformatted', access = 'stream')
-write(unit=1) Pcd(2, :)
-close(unit=1)
-
-write (*,*) "End of tangent linear evaluation in mu direction"
-
-
-write (*,*) "Computing the directional derivative with respect to sigma using tangent linear model"
-
-! initialize memory for P and V
-P = 0.0d0
-
-! note that V vector has an additional
-! length in each dimension x,y,z
-V = 0.0d0
-
-Tt = 0.0d0               ! simulation time
-Pc = 0.0d0               ! production data
-
-! initialize memory for inflow and saturation
-Q = 0.0d0
-S = 0.0d0
-
-! Perturb mu and get the total oil
-mud = 0.0
-sigmad = 1.0
-call wrapper_d(ir, mu, mud, sigma, sigmad, Q, S, P, V, St, Pt, &
-&   Tt, ND, Mw, Mo, Mt, Pc, Pcd, dummyTotalOil, totaloild, solver_inner, &
-&   solver_outer, verbose = .false.)
-
-write (*,*) "Total oil from tangent linear model (sigma) is ", dummyTotalOil
-write (*,*) "Directional derivative of total oil in sigma direction is ", totaloild
-
-! Set filename to collect results.
-open(unit = 1, file = 'Pc1_sigma_tanglin', &
-       form = 'unformatted', access = 'stream')
-write(unit=1) Pc(1, :)
-close(unit=1)
-
-! Set filename to collect results.
-open(unit = 1, file = 'Pc2_sigma_tanglin', &
-       form = 'unformatted', access = 'stream')
-write(unit=1) Pc(2, :)
-close(unit=1)
-
-! Set filename to collect results.
-open(unit = 1, file = 'Pcd1_sigma_tanglin', &
-       form = 'unformatted', access = 'stream')
-write(unit=1) Pcd(1, :)
-close(unit=1)
-
-! Set filename to collect results.
-open(unit = 1, file = 'Pcd2_sigma_tanglin', &
-       form = 'unformatted', access = 'stream')
-write(unit=1) Pcd(2, :)
-close(unit=1)
-
-write (*,*) "End of tangent linear evaluation in sigma direction"
+! Close the file.
+call iserror(nf90_close(ncid))
 
 return
+contains
+
+subroutine initialize_scenario(scenario_no, mu, sigma, Q, S, P, V)
+  integer :: scenario_no
+  double precision :: mu, sigma
+  double precision, dimension(N_) :: Q
+  double precision, dimension(N_) :: S
+  double precision, dimension(Nx_, Ny_, Nz_) :: P
+  double precision, dimension(3, Nx_ + 1, Ny_ + 1, Nz_ + 1) :: V
+
+  ! initialize mu
+  mu = 0.0d0
+  sigma = 1.0d0
+
+  ! initialize memory for inflow and saturation
+  Q = 0.0d0
+  S = 0.0d0
+
+  ! initialize memory for P and V
+  P = 0.0d0
+
+  ! note that V vector has an additional
+  ! length in each dimension x,y,z
+  V = 0.0d0
+  
+  ! Now read the permeabilities and porosities which are global
+  call read_permeability_and_porosity(PERM, POR)
+end subroutine
+
+! netCDF Error Check Routine
+subroutine iserror(status)
+  integer, intent ( in) :: status
+
+  if(status /= nf90_noerr) then 
+     print *, trim(nf90_strerror(status))
+     stop "Error encountered. Stopped."
+  end if
+end subroutine iserror
+
 end program runspe10

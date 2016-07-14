@@ -37,6 +37,10 @@ module parameters
   character(*), parameter :: permeability_file = data_directory//"KUr.txt"
   character(*), parameter :: results_eval_original_code = &
        results_directory//"results_eval_original_code.nc"
+  character(*), parameter :: results_eval_deriv_tapenade_1_fwd = &
+       results_directory//"results_eval_deriv_tapenade_1_forward.nc"
+  character(*), parameter :: results_eval_deriv_tapenade_1_rev = &
+       results_directory//"results_eval_deriv_tapenade_1_reverse.nc"
 
   ! PARAMETERS READ FROM FILE
   ! porosity and permeability parameters
