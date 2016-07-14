@@ -162,9 +162,9 @@ subroutine simulate_reservoir(Q, S, P, V, Tt, Pc, oil)
             k = k + 1
             
             if (j == 1) then
-              call stepforward(.true., Q, S, P, V, Mw, Mo)
+              call stepforward(1, Q, S, P, V, Mw, Mo)
             else
-              call stepforward(.false., Q, S, P, V, Mw, Mo)            
+              call stepforward(0, Q, S, P, V, Mw, Mo)            
             endif
 
             
@@ -183,14 +183,14 @@ subroutine simulate_reservoir(Q, S, P, V, Tt, Pc, oil)
 end subroutine simulate_reservoir
 
 subroutine stepforward(pressure_step, Q, S, P, V, Mw, Mo)
-  logical :: pressure_step
+  integer :: pressure_step
   double precision, dimension(N_) :: Q
   double precision, dimension(N_) :: S
   double precision, dimension(Nx_, Ny_, Nz_) :: P
   double precision, dimension(3, Nx_ + 1, Ny_ + 1, Nz_ + 1) :: V
   double precision :: Mw, Mo
   
-  if (pressure_step .eqv. .true.) then
+  if (pressure_step == 1) then
     ! solve pressure
     call Pres(Q, S, P, V)    ! Pressure solver
   endif
