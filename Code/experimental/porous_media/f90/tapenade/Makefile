@@ -50,5 +50,5 @@ src:
 
 clean:
 	make -C ${APP_SRC_DIR} clean
-	rm -f ../eval_deriv_tapenade_1_forward.o
-	rm -f ../eval_deriv_tapenade_1_reverse.o
+	rm -f ../eval_deriv_tapenade_1_forward
+	rm -f ../eval_deriv_tapenade_1_reverse
