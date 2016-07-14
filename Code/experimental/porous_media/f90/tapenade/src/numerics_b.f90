@@ -3,14 +3,16 @@
 !
 MODULE PARAMETERS_B
   IMPLICIT NONE
+! Number of outer iterations
 ! FIXED PARAMETERS
 ! grid parameters 
-  INTEGER :: nx_, ny_, nz_, n_
+  INTEGER :: nx_, ny_, nz_, n_, scenario_id
   DOUBLE PRECISION :: hx_, hy_, hz_, v_, ir
   INTEGER :: maxnx, maxny, maxnz
-  PARAMETER (maxnx=60, maxny=220, maxnz=85, nx_=10, ny_=10, nz_=2, hx_=&
-&   20.0d0*0.3048d0, hy_=10.0d0*0.3048d0, hz_=2.0d0*0.3048d0, n_=nx_*ny_&
-&   *nz_, v_=hx_*hy_*hz_, ir=795.0*nx_*ny_*nz_/(maxnx*maxny*maxnz))
+  PARAMETER (maxnx=60, maxny=220, maxnz=85)
+  PARAMETER (scenario_id=1, nx_=10, ny_=10, nz_=2, hx_=20.0d0*0.3048d0, &
+& hy_=10.0d0*0.3048d0, hz_=2.0d0*0.3048d0, n_=nx_*ny_*nz_, v_=hx_*hy_*&
+&   hz_, ir=795.0*nx_*ny_*nz_/(maxnx*maxny*maxnz))
 ! Dimension in x-direction
 ! Dimension in y-direction
 ! Dimension in z-direction
@@ -34,11 +36,13 @@ MODULE PARAMETERS_B
 ! Pressure time step
 ! Number of days in simulation
 ! filenames
-  CHARACTER(len=*), PARAMETER :: data_directory='../../data/'
-  CHARACTER(len=*), PARAMETER :: porosity_file=data_directory//&
-&   '/shared/pUr.txt'
+  CHARACTER(len=*), PARAMETER :: data_directory='../data/data_1/'
+  CHARACTER(len=*), PARAMETER :: results_directory='results/'
+  CHARACTER(len=*), PARAMETER :: porosity_file=data_directory//'pUr.txt'
   CHARACTER(len=*), PARAMETER :: permeability_file=data_directory//&
-&   '/shared/KUr.txt'
+&   'KUr.txt'
+  CHARACTER(len=*), PARAMETER :: results_eval_original_code=&
+&   results_directory//'results_eval_original_code.nc'
 ! PARAMETERS READ FROM FILE
 ! porosity and permeability parameters
 ! Porosities
@@ -49,6 +53,9 @@ MODULE PARAMETERS_B
 ! linear solver parameters
   LOGICAL :: verbose
   INTEGER :: solver_inner, solver_outer
+  PARAMETER (verbose=.false., solver_inner=64, solver_outer=100000)
+! Verbose solver output
+! Number of inner iterations
 END MODULE PARAMETERS_B
 
 MODULE MATHUTIL_B
@@ -213,7 +220,7 @@ CONTAINS
     END DO
  100 CONTINUE
   END SUBROUTINE ADDX_ELEM
-!  Differentiation of addx_diagonal in reverse (adjoint) mode:
+!  Differentiation of addx_diagonal in reverse (adjoint) mode (with options noISIZE):
 !   gradient     of useful results: ivalues
 !   with respect to varying inputs: ivalues
 !
@@ -341,7 +348,7 @@ CONTAINS
       END DO
     END DO
   END SUBROUTINE MYRESHAPE_1_2
-!  Differentiation of myreshape_3_1 in reverse (adjoint) mode:
+!  Differentiation of myreshape_3_1 in reverse (adjoint) mode (with options noISIZE):
 !   gradient     of useful results: bmatrix
 !   with respect to varying inputs: bmatrix amatrix
 !
@@ -402,7 +409,7 @@ CONTAINS
       END DO
     END DO
   END SUBROUTINE MYRESHAPE_3_1
-!  Differentiation of myreshape_1_3 in reverse (adjoint) mode:
+!  Differentiation of myreshape_1_3 in reverse (adjoint) mode (with options noISIZE):
 !   gradient     of useful results: bmatrix
 !   with respect to varying inputs: bmatrix amatrix
 !
@@ -485,7 +492,7 @@ CONTAINS
       END DO
     END DO
   END SUBROUTINE MYRESHAPE_4_1
-!  Differentiation of myreshape_1_4 in reverse (adjoint) mode:
+!  Differentiation of myreshape_1_4 in reverse (adjoint) mode (with options noISIZE):
 !   gradient     of useful results: bmatrix
 !   with respect to varying inputs: amatrix
 !
@@ -556,7 +563,7 @@ CONTAINS
       END DO
     END DO
   END SUBROUTINE MYRESHAPE_1_4
-!  Differentiation of spmat_multiply_diagonal in reverse (adjoint) mode:
+!  Differentiation of spmat_multiply_diagonal in reverse (adjoint) mode (with options noISIZE):
 !   gradient     of useful results: avalues rvalues
 !   with respect to varying inputs: avalues dmatrix rvalues
 !
@@ -640,7 +647,7 @@ CONTAINS
       END DO
     END IF
   END SUBROUTINE SPMAT_MULTIPLY_DIAGONAL
-!  Differentiation of spmat_multiply_vector in reverse (adjoint) mode:
+!  Differentiation of spmat_multiply_vector in reverse (adjoint) mode (with options noISIZE):
 !   gradient     of useful results: avalues cvector
 !   with respect to varying inputs: bvector avalues
 !
@@ -750,7 +757,7 @@ CONTAINS
       scalarout = scalarin2
     END IF
   END SUBROUTINE MYMIN_0_0_DOUBLE
-!  Differentiation of mymin_1_0_double in reverse (adjoint) mode:
+!  Differentiation of mymin_1_0_double in reverse (adjoint) mode (with options noISIZE):
 !   gradient     of useful results: vectorout vectorin
 !   with respect to varying inputs: vectorin
   SUBROUTINE MYMIN_1_0_DOUBLE_B(vectorin, vectorinb, scalarin, vectorout&
@@ -817,7 +824,7 @@ CONTAINS
       scalarout = scalarin2
     END IF
   END SUBROUTINE MYMAX_0_0_DOUBLE
-!  Differentiation of mymax_1_0_double in reverse (adjoint) mode:
+!  Differentiation of mymax_1_0_double in reverse (adjoint) mode (with options noISIZE):
 !   gradient     of useful results: vectorout vectorin
 !   with respect to varying inputs: vectorout vectorin
   SUBROUTINE MYMAX_1_0_DOUBLE_B(vectorin, vectorinb, scalarin, vectorout&
@@ -882,31 +889,6 @@ MODULE LINSOLVE_B
   USE MATHUTIL_B
   USE MATRIX_B
   IMPLICIT NONE
-! !%>LINSOLVE
-! !
-! ! A method to test OpenAD without solver
-! !
-! subroutine sparse_dummy_method(n, annz, alen, arow_index, arow_compressed, &
-!                                acol_index, avalues, b, x, solver_inner, solver_outer, verbose)
-!   integer :: i
-!   logical :: verbose
-!   integer :: solver_inner, solver_outer
-!   double precision :: sum
-!   integer :: n, annz, alen
-!   integer, dimension(alen) :: arow_index
-!   integer, dimension(alen) :: acol_index
-!   double precision, dimension(alen) :: avalues
-!   integer, dimension(n + 1) :: arow_compressed
-!   double precision, dimension(n) :: b
-!   double precision, dimension(n) :: x
-!   x = 0.0d0
-!   sum = 0.0d0
-!   do i = 1, annz
-!       sum = sum + avalues(i)
-!   end do
-!   x = b/sum
-! end subroutine sparse_dummy_method
-! !%<LINSOLVE
 ! export solve
   PUBLIC solve
   PUBLIC solve_b
@@ -920,9 +902,9 @@ MODULE LINSOLVE_B
 
 
 CONTAINS
-!  Differentiation of sparse_solve in reverse (adjoint) mode:
+!  Differentiation of sparse_solve in reverse (adjoint) mode (with options noISIZE):
 !   gradient     of useful results: avalues x b
-!   with respect to varying inputs: avalues x b
+!   with respect to varying inputs: avalues b
 !
 ! Calls a specific solver - here the jacobi method
 !
@@ -941,11 +923,7 @@ CONTAINS
     DOUBLE PRECISION, DIMENSION(n_) :: bb
     DOUBLE PRECISION, DIMENSION(n_) :: x
     DOUBLE PRECISION, DIMENSION(n_) :: xb
-    EXTERNAL SPARSE_DUMMY_METHOD
-    EXTERNAL SPARSE_DUMMY_METHOD_B
-    INTEGER :: arg1
-    arg1 = 7*n_
-    CALL SPARSE_DUMMY_METHOD_B(n_, annz, arg1, arow_index, &
+    call sparse_pmgmres_method_b(matdim, annz, maxlen, arow_index, &
 &                        arow_compressed, acol_index, avalues, avaluesb&
 &                        , b, bb, x, xb, solver_inner, solver_outer, &
 &                        verbose)
@@ -965,13 +943,156 @@ CONTAINS
     INTEGER, DIMENSION(n_ + 1) :: arow_compressed
     DOUBLE PRECISION, DIMENSION(n_) :: b
     DOUBLE PRECISION, DIMENSION(n_) :: x
-    EXTERNAL SPARSE_DUMMY_METHOD
-    INTEGER :: arg1
-    arg1 = 7*n_
-    CALL SPARSE_DUMMY_METHOD(n_, annz, arg1, arow_index, arow_compressed&
-&                      , acol_index, avalues, b, x, solver_inner, &
-&                      solver_outer, verbose)
+    call sparse_pmgmres_method(matdim, annz, maxlen, arow_index, &
+&                      arow_compressed, acol_index, avalues, b, x, &
+&                      solver_inner, solver_outer, verbose)
   END SUBROUTINE SPARSE_SOLVE
+!  Differentiation of sparse_dummy_method in reverse (adjoint) mode (with options noISIZE):
+!   gradient     of useful results: avalues x b
+!   with respect to varying inputs: avalues b
+!
+! A wrapper for pmgmres_ilu_cr
+!
+SUBROUTINE SPARSE_PMGMRES_METHOD_B(n, annz, alen, arow_index,   &
+                                  &   arow_compressed, acol_index, avalues,&
+                                  &   avaluesb, b, bb, x, xb,              &
+                                  &   solver_inner, solver_outer, verbose)
+                                  
+  USE MGMRES
+  USE MATHUTIL_B
+  USE UTILS
+  IMPLICIT NONE
+  INTEGER :: i, curr_nnz, curr_row
+  INTEGER :: itr_max, mr
+  LOGICAL :: verbose
+  INTEGER :: solver_inner, solver_outer
+  DOUBLE PRECISION :: tol_abs, tol_rel, nrm
+  INTEGER :: n, annz, alen
+  INTEGER, DIMENSION(alen) :: arow_index
+  INTEGER, DIMENSION(alen) :: acol_index
+  DOUBLE PRECISION, DIMENSION(alen) :: avalues
+  DOUBLE PRECISION, DIMENSION(alen) :: avaluesb
+  INTEGER, DIMENSION(n + 1) :: arow_compressed
+  DOUBLE PRECISION, DIMENSION(n) :: b
+  DOUBLE PRECISION, DIMENSION(n) :: bb
+  DOUBLE PRECISION, DIMENSION(n) :: x
+  DOUBLE PRECISION, DIMENSION(n) :: xb
+
+  DOUBLE PRECISION, DIMENSION(n) :: incrbb
+  
+  INTEGER, DIMENSION(alen) :: arow_index_transposed
+  INTEGER, DIMENSION(alen) :: acol_index_transposed
+  DOUBLE PRECISION, DIMENSION(alen) :: avalues_transposed
+  INTEGER, DIMENSION(n + 1) :: arow_compressed_transposed
+  
+  INTEGER, DIMENSION(2,annz)  :: column_index_key_value 
+  
+  tol_abs = 1.0d-8
+  tol_rel = 1.0d-8
+  itr_max = solver_outer
+  mr = solver_inner
+ 
+  ! Transpose the matrix A
+  ! First get the columns and its indices
+  DO i = 1,annz
+    column_index_key_value(1, i) = acol_index(i)        ! key
+    column_index_key_value(2, i) = i                    ! value
+  ENDDO
+  
+  ! Sort the indices based on the column indices
+  CALL SORT(column_index_key_value, annz)
+  
+  ! Now use the transposed entries to create A^T compressed row
+  DO i = 1,annz
+    arow_index_transposed(i) = acol_index(column_index_key_value(2, i))
+    acol_index_transposed(i) = arow_index(column_index_key_value(2, i))
+    avalues_transposed(i) = avalues(column_index_key_value(2, i))
+  ENDDO
+       
+  ! Now create row compressed for A^T
+  i = 1
+  curr_nnz = 0
+  curr_row = 1
+  arow_compressed_transposed(:) = 0
+  arow_compressed_transposed(1) = 1
+
+  DO WHILE (i <= annz .and. curr_row <= n) 
+    IF(arow_index_transposed(i) == curr_row) THEN
+      curr_nnz = curr_nnz + 1
+      i = i + 1
+    ELSE
+      curr_row = curr_row + 1
+      arow_compressed_transposed(curr_row) = &
+                    arow_compressed_transposed(curr_row - 1) + curr_nnz
+      curr_nnz = 0  
+    ENDIF
+  ENDDO
+  
+  IF(curr_row == n) THEN 
+    curr_row = curr_row + 1
+    arow_compressed_transposed(curr_row) = &
+          arow_compressed_transposed(curr_row - 1) + curr_nnz
+  ELSEIF(curr_row < n .or. i <= annz) THEN
+    stop "The matrix is singular"
+  ENDIF
+  
+  call dnrm2(xb,n, nrm)
+  incrbb = 0.0d0
+  if(nrm /= 0.0d0) then
+    CALL PMGMRES_ILU_CR (n, annz, arow_compressed_transposed, &
+                        acol_index_transposed, avalues_transposed, &
+                        incrbb, xb, itr_max, mr, tol_abs, tol_rel, verbose)
+    bb = bb + incrbb
+  endif
+    
+  CALL DNRM2(b, n, nrm)
+  x = 0.0d0
+  IF(nrm /= 0.0d0) THEN  
+    CALL PMGMRES_ILU_CR (n, annz, arow_compressed, acol_index, avalues, &
+                x, b, itr_max, mr, tol_abs, tol_rel, verbose)
+  ENDIF
+  
+  DO i = 1,annz
+    avaluesb(i) = avaluesb(i) - x(acol_index(i)) * incrbb(arow_index(i))
+  ENDDO
+  
+  xb = 0.0d0
+
+  RETURN
+!
+! A wrapper for pmgmres_ilu_cr
+!
+SUBROUTINE SPARSE_PMGMRES_METHOD(n, annz, alen, arow_index, arow_compressed, &
+                                  acol_index, avalues, b, x, solver_inner, &
+                                  solver_outer, verbose)
+    USE MGMRES
+    use mathutil_b
+    IMPLICIT NONE
+    INTEGER :: itr_max, mr
+    LOGICAL :: verbose
+    INTEGER :: solver_inner, solver_outer
+    DOUBLE PRECISION :: tol_abs, tol_rel, nrm
+    INTEGER :: n,  annz, alen
+    INTEGER, DIMENSION(alen) :: arow_index
+    INTEGER, DIMENSION(alen) :: acol_index
+    DOUBLE PRECISION, DIMENSION(alen) :: avalues
+    INTEGER, DIMENSION(n + 1) :: arow_compressed
+    DOUBLE PRECISION, DIMENSION(n) :: b
+    DOUBLE PRECISION, DIMENSION(n) :: x
+
+    tol_abs = 1.0d-8
+    tol_rel = 1.0d-8
+    itr_max = solver_outer
+    mr = solver_inner
+    
+    CALL DNRM2(b, n, nrm)
+    x = 0.0d0   
+    IF(nrm /= 0.0d0) THEN
+       CALL PMGMRES_ILU_CR (n, annz, arow_compressed, acol_index, avalues, &
+                  x, b, itr_max, mr, tol_abs, tol_rel, verbose)
+    ENDIF
+    RETURN
+END SUBROUTINE SPARSE_PMGMRES_METHOD
 END MODULE LINSOLVE_B
 
 MODULE FINITEVOLUME_B
@@ -992,7 +1113,7 @@ MODULE FINITEVOLUME_B
 
 
 CONTAINS
-!  Differentiation of newtraph in reverse (adjoint) mode:
+!  Differentiation of newtraph in reverse (adjoint) mode (with options noISIZE):
 !   gradient     of useful results: q s v
 !   with respect to varying inputs: q s v
 !
@@ -1107,9 +1228,6 @@ CONTAINS
           df = dmw/(mw+mo) - mw/(mw+mo)**2*(dmw+dmo)
 ! Matrix-diagonal matrix product
           CALL PUSHREAL8ARRAY(dgvalues, 1400)
-          CALL PUSHINTEGER4ARRAY(dgcol_index, 1400)
-          CALL PUSHINTEGER4ARRAY(dgrow_compressed, 201)
-          CALL PUSHINTEGER4ARRAY(dgrow_index, 1400)
           CALL PUSHINTEGER4(dgnnz)
           CALL SPMAT_MULTIPLY_DIAGONAL(bnnz, brow_index, brow_compressed&
 &                                , bcol_index, bvalues, df, dgnnz, &
@@ -1123,7 +1241,6 @@ CONTAINS
 &                              bcol_index, bvalues, fw, bfw, 'PRE')
           CALL PUSHREAL8ARRAY(g, 200)
           g = s - s_iter_copy - bfw - fi
-          CALL PUSHREAL8ARRAY(ds, 200)
           CALL SOLVE(dgnnz, dgrow_index, dgrow_compressed, dgcol_index, &
 &              dgvalues, g, ds)
           CALL PUSHREAL8ARRAY(s, 200)
@@ -1156,7 +1273,6 @@ CONTAINS
       ad_count1 = ad_count1 + 1
     END DO
     avaluesb = 0.D0
-    dsb = 0.D0
     s_copyb = 0.D0
     dgvaluesb = 0.D0
     fib = 0.D0
@@ -1177,9 +1293,9 @@ CONTAINS
         s_iter_copyb = 0.D0
         CALL POPINTEGER4(ad_count)
         DO i0=1,ad_count
+          dsb = 0.D0
           CALL POPREAL8ARRAY(s, 200)
-          dsb = dsb + sb
-          CALL POPREAL8ARRAY(ds, 200)
+          dsb = sb
           gb = 0.D0
           CALL SOLVE_B(dgnnz, dgrow_index, dgrow_compressed, dgcol_index&
 &                , dgvalues, dgvaluesb, g, gb, ds, dsb)
@@ -1201,9 +1317,6 @@ CONTAINS
 &                        dgcol_index, dgvalues, dgvaluesb, -1.0d0, 0)
           df = dmw/(mw+mo) - mw/(mw+mo)**2*(dmw+dmo)
           CALL POPINTEGER4(dgnnz)
-          CALL POPINTEGER4ARRAY(dgrow_index, 1400)
-          CALL POPINTEGER4ARRAY(dgrow_compressed, 201)
-          CALL POPINTEGER4ARRAY(dgcol_index, 1400)
           CALL POPREAL8ARRAY(dgvalues, 1400)
           CALL SPMAT_MULTIPLY_DIAGONAL_B(bnnz, brow_index, &
 &                                  brow_compressed, bcol_index, bvalues&
@@ -1342,7 +1455,7 @@ CONTAINS
       END IF
     END DO
   END SUBROUTINE NEWTRAPH
-!  Differentiation of pres in reverse (adjoint) mode:
+!  Differentiation of pres in reverse (adjoint) mode (with options noISIZE):
 !   gradient     of useful results: p q s v
 !   with respect to varying inputs: p q s v
 !
@@ -1419,7 +1532,7 @@ CONTAINS
     km = km*perm
     CALL TPFA(km, q, p, v)
   END SUBROUTINE PRES
-!  Differentiation of relperm_vector in reverse (adjoint) mode:
+!  Differentiation of relperm_vector in reverse (adjoint) mode (with options noISIZE):
 !   gradient     of useful results: s dmo mo dmw mw
 !   with respect to varying inputs: s dmo dmw
 !
@@ -1475,7 +1588,7 @@ CONTAINS
       dmo = -(2*(1-s_temp)/vo_/(1-swc_-sor_))
     END IF
   END SUBROUTINE RELPERM_VECTOR
-!  Differentiation of relperm_scalar in reverse (adjoint) mode:
+!  Differentiation of relperm_scalar in reverse (adjoint) mode (with options noISIZE):
 !   gradient     of useful results: s mo mw
 !   with respect to varying inputs: s
 !
@@ -1509,7 +1622,7 @@ CONTAINS
       dmo = -(2*(1-s_temp)/vo_/(1-swc_-sor_))
     END IF
   END SUBROUTINE RELPERM_SCALAR
-!  Differentiation of gena in reverse (adjoint) mode:
+!  Differentiation of gena in reverse (adjoint) mode (with options noISIZE):
 !   gradient     of useful results: avalues q v
 !   with respect to varying inputs: q v
 !
@@ -1721,7 +1834,7 @@ CONTAINS
     CALL SPDIAGS_FVM_CSR(diags, annz, arow_index, arow_compressed, &
 &                  acol_index, avalues)
   END SUBROUTINE GENA
-!  Differentiation of tpfa in reverse (adjoint) mode:
+!  Differentiation of tpfa in reverse (adjoint) mode (with options noISIZE):
 !   gradient     of useful results: p q v
 !   with respect to varying inputs: k p q v
 !
@@ -1837,7 +1950,6 @@ CONTAINS
     END DO
 ! solve the linear system
 ! Pass the rows_index, cols_index, values separately.
-    CALL PUSHREAL8ARRAY(u, 200)
     CALL SOLVE(annz, arow_index, arow_compressed, acol_index, avalues, q&
 &        , u)
 ! reshape the solution
@@ -1869,7 +1981,6 @@ CONTAINS
     vb(1, 2:nx_, 1:ny_, 1:nz_) = 0.D0
     CALL POPREAL8ARRAY(p, 10**2*2)
     CALL MYRESHAPE_1_3_B(u, ub, p, pb)
-    CALL POPREAL8ARRAY(u, 200)
     avaluesb = 0.D0
     CALL SOLVE_B(annz, arow_index, arow_compressed, acol_index, avalues&
 &          , avaluesb, q, qb, u, ub)
@@ -2068,7 +2179,7 @@ CONTAINS
       END DO
     END DO
   END SUBROUTINE SPDIAGS_FVM
-!  Differentiation of spdiags_fvm_csr in reverse (adjoint) mode:
+!  Differentiation of spdiags_fvm_csr in reverse (adjoint) mode (with options noISIZE):
 !   gradient     of useful results: ovalues
 !   with respect to varying inputs: imatrix
 !
@@ -2272,7 +2383,7 @@ CONTAINS
     END DO
     CALL MYMAX_1_0_DOUBLE(pur(pindices), 1.0d-3, por)
   END SUBROUTINE READ_PERMEABILITY_AND_POROSITY
-!  Differentiation of wrapper in reverse (adjoint) mode:
+!  Differentiation of wrapper in reverse (adjoint) mode (with options noISIZE):
 !   gradient     of useful results: oil
 !   with respect to varying inputs: sigma oil mu
 !   RW status of diff variables: sigma:out oil:in-zero mu:out
@@ -2295,7 +2406,7 @@ CONTAINS
     CALL INIT_FLW_TRNC_NORM_XIN_PT_OUT_B(mu, mub, sigma, sigmab, q, qb)
     oilb = 0.D0
   END SUBROUTINE WRAPPER_B
-!  Differentiation of init_flw_trnc_norm_xin_pt_out in reverse (adjoint) mode:
+!  Differentiation of init_flw_trnc_norm_xin_pt_out in reverse (adjoint) mode (with options noISIZE):
 !   gradient     of useful results: q
 !   with respect to varying inputs: sigma mu
 !
@@ -2374,7 +2485,7 @@ CONTAINS
       sigmab = sigmab - EXP(temp0)*tempb/sigma - temp*tempb0
     END DO
   END SUBROUTINE INIT_FLW_TRNC_NORM_XIN_PT_OUT_B
-!  Differentiation of simulate_reservoir in reverse (adjoint) mode:
+!  Differentiation of simulate_reservoir in reverse (adjoint) mode (with options noISIZE):
 !   gradient     of useful results: oil
 !   with respect to varying inputs: q
 !
@@ -2475,7 +2586,7 @@ CONTAINS
       END DO
     END DO
   END SUBROUTINE SIMULATE_RESERVOIR_B
-!  Differentiation of stepforward in reverse (adjoint) mode:
+!  Differentiation of stepforward in reverse (adjoint) mode (with options noISIZE):
 !   gradient     of useful results: p q s v mo mw
 !   with respect to varying inputs: p q s v
   SUBROUTINE STEPFORWARD_B(pressure_step, q, qb, s, sb, p, pb, v, vb, mw&
@@ -2515,7 +2626,7 @@ CONTAINS
       CALL PRES_B(q, qb, s, sb, p, pb, v, vb)
     END IF
   END SUBROUTINE STEPFORWARD_B
-!  Differentiation of update_oil in reverse (adjoint) mode:
+!  Differentiation of update_oil in reverse (adjoint) mode (with options noISIZE):
 !   gradient     of useful results: oilout pc
 !   with respect to varying inputs: oilin pc
   SUBROUTINE UPDATE_OIL_B(pc, pcb, k, st, oilin, oilinb, oilout, oiloutb&
