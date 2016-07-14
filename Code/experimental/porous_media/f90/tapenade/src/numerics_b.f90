@@ -1059,6 +1059,8 @@ SUBROUTINE SPARSE_PMGMRES_METHOD_B(n, annz, alen, arow_index,   &
   xb = 0.0d0
 
   RETURN
+END SUBROUTINE SPARSE_PMGMRES_METHOD_B
+
 !
 ! A wrapper for pmgmres_ilu_cr
 !
@@ -1093,6 +1095,7 @@ SUBROUTINE SPARSE_PMGMRES_METHOD(n, annz, alen, arow_index, arow_compressed, &
     ENDIF
     RETURN
 END SUBROUTINE SPARSE_PMGMRES_METHOD
+
 END MODULE LINSOLVE_B
 
 MODULE FINITEVOLUME_B
@@ -2527,7 +2530,7 @@ CONTAINS
           CALL PUSHREAL8ARRAY(v, 3**2*11**2)
           CALL PUSHREAL8ARRAY(p, 10**2*2)
           CALL PUSHREAL8ARRAY(s, 200)
-          CALL STEPFORWARD(.true., q, s, p, v, mw, mo)
+          CALL STEPFORWARD(1, q, s, p, v, mw, mo)
           CALL PUSHCONTROL1B(0)
         ELSE
           CALL PUSHREAL8(mo)
@@ -2535,7 +2538,7 @@ CONTAINS
           CALL PUSHREAL8ARRAY(v, 3**2*11**2)
           CALL PUSHREAL8ARRAY(p, 10**2*2)
           CALL PUSHREAL8ARRAY(s, 200)
-          CALL STEPFORWARD(.false., q, s, p, v, mw, mo)
+          CALL STEPFORWARD(0, q, s, p, v, mw, mo)
           CALL PUSHCONTROL1B(1)
         END IF
 ! update quantites
@@ -2570,16 +2573,16 @@ CONTAINS
           CALL POPREAL8ARRAY(v, 3**2*11**2)
           CALL POPREAL8(mw)
           CALL POPREAL8(mo)
-          CALL STEPFORWARD_B(.true., q, qb, s, sb, p, pb, v, vb, mw, mwb&
-&                      , mo, mob)
+          CALL STEPFORWARD_B(1, q, qb, s, sb, p, pb, v, vb, mw, mwb, mo&
+&                      , mob)
         ELSE
           CALL POPREAL8ARRAY(s, 200)
           CALL POPREAL8ARRAY(p, 10**2*2)
           CALL POPREAL8ARRAY(v, 3**2*11**2)
           CALL POPREAL8(mw)
           CALL POPREAL8(mo)
-          CALL STEPFORWARD_B(.false., q, qb, s, sb, p, pb, v, vb, mw, &
-&                      mwb, mo, mob)
+          CALL STEPFORWARD_B(0, q, qb, s, sb, p, pb, v, vb, mw, mwb, mo&
+&                      , mob)
         END IF
         CALL POPINTEGER4(k)
         tempoil2b = 0.D0
@@ -2593,7 +2596,7 @@ CONTAINS
 &   , mwb, mo, mob)
     IMPLICIT NONE
 ! Mobilities in well-block
-    LOGICAL :: pressure_step
+    INTEGER :: pressure_step
     DOUBLE PRECISION, DIMENSION(n_) :: q
     DOUBLE PRECISION, DIMENSION(n_) :: qb
     DOUBLE PRECISION, DIMENSION(n_) :: s
@@ -2605,7 +2608,7 @@ CONTAINS
     DOUBLE PRECISION :: mw, mo
     DOUBLE PRECISION :: mwb, mob
     INTEGER :: branch
-    IF (pressure_step .EQ. .true.) THEN
+    IF (pressure_step .EQ. 1) THEN
 ! solve pressure
       CALL PUSHREAL8ARRAY(p, 10**2*2)
       CALL PRES(q, s, p, v)
@@ -2733,9 +2736,9 @@ CONTAINS
       DO j=1,pt/st
         k = k + 1
         IF (j .EQ. 1) THEN
-          CALL STEPFORWARD(.true., q, s, p, v, mw, mo)
+          CALL STEPFORWARD(1, q, s, p, v, mw, mo)
         ELSE
-          CALL STEPFORWARD(.false., q, s, p, v, mw, mo)
+          CALL STEPFORWARD(0, q, s, p, v, mw, mo)
         END IF
 ! update quantites
         mt = mw + mo
@@ -2751,13 +2754,13 @@ CONTAINS
   SUBROUTINE STEPFORWARD(pressure_step, q, s, p, v, mw, mo)
     IMPLICIT NONE
 ! Mobilities in well-block
-    LOGICAL :: pressure_step
+    INTEGER :: pressure_step
     DOUBLE PRECISION, DIMENSION(n_) :: q
     DOUBLE PRECISION, DIMENSION(n_) :: s
     DOUBLE PRECISION, DIMENSION(nx_, ny_, nz_) :: p
     DOUBLE PRECISION, DIMENSION(3, nx_ + 1, ny_ + 1, nz_ + 1) :: v
     DOUBLE PRECISION :: mw, mo
-    IF (pressure_step .EQV. .true.) CALL PRES(q, s, p, v)
+    IF (pressure_step .EQ. 1) CALL PRES(q, s, p, v)
 ! solve pressure
 ! Pressure solver
     CALL NEWTRAPH(q, v, s)
