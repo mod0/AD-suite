@@ -646,7 +646,6 @@ subroutine sparse_solve(annz, arow_index, arow_compressed, &
                            acol_index, avalues, b, x, solver_inner, solver_outer, verbose)
 end subroutine sparse_solve
 
-!%>LINSOLVE
 !
 ! A wrapper for pmgmres_ilu_cr
 !
@@ -681,7 +680,6 @@ SUBROUTINE SPARSE_PMGMRES_METHOD(n, annz, alen, arow_index, arow_compressed, &
     ENDIF
     RETURN
 END SUBROUTINE SPARSE_PMGMRES_METHOD
-!%<LINSOLVE
 end module linsolve
 module finitevolume
 use parameters

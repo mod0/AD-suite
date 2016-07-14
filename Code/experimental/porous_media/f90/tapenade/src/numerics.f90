@@ -642,46 +642,33 @@ subroutine sparse_solve(annz, arow_index, arow_compressed, &
   double precision, dimension(N_) :: b
   double precision, dimension(N_) :: x
 
-  call sparse_pmgmres_method(matdim, annz, maxlen, arow_index, arow_compressed,&
+  call sparse_dummy_method(matdim, annz, maxlen, arow_index, arow_compressed,&
                            acol_index, avalues, b, x, solver_inner, solver_outer, verbose)
 end subroutine sparse_solve
 
-!%>LINSOLVE
-!
-! A wrapper for pmgmres_ilu_cr
-!
-SUBROUTINE SPARSE_PMGMRES_METHOD(n, annz, alen, arow_index, arow_compressed, &
-                                  acol_index, avalues, b, x, solver_inner, &
-                                  solver_outer, verbose)
-    USE MGMRES
-    USE MATHUTIL
-    IMPLICIT NONE
-    INTEGER :: itr_max, mr
-    LOGICAL :: verbose
-    INTEGER :: solver_inner, solver_outer
-    DOUBLE PRECISION :: tol_abs, tol_rel, nrm
-    INTEGER :: n,  annz, alen
-    INTEGER, DIMENSION(alen) :: arow_index
-    INTEGER, DIMENSION(alen) :: acol_index
-    DOUBLE PRECISION, DIMENSION(alen) :: avalues
-    INTEGER, DIMENSION(n + 1) :: arow_compressed
-    DOUBLE PRECISION, DIMENSION(n) :: b
-    DOUBLE PRECISION, DIMENSION(n) :: x
+subroutine sparse_dummy_method(n, annz, alen, arow_index, arow_compressed, &
+                               acol_index, avalues, b, x, solver_inner, solver_outer, verbose)
+  integer :: i
+  logical :: verbose
+  integer :: solver_inner, solver_outer
+  double precision :: sum
+  integer :: n, annz, alen
+  integer, dimension(alen) :: arow_index
+  integer, dimension(alen) :: acol_index
+  double precision, dimension(alen) :: avalues
+  integer, dimension(n + 1) :: arow_compressed
+  
+  double precision, dimension(n) :: b
+  double precision, dimension(n) :: x
 
-    tol_abs = 1.0d-8
-    tol_rel = 1.0d-8
-    itr_max = solver_outer
-    mr = solver_inner
-    
-    CALL DNRM2(b, n, nrm)
-    x = 0.0d0   
-    IF(nrm /= 0.0d0) THEN
-       CALL PMGMRES_ILU_CR (n, annz, arow_compressed, acol_index, avalues, &
-                  x, b, itr_max, mr, tol_abs, tol_rel, verbose)
-    ENDIF
-    RETURN
-END SUBROUTINE SPARSE_PMGMRES_METHOD
-!%<LINSOLVE
+  x = 0.0d0
+  sum = 0.0d0
+  do i = 1, annz
+      sum = sum + avalues(i)
+  end do
+
+  x = b/sum
+end subroutine sparse_dummy_method
 end module linsolve
 module finitevolume
 use parameters

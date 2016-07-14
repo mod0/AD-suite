@@ -38,10 +38,6 @@ subroutine sparse_solve(annz, arow_index, arow_compressed, &
                            acol_index, avalues, b, x, solver_inner, solver_outer, verbose)
 end subroutine sparse_solve
 
-!%>LINSOLVE
-!
-! A method to test OpenAD without solver
-!
 subroutine sparse_dummy_method(n, annz, alen, arow_index, arow_compressed, &
                                acol_index, avalues, b, x, solver_inner, solver_outer, verbose)
   integer :: i
@@ -65,5 +61,4 @@ subroutine sparse_dummy_method(n, annz, alen, arow_index, arow_compressed, &
 
   x = b/sum
 end subroutine sparse_dummy_method
-!%<LINSOLVE
 end module linsolve

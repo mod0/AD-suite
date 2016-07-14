@@ -14,7 +14,7 @@ IS_FORTRAN=$(shell echo ${LANG}|grep -i -c F90)
 IS_TAPENADE=$(shell echo ${DERIV}|grep -i -c TAPENADE)
 IS_ALL_LANG=$(shell echo ${LANG}|grep -i -c ALL)
 IS_ALL_DERIV=$(shell echo ${DERIV}|grep -i -c ALL)
-FLAG=$(shell echo $$(((${IS_FORTRAN} + ${IS_ALL_LANG}) * (${IS_TAPENADE} * ${IS_ALL_DERIV}))))
+FLAG=$(shell echo $$(((${IS_FORTRAN} + ${IS_ALL_LANG}) * (${IS_TAPENADE} + ${IS_ALL_DERIV}))))
 
 # Add targets if directory needs to be built
 CONDITIONAL_BUILD =
@@ -25,6 +25,7 @@ endif
 .PHONY: cdir cpmod src build link clean
 
 build: ${CONDITIONAL_BUILD}
+
 
 link:
 	${FORT} ${FFLAGS} $(addprefix ${OBJ_DIR}/, ${OBJS}) ${OBJ_DIR}/eval_deriv_tapenade_1_forward.o -o ../eval_deriv_tapenade_1_forward -J${MOD_DIR} $(addprefix -, ${F90_LIBS})
