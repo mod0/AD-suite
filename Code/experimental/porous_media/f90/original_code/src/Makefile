@@ -2,9 +2,10 @@ include ../../../make.config
 
 OBJ_DIR = ../obj
 MOD_DIR = ../modules
-OBJS_SUPP = supporting_routines.o
+OBJS_SUPP = supporting_routines.o 
 OBJS_SIM = numerics.o
-OBJS= ${OBJS_SUPP} ${OBJS_SIM}
+OBJS_EXT = sparse_pmgmres_template.o
+OBJS= ${OBJS_SUPP} ${OBJS_SIM} ${OBJS_EXT}
 
 PARAMS_FILE = ../../../data/data_${SCENE}/parameters.f90
 

@@ -3,9 +3,10 @@ include ../../make.config
 OBJ_DIR = obj
 MOD_DIR = modules
 APP_SRC_DIR = src
-OBJS_SUPP = supporting_routines.o
+OBJS_SUPP = supporting_routines.o 
 OBJS_SIM = numerics.o
-OBJS = ${OBJS_SUPP} ${OBJS_SIM}
+OBJS_EXT = sparse_pmgmres_template.o
+OBJS = ${OBJS_SUPP} ${OBJS_SIM} ${OBJS_EXT}
 OBJS_MAIN = eval_original_code.o  
 
 .PHONY: cdir cpmod src build link clean

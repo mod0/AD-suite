@@ -1,21 +1,14 @@
 module parameters
   ! FIXED PARAMETERS
   ! grid parameters 
-  integer :: Nx_, Ny_, Nz_, N_, scenario_id
+  integer :: scenario_id
   double precision :: hx_, hy_, hz_, V_, ir
-  integer :: maxNx, maxNy, maxNz
 
-  parameter(maxNx=60, maxNy=220, maxNz=85)
   parameter(scenario_id = 1, &
-       Nx_ = 10, &              ! Dimension in x-direction
-       Ny_ = 10, &                   ! Dimension in y-direction
-       Nz_ = 2, &                    ! Dimension in z-direction
        hx_ = 20.0d0 * 0.3048d0, &    ! step size in x-direction
        hy_ = 10.0d0 * 0.3048d0, &    ! step size in y-direction
        hz_ = 2.0d0 * 0.3048d0, &     ! step size in z-direction
-       N_ = Nx_ * Ny_ * Nz_, &       ! Total number of grid cells
-       V_ = hx_ * hy_ * hz_, &        ! Volume of each grid cell
-       ir = (795.0 * Nx_ * Ny_ * Nz_) / (maxNx * maxNy * maxNz)) ! Magic number
+       V_ = hx_ * hy_ * hz_)        ! Volume of each grid cell
 
   ! fluid parameters
   double precision :: vw_, vo_, swc_, sor_
@@ -25,10 +18,10 @@ module parameters
             sor_ = 0.2d0)      ! Saturation of oil cut
 
   ! timestepping parameters
-  integer :: St, Pt, ND
-  parameter(St = 5,            &                  ! Max saturation time step
-            Pt = 100,          &                  ! Pressure time step
-            ND = 2000)                            ! Number of days in simulation
+  integer :: St_, Pt_, ND_
+  parameter(St_ = 5,            &                  ! Max saturation time step
+            Pt_ = 100,          &                  ! Pressure time step
+            ND_ = 2000)                            ! Number of days in simulation
 
   ! filenames
   character(*), parameter :: data_directory = "../data/data_1/"
@@ -44,8 +37,8 @@ module parameters
 
   ! PARAMETERS READ FROM FILE
   ! porosity and permeability parameters
-  double precision, dimension(N_) :: POR      ! Porosities
-  double precision, dimension(3, Nx_, Ny_, Nz_) :: PERM  ! Permeabilities  
+  double precision, dimension(:), allocatable :: POR      ! Porosities
+  double precision, dimension(:, :, :, :), allocatable :: PERM  ! Permeabilities  
 
   ! PARAMETERS SET IN DRIVER
   ! linear solver parameters
