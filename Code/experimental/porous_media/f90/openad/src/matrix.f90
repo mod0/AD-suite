@@ -1,5 +1,5 @@
 module matrix
-    use grid
+    use parameters
     implicit none
 
     ! export module interface
@@ -21,8 +21,8 @@ module matrix
 
     ! Common interface for all add methods to spmat
     interface add_x
-      module procedure addx_elem2
-      module procedure addx_diagonal2
+      module procedure addx_elem
+      module procedure addx_diagonal
     end interface add_x
 
     ! Common interface to multiply SPMAT with other vectors, diagonal matrices.
@@ -31,9 +31,9 @@ module matrix
     ! SPMAT * MAT }- These can be implemented by repeatedly calling
     ! MAT * SPMAT }- the vector versions of the method.
     interface spmat_multiply
-      module procedure spmat_multiply_diagonal2
-      module procedure spmat_multiply_vector2
-      module procedure scalar_multiply_spmat2
+      module procedure spmat_multiply_diagonal
+      module procedure spmat_multiply_vector
+      module procedure scalar_multiply_spmat
     end interface
 
     interface mymin
@@ -52,7 +52,7 @@ contains
 ! !
 ! ! Display the matrix entries
 ! !
-! subroutine disp_spmat2(innz, irow_index, irow_compressed, icol_index, ivalues, output)
+! subroutine disp_spmat(innz, irow_index, irow_compressed, icol_index, ivalues, output)
 !     implicit none
 !     integer :: k, output
 !
@@ -69,7 +69,7 @@ contains
 !         end do
 !         write (*, *) irow_compressed
 !     end if
-! end subroutine disp_spmat2
+! end subroutine disp_spmat
 
 !
 ! Subroutine adds x to a particular element.
@@ -78,7 +78,7 @@ contains
 ! the column matrix. Further the element may be non-existent. Structure of
 ! SPMAT has to be changed to allow arbitrary fill-ins.
 !
-subroutine addx_elem2(innz, irow_index, irow_compressed,&
+subroutine addx_elem(innz, irow_index, irow_compressed,&
                       icol_index, ivalues, x, row, col)
     implicit none
     double precision :: x
@@ -96,7 +96,7 @@ subroutine addx_elem2(innz, irow_index, irow_compressed,&
             exit
         end if
     end do
-end subroutine addx_elem2
+end subroutine addx_elem
 
 !
 ! Subroutine adds x to a particular diagonal
@@ -104,7 +104,7 @@ end subroutine addx_elem2
 ! , for other than the main diagonal, entries are skipped if they are 0.0 in
 ! the column matrix
 !
-subroutine addx_diagonal2(innz, irow_index, irow_compressed,&
+subroutine addx_diagonal(innz, irow_index, irow_compressed,&
                           icol_index, ivalues, x, diag)
     implicit none
     integer :: i, diag
@@ -121,7 +121,7 @@ subroutine addx_diagonal2(innz, irow_index, irow_compressed,&
             ivalues(i) = ivalues(i) + x
         end if
     end do
-end subroutine addx_diagonal2
+end subroutine addx_diagonal
 
 !
 ! Gets the diagonal on which the row, col lie
@@ -196,7 +196,7 @@ subroutine myreshape_2_1(amatrix, bmatrix)
             bmatrix(k) = amatrix(i, j)
         end do
     end do
-end subroutine
+end subroutine myreshape_2_1
 
 
 !
@@ -216,7 +216,7 @@ subroutine myreshape_1_2(amatrix, bmatrix)
             bmatrix(i, j) = amatrix(k)
         end do
     end do
-end subroutine
+end subroutine myreshape_1_2
 
 !
 ! Reshape a 3d matrix to a 1D array
@@ -237,7 +237,7 @@ subroutine myreshape_3_1(amatrix, bmatrix)
             end do
         end do
     end do
-end subroutine
+end subroutine myreshape_3_1
 
 
 !
@@ -259,7 +259,7 @@ subroutine myreshape_1_3(amatrix, bmatrix)
             end do
         end do
     end do
-end subroutine
+end subroutine myreshape_1_3
 
 
 !
@@ -283,7 +283,7 @@ subroutine myreshape_4_1(amatrix, bmatrix)
             end do
         end do
     end do
-end subroutine
+end subroutine myreshape_4_1
 
 
 !
@@ -307,12 +307,12 @@ subroutine myreshape_1_4(amatrix, bmatrix)
             end do
         end do
     end do
-end subroutine
+end subroutine myreshape_1_4
 
 !
 ! This routine pre-multiplies a diagonal matrix by a sparse matrix
 !
-subroutine spmat_multiply_diagonal2(annz, arow_index, arow_compressed,&
+subroutine spmat_multiply_diagonal(annz, arow_index, arow_compressed,&
                                     acol_index, avalues, dmatrix, &
                                     rnnz, rrow_index, rrow_compressed,&
                                     rcol_index, rvalues, order)
@@ -352,13 +352,13 @@ subroutine spmat_multiply_diagonal2(annz, arow_index, arow_compressed,&
             rvalues(i) = avalues(i) * dmatrix(arow_index(i))
         end do
     end if
-end subroutine spmat_multiply_diagonal2
+end subroutine spmat_multiply_diagonal
 
 
 !
 ! The routine multiplies a vector by a sparse matrix (PRE/POST)
 !
-subroutine spmat_multiply_vector2(annz, arow_index, arow_compressed, &
+subroutine spmat_multiply_vector(annz, arow_index, arow_compressed, &
                                   acol_index, avalues, bvector, cvector, order)
     implicit none
     integer :: i
@@ -388,14 +388,14 @@ subroutine spmat_multiply_vector2(annz, arow_index, arow_compressed, &
                                 + avalues(i) * bvector(arow_index(i))
         end do
     end if
-end subroutine spmat_multiply_vector2
+end subroutine spmat_multiply_vector
 
 !
 ! This routine multiplies each element of the SPMAT
 ! by a scalar.
 ! Allows amatrix to be the same as rmatrix
 !
-subroutine scalar_multiply_spmat2(annz, arow_index, arow_compressed, &
+subroutine scalar_multiply_spmat(annz, arow_index, arow_compressed, &
                                   acol_index, avalues, scalar, &
                                   rnnz, rrow_index, rrow_compressed, &
                                   rcol_index, rvalues)
@@ -423,7 +423,7 @@ subroutine scalar_multiply_spmat2(annz, arow_index, arow_compressed, &
         rcol_index(i) = acol_index(i)
         rvalues(i) = scalar * avalues(i)
     end do
-end subroutine scalar_multiply_spmat2
+end subroutine scalar_multiply_spmat
 
 subroutine mymin_0_0_double(scalarin1, scalarin2, scalarout)
   double precision :: scalarin1, scalarin2, scalarout

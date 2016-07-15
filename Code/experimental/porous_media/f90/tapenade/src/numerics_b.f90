@@ -2342,9 +2342,9 @@ CONTAINS
     IMPLICIT NONE
     INTEGER :: i, j, k, l, m
 ! Porosities
-    DOUBLE PRECISION, DIMENSION(n_), INTENT(OUT) :: por
+    DOUBLE PRECISION, DIMENSION(n_) :: por
 ! Permeabilities
-    DOUBLE PRECISION, DIMENSION(3, nx_, ny_, nz_), INTENT(OUT) :: perm
+    DOUBLE PRECISION, DIMENSION(3, nx_, ny_, nz_) :: perm
     DOUBLE PRECISION, DIMENSION(nx_, ny_, nz_) :: p
     DOUBLE PRECISION, DIMENSION(maxnx*maxny*maxnz) :: pur
     DOUBLE PRECISION, DIMENSION(3*maxnx, maxny*maxnz) :: kur
@@ -2422,7 +2422,7 @@ CONTAINS
   SUBROUTINE INIT_FLW_TRNC_NORM_XIN_PT_OUT_B(mu, mub, sigma, sigmab, q, &
 &   qb)
     IMPLICIT NONE
-    DOUBLE PRECISION, INTENT(IN) :: mu, sigma
+    DOUBLE PRECISION :: mu, sigma
     DOUBLE PRECISION :: mub, sigmab
     DOUBLE PRECISION, DIMENSION(n_) :: q
     DOUBLE PRECISION, DIMENSION(n_) :: qb
@@ -2668,8 +2668,8 @@ CONTAINS
 !
   SUBROUTINE INIT_FLW_TRNC_NORM_XIN_PT_OUT(mu, sigma, q)
     IMPLICIT NONE
-    DOUBLE PRECISION, INTENT(IN) :: mu, sigma
-    DOUBLE PRECISION, DIMENSION(n_), INTENT(OUT) :: q
+    DOUBLE PRECISION :: mu, sigma
+    DOUBLE PRECISION, DIMENSION(n_) :: q
     INTEGER :: i, j
     DOUBLE PRECISION :: x, pi, pdf, mass
     DOUBLE PRECISION, DIMENSION(nx_) :: idx

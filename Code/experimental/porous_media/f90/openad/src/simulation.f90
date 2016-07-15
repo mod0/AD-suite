@@ -1,14 +1,9 @@
-module head
-  use grid
+module simulation
+  use parameters
   use matrix
-  use fvm
+  use finitevolume
 
   implicit none
-  integer :: St, Pt, ND
-
-  parameter(St = 5,            &                  ! Max saturation time step
-            Pt = 100,          &                  ! Pressure time step
-            ND = 2000)                            ! Number of days in simulation
 contains
 
 !
@@ -18,7 +13,7 @@ contains
 subroutine read_permeability_and_porosity(PERM, POR)
     integer :: i, j, k, l, m
 
-    double precision, dimension(N_) :: POR      ! Porosities
+    double precision, dimension(N_) :: POR                 ! Porosities
     double precision, dimension(3, Nx_, Ny_, Nz_) :: PERM  ! Permeabilities
 
     double precision, dimension(Nx_, Ny_, Nz_) :: P
@@ -34,7 +29,7 @@ subroutine read_permeability_and_porosity(PERM, POR)
     POR = 0.0d0
 
     ! read KUr
-    open(1,file='KUr.txt',status='old')
+    open(1,file=permeability_file,status='old')
     read(1,*) ((KUr(i,j), j=1,maxNy * maxNz), i=1,3 * maxNx)
     close(1)
 
@@ -60,7 +55,7 @@ subroutine read_permeability_and_porosity(PERM, POR)
     call myreshape_1_4(KUrl(Kindices), PERM)
 
     ! read KUr
-    open(1,file='pUr.txt',status='old')
+    open(1,file=porosity_file,status='old')
     read(1,*) (pUr(i), i=1,maxNx * maxNy * maxNz)
     close(1)
 
@@ -75,7 +70,6 @@ subroutine read_permeability_and_porosity(PERM, POR)
         end do
     end do
 
-    !POR = max(pUr(Pindices), 1.0d-3)
     call mymax_1_0_double(pUr(Pindices), 1.0d-3, POR)
 end subroutine read_permeability_and_porosity
 
@@ -83,60 +77,55 @@ end subroutine read_permeability_and_porosity
 !
 ! Initialize inflow and outflow.
 !
-subroutine init_flw_trnc_norm_xin_pt_out(ir, mu, sigma, Q)
-    !!use gnufor2
-    integer :: i, j
-    double precision, dimension(Nx_) :: idx
-    double precision :: x, pi, pdf, mass
-    double precision :: mu, sigma, ir
-    double precision, dimension(N_) :: Q
-    double precision, dimension(Nx_) :: Q_x
+subroutine init_flw_trnc_norm_xin_pt_out(mu, sigma, Q)
+  double precision :: mu, sigma
+  double precision, dimension(N_) :: Q
 
-    ! value of pi
-    pi = 3.14159265358979323d0
+  integer :: i, j
+  double precision :: x, pi, pdf, mass
+  double precision, dimension(Nx_) :: idx
+  double precision, dimension(Nx_) :: Q_x
 
-    !initialize the total mass to 0
-    mass = 0.0d0
-    Q_x = 0.0d0
+  ! value of pi
+  pi = 3.14159265358979323d0
 
-    ! Note that the portion of the  Standard Normal distribution between
-    ! -3sigma/2 to 3sigma/2 is assumed to fit the 1..Nx where sigma is 1
-    do i = 1, Nx_
-        ! get the real x coordinate
-        x = -1.5d0 + ((i - 1) * 3.0d0)/(Nx_ - 1)    ! Mapping x = [-1.5, 1.5] to Nx_ dimension
+  !initialize the total mass to 0
+  mass = 0.0d0
+  Q_x = 0.0d0
 
-        ! Now use mu and sigma to find the pdf value at x
-        pdf = 1.0d0/(sigma * sqrt(2.0d0 * pi)) * exp(-(((x - mu)/sigma)**2.0d0)/2.0d0)
+  ! Note that the portion of the  Standard Normal distribution between
+  ! -3sigma/2 to 3sigma/2 is assumed to fit the 1..Nx where sigma is 1
+  do i = 1, Nx_
+      ! get the real x coordinate
+      x = -1.5d0 + ((i - 1) * 3.0d0)/(Nx_ - 1)    ! Mapping x = [-1.5, 1.5] to Nx_ dimension
 
-        ! set the value at the index equal to the pdf value at that point
-        Q_x(i) = pdf
+      ! Now use mu and sigma to find the pdf value at x
+      pdf = 1.0d0/(sigma * sqrt(2.0d0 * pi)) * exp(-(((x - mu)/sigma)**2.0d0)/2.0d0)
 
-        ! increment the mass by the value of the pdf
-        mass = mass + pdf
+      ! set the value at the index equal to the pdf value at that point
+      Q_x(i) = pdf
 
-        ! index to test initialization by plot
-        idx(i) = i * 1.0
-    end do
+      ! increment the mass by the value of the pdf
+      mass = mass + pdf
 
-    ! now rescale all the entities
-    Q_x = Q_x/mass * ir
+      ! index to test initialization by plot
+      idx(i) = i * 1.0
+  end do
 
-    ! Assign Q_x to Q
-    j = 1
-    do i = 1, Nx_* Ny_, Ny_
-      Q(i) = Q_x(j)
-      j = j + 1
-    end do
+  ! now rescale all the entities
+  do i = 1, Nx_
+     Q_x(i) = Q_x(i)/mass * ir
+  end do
 
-    ! now set the output
-    Q(N_) = -ir
+  ! Assign Q_x to Q
+  j = 1
+  do i = 1, Nx_* Ny_, Ny_
+    Q(i) = Q_x(j)
+    j = j + 1
+  end do
 
-   !---------------------------------------------------------------------------
-   ! Call GNUPLOT through the interface module.
-   ! Uncomment these plot calls after verifying you have GNUPlot installed.
-   !---------------------------------------------------------------------------
-   ! Plot the Q and check if it is correct.
-   !call plot(idx, Q_x, terminal='png', filename='inflow.png')
+  ! now set the output
+  Q(N_) = -ir
 end subroutine init_flw_trnc_norm_xin_pt_out
 
 
@@ -144,21 +133,20 @@ end subroutine init_flw_trnc_norm_xin_pt_out
 ! This subroutine simulates the reservoir
 ! model.
 !
-subroutine simulate_reservoir(Q, S, P, V, St, Pt, Tt, ND, Mw, Mo, Mt, Pc, oil, &
-                              solver_inner, solver_outer, verbose)
-    use grid
-    use fluid
-    logical :: verbose
-    integer :: solver_inner, solver_outer
-    integer :: i, j, k, ND, St, Pt
-    double precision :: Mw, Mo, Mt, tempoil1, tempoil2
-    double precision ::  oil
-    double precision, dimension((ND/St) + 1) :: Tt
-    double precision, dimension(N_) :: S
+subroutine simulate_reservoir(Q, S, P, V, Tt, Pc, oil)
+    use parameters
+    
     double precision, dimension(N_) :: Q
-    double precision, dimension(2, (ND/St) + 1) :: Pc
+    double precision, dimension(N_) :: S
     double precision, dimension(Nx_, Ny_, Nz_) :: P
     double precision, dimension(3, Nx_ + 1, Ny_ + 1, Nz_ + 1) :: V
+    
+    double precision, dimension((ND/St) + 1) :: Tt   
+    double precision, dimension(2, (ND/St) + 1) :: Pc
+    double precision ::  oil
+    
+    integer :: i, j, k
+    double precision :: Mw, Mo, Mt, tempoil1, tempoil2
 
     S = swc_                            ! initial saturation
 
@@ -168,19 +156,22 @@ subroutine simulate_reservoir(Q, S, P, V, St, Pt, Tt, ND, Mw, Mo, Mt, Pc, oil, &
 
     tempoil1 = 0.0d0
     tempoil2 = 0.0d0
+    
     k = 1
     do i = 1, ND/Pt
-        call Pres(S, Q, P, V, solver_inner, solver_outer, verbose) ! Pressure solver
-!        write (*,*) 'PRESSURE========================================================'
          do j = 1, Pt/St
-!            write(*,*) "Outer:", i, "Inner:", j
             k = k + 1
-            call NewtRaph(S, V, Q, St, solver_inner, solver_outer, verbose) ! Solve for saturation
-            call RelPerm(S(N_), Mw, Mo)             ! Mobilities in well-block
+            
+            if (j == 1) then
+              call stepforward(1, Q, S, P, V, Mw, Mo)
+            else
+              call stepforward(0, Q, S, P, V, Mw, Mo)            
+            endif
 
+            
+            ! update quantites
             Mt = Mw + Mo
-
-            Tt(k) = 1.0d0 * k * St
+            Tt(k) = 1.0d0 * k * St  
             Pc(1,k) = Mw/Mt
             Pc(2,k) = Mo/Mt
 
@@ -192,6 +183,22 @@ subroutine simulate_reservoir(Q, S, P, V, St, Pt, Tt, ND, Mw, Mo, Mt, Pc, oil, &
     oil = tempoil2
 end subroutine simulate_reservoir
 
+subroutine stepforward(pressure_step, Q, S, P, V, Mw, Mo)
+  integer :: pressure_step
+  double precision, dimension(N_) :: Q
+  double precision, dimension(N_) :: S
+  double precision, dimension(Nx_, Ny_, Nz_) :: P
+  double precision, dimension(3, Nx_ + 1, Ny_ + 1, Nz_ + 1) :: V
+  double precision :: Mw, Mo
+  
+  if (pressure_step == 1) then
+    ! solve pressure
+    call Pres(Q, S, P, V)    ! Pressure solver
+  endif
+
+  call NewtRaph(Q, V, S)      ! Solve for saturation
+  call RelPerm(S(N_), Mw, Mo)         ! Mobilities in well-block
+end subroutine stepforward
 
 subroutine update_oil(Pc, k, St, oilin, oilout)
   integer :: St, k
@@ -202,32 +209,21 @@ subroutine update_oil(Pc, k, St, oilin, oilout)
   oilout = oilin +  Pc(2, k) * St                     ! Reimann sum
 end subroutine update_oil
 
-subroutine wrapper(ir, mu, sigma, Q, S, P, V, St, Pt, Tt, ND, Mw, Mo, &
-&                  Mt, Pc, oil, solver_inner, solver_outer, verbose)
-  use grid
-  use fluid
-  integer :: ND, St, Pt
-  logical :: verbose
-  integer :: solver_inner, solver_outer
-  double precision :: mu, sigma, ir
-  double precision :: Mw, Mo, Mt
-  double precision :: oil
-  double precision, dimension((ND/St) + 1) :: Tt
-  double precision, dimension(N_) :: S
+subroutine wrapper(mu, sigma, Q, S, P, V, Tt, Pc, oil) 
+  double precision :: mu, sigma
   double precision, dimension(N_) :: Q
-  double precision, dimension(2, (ND/St) + 1) :: Pc
+  double precision, dimension(N_) :: S
   double precision, dimension(Nx_, Ny_, Nz_) :: P
   double precision, dimension(3, Nx_ + 1, Ny_ + 1, Nz_ + 1) :: V
+  double precision, dimension((ND/St) + 1) :: Tt
+  double precision, dimension(2, (ND/St) + 1) :: Pc
+  double precision :: oil
 
   !$openad independent(mu)
   !$openad independent(sigma)
-  !$openad independent(ir)
-
-
-  call init_flw_trnc_norm_xin_pt_out(ir, mu, sigma, Q)
-  call simulate_reservoir(Q, S, P, V, St, Pt, Tt, ND, Mw, Mo, Mt, Pc, &
-&                         oil, solver_inner, solver_outer, verbose)
-
+  !$openad independent(ir)  
+  call init_flw_trnc_norm_xin_pt_out(mu, sigma, Q)
+  call simulate_reservoir(Q, S, P, V, Tt, Pc, oil)
   !$openad dependent(oil)
 end subroutine wrapper
-end module head
+end module simulation

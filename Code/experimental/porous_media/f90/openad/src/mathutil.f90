@@ -1,5 +1,6 @@
 module mathutil
 implicit none
+public :: dnrm2
 contains
 
 subroutine scalar_max(scalarin1, scalarin2, scalarout)

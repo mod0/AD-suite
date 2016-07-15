@@ -1,32 +1,64 @@
-module fluid
-    double precision :: vw_, vo_, swc_, sor_
+module parameters
+  ! FIXED PARAMETERS
+  ! grid parameters 
+  integer :: Nx_, Ny_, Nz_, N_, scenario_id
+  double precision :: hx_, hy_, hz_, V_, ir
+  integer :: maxNx, maxNy, maxNz
 
-    parameter(vw_ = 3d-4, &      ! Viscosity of Water
-              vo_ = 3d-3, &      ! Viscosity of Oil
-              swc_ = 0.2d0, &    ! Saturation of water cut
-              sor_ = 0.2d0)      ! Saturation of oil cut
+  parameter(maxNx=60, maxNy=220, maxNz=85)
+  parameter(scenario_id = 1, &
+       Nx_ = 10, &              ! Dimension in x-direction
+       Ny_ = 10, &                   ! Dimension in y-direction
+       Nz_ = 2, &                    ! Dimension in z-direction
+       hx_ = 20.0d0 * 0.3048d0, &    ! step size in x-direction
+       hy_ = 10.0d0 * 0.3048d0, &    ! step size in y-direction
+       hz_ = 2.0d0 * 0.3048d0, &     ! step size in z-direction
+       N_ = Nx_ * Ny_ * Nz_, &       ! Total number of grid cells
+       V_ = hx_ * hy_ * hz_, &        ! Volume of each grid cell
+       ir = (795.0 * Nx_ * Ny_ * Nz_) / (maxNx * maxNy * maxNz)) ! Magic number
 
-end module fluid
-module grid
-    integer :: Nx_, Ny_, Nz_, N_
-    double precision :: hx_, hy_, hz_, V_
-    integer :: maxNx, maxNy, maxNz
-    parameter(maxNx=60, maxNy=220, maxNz=85)
+  ! fluid parameters
+  double precision :: vw_, vo_, swc_, sor_
+  parameter(vw_ = 3d-4, &      ! Viscosity of Water
+            vo_ = 3d-3, &      ! Viscosity of Oil
+            swc_ = 0.2d0, &    ! Saturation of water cut
+            sor_ = 0.2d0)      ! Saturation of oil cut
 
-    parameter(Nx_ = 10, &                   ! Dimension in x-direction
-              Ny_ = 10, &                  ! Dimension in y-direction
-              Nz_ = 2, &                    ! Dimension in z-direction
-              hx_ = 20.0d0 * 0.3048d0, &    ! step size in x-direction
-              hy_ = 10.0d0 * 0.3048d0, &    ! step size in y-direction
-              hz_ = 2.0d0 * 0.3048d0, &     ! step size in z-direction
-              N_ = Nx_ * Ny_ * Nz_, &       ! Total number of grid cells
-              V_ = hx_ * hy_ * hz_)         ! Volume of each grid cell
+  ! timestepping parameters
+  integer :: St, Pt, ND
+  parameter(St = 5,            &                  ! Max saturation time step
+            Pt = 100,          &                  ! Pressure time step
+            ND = 2000)                            ! Number of days in simulation
 
-    double precision, dimension(N_) :: POR      ! Porosities
-    double precision, dimension(3, Nx_, Ny_, Nz_) :: PERM  ! Permeabilities
-end module grid
+  ! filenames
+  character(*), parameter :: data_directory = "../data/data_1/"
+  character(*), parameter :: results_directory = "results/"
+  character(*), parameter :: porosity_file = data_directory//"pUr.txt"
+  character(*), parameter :: permeability_file = data_directory//"KUr.txt"
+  character(*), parameter :: results_eval_original_code = &
+       results_directory//"results_eval_original_code.nc"
+  character(*), parameter :: results_eval_deriv_tap_1_fwd = &
+       results_directory//"results_eval_deriv_tapenade_1_forward.nc"
+  character(*), parameter :: results_eval_deriv_tap_1_rev = &
+       results_directory//"results_eval_deriv_tapenade_1_reverse.nc"
+
+  ! PARAMETERS READ FROM FILE
+  ! porosity and permeability parameters
+  double precision, dimension(N_) :: POR      ! Porosities
+  double precision, dimension(3, Nx_, Ny_, Nz_) :: PERM  ! Permeabilities  
+
+  ! PARAMETERS SET IN DRIVER
+  ! linear solver parameters
+  logical :: verbose
+  integer :: solver_inner, solver_outer
+
+  parameter(verbose = .false.,   &              ! Verbose solver output
+       solver_inner = 64,        &              ! Number of inner iterations
+       solver_outer = 100000)                   ! Number of outer iterations
+end module parameters
 module mathutil
 implicit none
+public :: dnrm2
 contains
 
 subroutine scalar_max(scalarin1, scalarin2, scalarout)
@@ -73,7 +105,7 @@ subroutine dnrm2(v, len_v, n)
 end subroutine dnrm2
 end module mathutil
 module matrix
-    use grid
+    use parameters
     implicit none
 
     ! export module interface
@@ -95,8 +127,8 @@ module matrix
 
     ! Common interface for all add methods to spmat
     interface add_x
-      module procedure addx_elem2
-      module procedure addx_diagonal2
+      module procedure addx_elem
+      module procedure addx_diagonal
     end interface add_x
 
     ! Common interface to multiply SPMAT with other vectors, diagonal matrices.
@@ -105,9 +137,9 @@ module matrix
     ! SPMAT * MAT }- These can be implemented by repeatedly calling
     ! MAT * SPMAT }- the vector versions of the method.
     interface spmat_multiply
-      module procedure spmat_multiply_diagonal2
-      module procedure spmat_multiply_vector2
-      module procedure scalar_multiply_spmat2
+      module procedure spmat_multiply_diagonal
+      module procedure spmat_multiply_vector
+      module procedure scalar_multiply_spmat
     end interface
 
     interface mymin
@@ -126,7 +158,7 @@ contains
 ! !
 ! ! Display the matrix entries
 ! !
-! subroutine disp_spmat2(innz, irow_index, irow_compressed, icol_index, ivalues, output)
+! subroutine disp_spmat(innz, irow_index, irow_compressed, icol_index, ivalues, output)
 !     implicit none
 !     integer :: k, output
 !
@@ -143,7 +175,7 @@ contains
 !         end do
 !         write (*, *) irow_compressed
 !     end if
-! end subroutine disp_spmat2
+! end subroutine disp_spmat
 
 !
 ! Subroutine adds x to a particular element.
@@ -152,7 +184,7 @@ contains
 ! the column matrix. Further the element may be non-existent. Structure of
 ! SPMAT has to be changed to allow arbitrary fill-ins.
 !
-subroutine addx_elem2(innz, irow_index, irow_compressed,&
+subroutine addx_elem(innz, irow_index, irow_compressed,&
                       icol_index, ivalues, x, row, col)
     implicit none
     double precision :: x
@@ -170,7 +202,7 @@ subroutine addx_elem2(innz, irow_index, irow_compressed,&
             exit
         end if
     end do
-end subroutine addx_elem2
+end subroutine addx_elem
 
 !
 ! Subroutine adds x to a particular diagonal
@@ -178,7 +210,7 @@ end subroutine addx_elem2
 ! , for other than the main diagonal, entries are skipped if they are 0.0 in
 ! the column matrix
 !
-subroutine addx_diagonal2(innz, irow_index, irow_compressed,&
+subroutine addx_diagonal(innz, irow_index, irow_compressed,&
                           icol_index, ivalues, x, diag)
     implicit none
     integer :: i, diag
@@ -195,7 +227,7 @@ subroutine addx_diagonal2(innz, irow_index, irow_compressed,&
             ivalues(i) = ivalues(i) + x
         end if
     end do
-end subroutine addx_diagonal2
+end subroutine addx_diagonal
 
 !
 ! Gets the diagonal on which the row, col lie
@@ -270,7 +302,7 @@ subroutine myreshape_2_1(amatrix, bmatrix)
             bmatrix(k) = amatrix(i, j)
         end do
     end do
-end subroutine
+end subroutine myreshape_2_1
 
 
 !
@@ -290,7 +322,7 @@ subroutine myreshape_1_2(amatrix, bmatrix)
             bmatrix(i, j) = amatrix(k)
         end do
     end do
-end subroutine
+end subroutine myreshape_1_2
 
 !
 ! Reshape a 3d matrix to a 1D array
@@ -311,7 +343,7 @@ subroutine myreshape_3_1(amatrix, bmatrix)
             end do
         end do
     end do
-end subroutine
+end subroutine myreshape_3_1
 
 
 !
@@ -333,7 +365,7 @@ subroutine myreshape_1_3(amatrix, bmatrix)
             end do
         end do
     end do
-end subroutine
+end subroutine myreshape_1_3
 
 
 !
@@ -357,7 +389,7 @@ subroutine myreshape_4_1(amatrix, bmatrix)
             end do
         end do
     end do
-end subroutine
+end subroutine myreshape_4_1
 
 
 !
@@ -381,12 +413,12 @@ subroutine myreshape_1_4(amatrix, bmatrix)
             end do
         end do
     end do
-end subroutine
+end subroutine myreshape_1_4
 
 !
 ! This routine pre-multiplies a diagonal matrix by a sparse matrix
 !
-subroutine spmat_multiply_diagonal2(annz, arow_index, arow_compressed,&
+subroutine spmat_multiply_diagonal(annz, arow_index, arow_compressed,&
                                     acol_index, avalues, dmatrix, &
                                     rnnz, rrow_index, rrow_compressed,&
                                     rcol_index, rvalues, order)
@@ -426,13 +458,13 @@ subroutine spmat_multiply_diagonal2(annz, arow_index, arow_compressed,&
             rvalues(i) = avalues(i) * dmatrix(arow_index(i))
         end do
     end if
-end subroutine spmat_multiply_diagonal2
+end subroutine spmat_multiply_diagonal
 
 
 !
 ! The routine multiplies a vector by a sparse matrix (PRE/POST)
 !
-subroutine spmat_multiply_vector2(annz, arow_index, arow_compressed, &
+subroutine spmat_multiply_vector(annz, arow_index, arow_compressed, &
                                   acol_index, avalues, bvector, cvector, order)
     implicit none
     integer :: i
@@ -462,14 +494,14 @@ subroutine spmat_multiply_vector2(annz, arow_index, arow_compressed, &
                                 + avalues(i) * bvector(arow_index(i))
         end do
     end if
-end subroutine spmat_multiply_vector2
+end subroutine spmat_multiply_vector
 
 !
 ! This routine multiplies each element of the SPMAT
 ! by a scalar.
 ! Allows amatrix to be the same as rmatrix
 !
-subroutine scalar_multiply_spmat2(annz, arow_index, arow_compressed, &
+subroutine scalar_multiply_spmat(annz, arow_index, arow_compressed, &
                                   acol_index, avalues, scalar, &
                                   rnnz, rrow_index, rrow_compressed, &
                                   rcol_index, rvalues)
@@ -497,7 +529,7 @@ subroutine scalar_multiply_spmat2(annz, arow_index, arow_compressed, &
         rcol_index(i) = acol_index(i)
         rvalues(i) = scalar * avalues(i)
     end do
-end subroutine scalar_multiply_spmat2
+end subroutine scalar_multiply_spmat
 
 subroutine mymin_0_0_double(scalarin1, scalarin2, scalarout)
   double precision :: scalarin1, scalarin2, scalarout
@@ -575,9 +607,10 @@ end subroutine mymax_1_1_double
 
 end module matrix
 module linsolve
-use grid
-use matrix
+use parameters
 use mathutil
+use matrix
+
 
 implicit none
 
@@ -595,11 +628,9 @@ contains
 ! Calls a specific solver - here the jacobi method
 !
 subroutine sparse_solve(annz, arow_index, arow_compressed, &
-                        acol_index, avalues, b, x, solver_inner, solver_outer, verbose)
+                        acol_index, avalues, b, x)
   implicit none
-  logical :: verbose
-  integer :: solver_inner, solver_outer
-  
+ 
   integer :: annz
   integer, parameter :: matdim = N_
   integer, parameter :: maxlen = 7 * matdim
@@ -615,15 +646,11 @@ subroutine sparse_solve(annz, arow_index, arow_compressed, &
                            acol_index, avalues, b, x, solver_inner, solver_outer, verbose)
 end subroutine sparse_solve
 
-!
-! A method to test OpenAD without solver
-!
 subroutine sparse_dummy_method(n, annz, alen, arow_index, arow_compressed, &
                                acol_index, avalues, b, x, solver_inner, solver_outer, verbose)
   integer :: i
   logical :: verbose
   integer :: solver_inner, solver_outer
-  double precision :: summe
   integer :: n, annz, alen
   integer, dimension(alen) :: arow_index
   integer, dimension(alen) :: acol_index
@@ -632,53 +659,16 @@ subroutine sparse_dummy_method(n, annz, alen, arow_index, arow_compressed, &
   
   double precision, dimension(n) :: b
   double precision, dimension(n) :: x
-! 
-!   x(:) = 0.0d0
-!   summe = 0.0d0
-!   do i = 1, annz
-!       summe = summe + avalues(i)
-!   end do
-! 
-!   x(:) = b(:)*summe
+
   call spmat_multiply_vector2(annz, arow_index, arow_compressed, &
                               acol_index, avalues, b, x, "PRE")
 end subroutine sparse_dummy_method
-
-
-! a wrapper for mgmres
-!
-! subroutine sparse_mgmres_method(annz, arow_index, arow_compressed, &
-!                                  acol_index, avalues, b, x)
-!   use mgmres
-!   implicit none
-!   integer :: itr_max, mr
-!   double precision :: tol_abs, tol_rel
-!   integer :: annz
-!   integer, dimension(7 * N_) :: arow_index
-!   integer, dimension(7 * N_) :: acol_index
-!   double precision, dimension(7 * N_) :: avalues
-!   integer, dimension(N_ + 1) :: arow_compressed
-!   double precision, dimension(N_) :: b
-!   double precision, dimension(N_) :: x
-! 
-!   tol_abs = 1.0d-8
-!   tol_rel = 1.0d-8
-!   itr_max = int(sqrt(N_ * 1.0)) + 1
-!   mr = min(N_, 100)
-! 
-!   x = 0.0d0
-! 
-!   call mgmres_st (N_, annz, arow_index, acol_index, avalues, x, b, &
-!                   itr_max, mr, tol_abs, tol_rel )
-! end subroutine sparse_mgmres_method
 end module linsolve
-module fvm
-use grid
-use fluid
+module finitevolume
+use parameters
+use mathutil
 use matrix
 use linsolve
-use mathutil
-
 implicit none
 
 interface RelPerm
@@ -686,22 +676,15 @@ interface RelPerm
     module procedure RelPerm_vector
 end interface RelPerm
 
-integer :: output
-parameter(output = 0)
-
 contains
 
 !
 ! Performs Newton Raphson to solve for saturations
 !
-subroutine NewtRaph(S, V, Q, St, solver_inner, solver_outer, verbose)
-  
+subroutine NewtRaph(Q, V, S)
   implicit none
-  logical :: verbose
-  integer :: solver_inner, solver_outer
   
   integer :: i, j, it
-  integer :: St                             ! Maximum saturation Time Step
   logical :: converged
   double precision :: dt, dsn
 
@@ -754,69 +737,68 @@ subroutine NewtRaph(S, V, Q, St, solver_inner, solver_outer, verbose)
   it = 0
 
   do while(.not. converged)
-      dt = (1.0d0 * St)/(2**it)
-      dtx = dt/(V_ * POR)
+    dt = (1.0d0 * St)/(2**it)
+    dtx = dt/(V_ * POR)
 
-      call mymax_1_0_double(Q, 0.0d0, fi)
-      fi = fi * dtx
+    call mymax_1_0_double(Q, 0.0d0, fi)
+    fi = fi * dtx
 
-      ! Matrix-diagonal matrix product
-      call spmat_multiply_diagonal2( annz, arow_index, arow_compressed,&
-                                    acol_index, avalues, dtx, &
-                                     bnnz, brow_index, brow_compressed,&
-                                    bcol_index, bvalues, "POS")
+    ! Matrix-diagonal matrix product
+    call spmat_multiply_diagonal( annz, arow_index, arow_compressed,&
+                                  acol_index, avalues, dtx, &
+                                    bnnz, brow_index, brow_compressed,&
+                                  bcol_index, bvalues, "POS")
+    i = 0
+    
+    do while (i < 2**it)
+      j = 0
+      i = i + 1
+      dsn = 1.0d0
+      S_iter_copy = S
 
-      i = 0
+      do while (dsn > 1.0d-3 .and. j < 10)
+        call RelPerm(S, Mw, Mo, dMw, dMo)
 
-      do while (i < 2**it)
-          j = 0
-          i = i + 1
-          dsn = 1.0d0
-          S_iter_copy = S
+        dF = dMw/(Mw + Mo) - (Mw/((Mw + Mo)**2) * (dMw + dMo))
 
-          do while (dsn > 1.0d-3 .and. j < 10)
-              call RelPerm(S, Mw, Mo, dMw, dMo)
+        ! Matrix-diagonal matrix product
+        call spmat_multiply_diagonal( bnnz, brow_index, brow_compressed, &
+                                      bcol_index, bvalues, dF, &
+                                        dgnnz, dgrow_index, dgrow_compressed, &
+                                      dgcol_index, dgvalues, "PRE")
 
-              dF = dMw/(Mw + Mo) - (Mw/((Mw + Mo)**2) * (dMw + dMo))
+        call addx_diagonal( dgnnz, dgrow_index, dgrow_compressed, &
+                            dgcol_index, dgvalues, -1.0d0, 0)
 
-              ! Matrix-diagonal matrix product
-              call spmat_multiply_diagonal2( bnnz, brow_index, brow_compressed, &
-                                            bcol_index, bvalues, dF, &
-                                             dgnnz, dgrow_index, dgrow_compressed, &
-                                            dgcol_index, dgvalues, "PRE")
+        fw = Mw / (Mw + Mo)
 
-              call addx_diagonal2( dgnnz, dgrow_index, dgrow_compressed, &
-                                  dgcol_index, dgvalues, -1.0d0, 0)
+        ! Matrix-vector matrix product
+        call spmat_multiply_vector( bnnz, brow_index, brow_compressed, &
+                                    bcol_index, bvalues, fw, bfw, "PRE")
 
-              fw = Mw / (Mw + Mo)
+        G = S - S_iter_copy - bfw - fi
 
-              ! Matrix-vector matrix product
-              call spmat_multiply_vector2( bnnz, brow_index, brow_compressed, &
-                                          bcol_index, bvalues, fw, bfw, "PRE")
+        call solve( dgnnz, dgrow_index, dgrow_compressed, &
+                    dgcol_index, dgvalues, G, dS)
 
-              G = S - S_iter_copy - bfw - fi
+        S = S + dS
 
-              call solve( dgnnz, dgrow_index, dgrow_compressed, &
-                         dgcol_index, dgvalues, G, dS, solver_inner, solver_outer, verbose)
+        call dnrm2(dS, N_, dsn)
 
-              S = S + dS
-
-              call dnrm2(dS, N_, dsn)
-
-              j = j + 1
-          end do
-
-          if (dsn > 1.0d-3) then
-              i = 2**it               ! Breaks out of while loop.
-              S = S_copy
-          end if
+        j = j + 1
       end do
 
-      if (dsn < 1.0d-3) then
-          converged = .true.
-      else
-          it = it + 1
+      if (dsn > 1.0d-3) then
+          i = 2**it               ! Breaks out of while loop.
+          S = S_copy
       end if
+    end do
+
+    if (dsn < 1.0d-3) then
+        converged = .true.
+    else
+        it = it + 1
+    end if
   end do
 end subroutine NewtRaph
 
@@ -824,63 +806,55 @@ end subroutine NewtRaph
 !
 ! Pressure Solver
 !
-subroutine Pres(S, Q, P, V, solver_inner, solver_outer, verbose)
-    
-    logical :: verbose
-    integer :: solver_inner, solver_outer
-    
-    integer i
+subroutine Pres(Q, S, P, V)
+  integer i
 
-    double precision, dimension(N_) :: S
-    double precision, dimension(N_) :: Q
-    double precision, dimension(3 * N_) :: M
-    double precision, dimension(Nx_, Ny_, Nz_) :: P
-    double precision, dimension(3, Nx_, Ny_, Nz_) :: KM
-    double precision, dimension(3, Nx_ + 1, Ny_ + 1, Nz_ + 1) :: V
+  double precision, dimension(N_) :: S
+  double precision, dimension(N_) :: Q
+  double precision, dimension(3 * N_) :: M
+  double precision, dimension(Nx_, Ny_, Nz_) :: P
+  double precision, dimension(3, Nx_, Ny_, Nz_) :: KM
+  double precision, dimension(3, Nx_ + 1, Ny_ + 1, Nz_ + 1) :: V
 
-    double precision, dimension(N_) :: Mw
-    double precision, dimension(N_) :: Mo
+  double precision, dimension(N_) :: Mw
+  double precision, dimension(N_) :: Mo
 
-    !call RelPerm(S, M(1 : 3 * N_ : 3), M(2 : 3 * N_ : 3))
+  call RelPerm(S, Mw, Mo)
 
-    call RelPerm(S, Mw, Mo)
+  do i = 1,N_
+    M(1 + (i - 1) * 3) = Mw(i) + Mo(i)
+    M(2 + (i - 1) * 3) = M(1 + (i - 1) * 3)
+    M(3 + (i - 1) * 3) = M(1 + (i - 1) * 3)
+  end do
 
-    do i = 1,N_
-      M(1 + (i - 1) * 3) = Mw(i) + Mo(i)
-      M(2 + (i - 1) * 3) = M(1 + (i - 1) * 3)
-      M(3 + (i - 1) * 3) = M(1 + (i - 1) * 3)
-    end do
+  call myreshape_1_4(M, KM)
 
-    call myreshape_1_4(M, KM)
+  ! point-wise multiply
+  KM = KM * PERM
 
-    ! point-wise multiply
-    KM = KM * PERM
-
-    call tpfa(KM, Q, P, V, solver_inner, solver_outer, verbose)
-end subroutine
+  call TPFA(KM, Q, P, V)
+end subroutine Pres
 
 
 !
 ! Relative Permeabilities
 !
 subroutine RelPerm_vector(S, Mw, Mo, dMw, dMo)
-    
     implicit none
     double precision, dimension(N_) :: S
     double precision, dimension(N_) :: Mw
     double precision, dimension(N_) :: Mo
-    double precision, dimension(N_) :: S_
+    double precision, dimension(N_) :: S_temp
     double precision, dimension(N_), optional :: dMw
     double precision, dimension(N_), optional :: dMo
 
-    S_ = (S - swc_)/(1.0d0 - swc_ - sor_)   ! rescale saturation
-
-    Mw = S_**2/vw_
-    Mo = (1 - S_)**2/vo_
+    S_temp = (S - swc_)/(1.0d0 - swc_ - sor_)   ! rescale saturation
+    Mw = S_temp**2/vw_
+    Mo = (1 - S_temp)**2/vo_
 
     if (present(dMo) .and. present(dMw)) then
-        dMw = 2 * S_/vw_/(1 - swc_ - sor_)
-        dMo = -2 * (1 - S_)/vo_/(1 - swc_ - sor_)
+        dMw = 2 * S_temp/vw_/(1 - swc_ - sor_)
+        dMo = -2 * (1 - S_temp)/vo_/(1 - swc_ - sor_)
     endif
 end subroutine RelPerm_vector
 
@@ -889,16 +863,16 @@ end subroutine RelPerm_vector
 !
 subroutine RelPerm_scalar(S, Mw, Mo, dMw, dMo)
     implicit none
-    double precision :: S, Mw, Mo, S_
+    double precision :: S, Mw, Mo, S_temp
     double precision, optional :: dMw, dMo
 
-    S_ = (S - swc_)/(1.0d0 - swc_ - sor_)   ! rescale saturation
-    Mw = S_**2/vw_
-    Mo = (1 - S_)**2/vo_
+    S_temp = (S - swc_)/(1.0d0 - swc_ - sor_)   ! rescale saturation
+    Mw = S_temp**2/vw_
+    Mo = (1 - S_temp)**2/vo_
 
     if (present(dMo) .and. present(dMw)) then
-        dMw = 2 * S_/vw_/(1 - swc_ - sor_)
-        dMo = -2 * (1 - S_)/vo_/(1 - swc_ - sor_)
+        dMw = 2 * S_temp/vw_/(1 - swc_ - sor_)
+        dMo = -2 * (1 - S_temp)/vo_/(1 - swc_ - sor_)
     endif
 end subroutine RelPerm_scalar
 
@@ -906,7 +880,6 @@ end subroutine RelPerm_scalar
 ! Generate A matrix
 !
 subroutine GenA(V, Q,  annz, arow_index, arow_compressed, acol_index, avalues)
-  
   implicit none
 
   integer, dimension(7) :: idiags
@@ -971,183 +944,170 @@ subroutine GenA(V, Q,  annz, arow_index, arow_compressed, acol_index, avalues)
   diags(:, 4) = diag_tmp - diags(:, 5) - diags(:, 3) &
                           - diags(:, 6) - diags(:, 2) &
                           - diags(:, 7) - diags(:, 1)
-
-  ! This can be sped up by passing 3 arrays having rows, cols and diagind
-  ! this can be done because diag positions are fixed.
-  !TODO: Have a variant of spdiags which will instead of writing it in
-  !the spmat type, it will write it in separate arrays sent to it.
   
   call spdiags_fvm_csr(diags, annz, arow_index, arow_compressed,&
-                    acol_index, avalues)
+                       acol_index, avalues)
 end subroutine GenA
 
 !
 ! Two point flux approximation.
 !
-subroutine tpfa(K, Q, P, V, solver_inner, solver_outer, verbose)
-    
-    implicit none
-    logical :: verbose
-    integer :: solver_inner, solver_outer
-    
-    integer :: i
-    integer, dimension(7) :: idiags
-    double precision, dimension(N_, 7) :: diags ! the matrix containing the diagonal entries
+subroutine TPFA(K, Q, P, V)
+  implicit none
+  
+  integer :: i
+  integer, dimension(7) :: idiags
+  double precision, dimension(N_, 7) :: diags ! the matrix containing the diagonal entries
 
-    double precision, dimension(N_) :: Q
-    double precision, dimension(Nx_, Ny_, Nz_) :: P
-    double precision, dimension(3, Nx_, Ny_, Nz_) :: K
-    double precision, dimension(3, Nx_ + 1, Ny_ + 1, Nz_ + 1) :: V
+  double precision, dimension(N_) :: Q
+  double precision, dimension(Nx_, Ny_, Nz_) :: P
+  double precision, dimension(3, Nx_, Ny_, Nz_) :: K
+  double precision, dimension(3, Nx_ + 1, Ny_ + 1, Nz_ + 1) :: V
 
-    ! local variables
-    double precision :: tx_, ty_, tz_
-    double precision, dimension(Nx_ + 1, Ny_, Nz_) :: TX
-    double precision, dimension(Nx_, Ny_ + 1, Nz_) :: TY
-    double precision, dimension(Nx_, Ny_, Nz_ + 1) :: TZ
-    double precision, dimension(Nx_, Ny_, Nz_) :: TXYZ
+  ! local variables
+  double precision :: tx_, ty_, tz_
+  double precision, dimension(Nx_ + 1, Ny_, Nz_) :: TX
+  double precision, dimension(Nx_, Ny_ + 1, Nz_) :: TY
+  double precision, dimension(Nx_, Ny_, Nz_ + 1) :: TZ
+  double precision, dimension(Nx_, Ny_, Nz_) :: TXYZ
 
-    ! solution to the linear system
-    double precision, dimension(N_) :: u
+  ! solution to the linear system
+  double precision, dimension(N_) :: u
 
-    ! point-wise inverse of permeability
-    double precision, dimension(3, Nx_, Ny_, Nz_) :: L
+  ! point-wise inverse of permeability
+  double precision, dimension(3, Nx_, Ny_, Nz_) :: L
 
-    ! sparse matrix
-    integer :: annz
-    integer, dimension(7 * N_) :: arow_index
-    integer, dimension(7 * N_) :: acol_index
-    double precision, dimension(7 * N_) :: avalues
-    integer, dimension(N_ + 1) :: arow_compressed
+  ! sparse matrix
+  integer :: annz
+  integer, dimension(7 * N_) :: arow_index
+  integer, dimension(7 * N_) :: acol_index
+  double precision, dimension(7 * N_) :: avalues
+  integer, dimension(N_ + 1) :: arow_compressed
 
 
-    ! get the point-wise inverse of the permeability matrix
-    L = 1.0d0/K
+  ! get the point-wise inverse of the permeability matrix
+  L = 1.0d0/K
 
-    tx_ = 2.0d0 * hy_ * hz_ / hx_
-    ty_ = 2.0d0 * hx_ * hz_ / hy_
-    tz_ = 2.0d0 * hy_ * hx_ / hz_
+  tx_ = 2.0d0 * hy_ * hz_ / hx_
+  ty_ = 2.0d0 * hx_ * hz_ / hy_
+  tz_ = 2.0d0 * hy_ * hx_ / hz_
 
-    TX = 0.0d0
-    TY = 0.0d0
-    TZ = 0.0d0
+  TX = 0.0d0
+  TY = 0.0d0
+  TZ = 0.0d0
 
-    ! Compute transmissibilities by averaging harmonically
-    TX(2:Nx_,1:Ny_,1:Nz_) = tx_/(L(1, 1:Nx_ - 1, 1:Ny_, 1:Nz_) + L(1, 2:Nx_, 1:Ny_, 1:Nz_))
-    TY(1:Nx_,2:Ny_,1:Nz_) = ty_/(L(2, 1:Nx_, 1:Ny_ - 1, 1:Nz_) + L(2, 1:Nx_, 2:Ny_, 1:Nz_))
-    TZ(1:Nx_,1:Ny_,2:Nz_) = tz_/(L(3, 1:Nx_, 1:Ny_, 1:Nz_ - 1) + L(3, 1:Nx_, 1:Ny_, 2:Nz_))
+  ! Compute transmissibilities by averaging harmonically
+  TX(2:Nx_,1:Ny_,1:Nz_) = tx_/(L(1, 1:Nx_ - 1, 1:Ny_, 1:Nz_) + L(1, 2:Nx_, 1:Ny_, 1:Nz_))
+  TY(1:Nx_,2:Ny_,1:Nz_) = ty_/(L(2, 1:Nx_, 1:Ny_ - 1, 1:Nz_) + L(2, 1:Nx_, 2:Ny_, 1:Nz_))
+  TZ(1:Nx_,1:Ny_,2:Nz_) = tz_/(L(3, 1:Nx_, 1:Ny_, 1:Nz_ - 1) + L(3, 1:Nx_, 1:Ny_, 2:Nz_))
 
-    ! initialize diags
-    diags = 0.0d0
+  ! initialize diags
+  diags = 0.0d0
 
-    TXYZ = -TX(1:Nx_,1:Ny_,1:Nz_)
-    call myreshape_3_1(TXYZ, diags(:, 5))          ! -x1
-    TXYZ = -TY(1:Nx_,1:Ny_,1:Nz_)
-    call myreshape_3_1(TXYZ, diags(:, 6))          ! -y1
-    TXYZ = -TZ(1:Nx_,1:Ny_,1:Nz_)
-    call myreshape_3_1(TXYZ, diags(:, 7))          ! -z1
-    TXYZ = -TX(2:Nx_ + 1,1:Ny_,1:Nz_)
-    call myreshape_3_1(TXYZ, diags(:, 3))      ! -x2
-    TXYZ = -TY(1:Nx_,2:Ny_ + 1,1:Nz_)
-    call myreshape_3_1(TXYZ, diags(:, 2))      ! -y2
-    TXYZ = -TZ(1:Nx_,1:Ny_,2:Nz_ + 1)
-    call myreshape_3_1(TXYZ, diags(:, 1))      ! -z2
+  TXYZ = -TX(1:Nx_,1:Ny_,1:Nz_)
+  call myreshape_3_1(TXYZ, diags(:, 5))          ! -x1
+  TXYZ = -TY(1:Nx_,1:Ny_,1:Nz_)
+  call myreshape_3_1(TXYZ, diags(:, 6))          ! -y1
+  TXYZ = -TZ(1:Nx_,1:Ny_,1:Nz_)
+  call myreshape_3_1(TXYZ, diags(:, 7))          ! -z1
+  TXYZ = -TX(2:Nx_ + 1,1:Ny_,1:Nz_)
+  call myreshape_3_1(TXYZ, diags(:, 3))      ! -x2
+  TXYZ = -TY(1:Nx_,2:Ny_ + 1,1:Nz_)
+  call myreshape_3_1(TXYZ, diags(:, 2))      ! -y2
+  TXYZ = -TZ(1:Nx_,1:Ny_,2:Nz_ + 1)
+  call myreshape_3_1(TXYZ, diags(:, 1))      ! -z2
 
-    ! Assemble discretization matrix
-    diags(:, 4) = -(diags(:,1) + diags(:,2) + diags(:,3) &
-                    + diags(:,5) + diags(:,6) + diags(:,7))
+  ! Assemble discretization matrix
+  diags(:, 4) = -(diags(:,1) + diags(:,2) + diags(:,3) &
+                  + diags(:,5) + diags(:,6) + diags(:,7))
 
-
-    !TODO: Have a variant of spdiags which will instead of writing it in
-    !the spmat type, it will write it in separate arrays sent to it.
-
-    call spdiags_fvm_csr(diags, annz, arow_index, arow_compressed, &
-                     acol_index, avalues)
+  call spdiags_fvm_csr(diags, annz, arow_index, arow_compressed, &
+                    acol_index, avalues)
 
 
-    ! ! Increment the 1,1 element of A
-!     call addx_elem2(annz, arow_index, arow_compressed,&
+  ! ! Increment the 1,1 element of A
+!     call addx_elem(annz, arow_index, arow_compressed,&
 !                     acol_index, avalues, &
 !                     PERM(1,1,1,1) + PERM(2,1,1,1) + PERM(3,1,1,1), 1, 1)
 
-    ! Fix the pressure at the inlets
-    do i = 1,annz
-      if(arow_index(i) < Nx_ * Ny_ .and. mod(arow_index(i), Ny_) == 1) then
-          if(arow_index(i) == acol_index(i)) then
-            avalues(i) = 1
-          else
-            avalues(i) = 0
-          endif
-      endif
-    enddo
+  ! Fix the pressure at the inlets
+  do i = 1,annz
+    if(arow_index(i) < Nx_ * Ny_ .and. mod(arow_index(i), Ny_) == 1) then
+        if(arow_index(i) == acol_index(i)) then
+          avalues(i) = 1
+        else
+          avalues(i) = 0
+        endif
+    endif
+  enddo
 
-    ! solve the linear system
-    ! Pass the rows_index, cols_index, values separately.
-    call solve(annz, arow_index, arow_compressed, &
-               acol_index, avalues, Q, u, solver_inner, solver_outer, verbose)
+  ! solve the linear system
+  ! Pass the rows_index, cols_index, values separately.
+  call solve(annz, arow_index, arow_compressed, &
+              acol_index, avalues, Q, u)
 
-    ! reshape the solution
-    call myreshape_1_3(u, P)
+  ! reshape the solution
+  call myreshape_1_3(u, P)
 
-    ! V.x
-    V(1, 2:Nx_, 1:Ny_, 1:Nz_) = (P(1:Nx_ - 1, :, :) - P(2:Nx_, :, :)) * TX(2:Nx_,:,:)
-    ! V.y
-    V(2, 1:Nx_, 2:Ny_, 1:Nz_) = (P(:, 1:Ny_ - 1, :) - P(:, 2:Ny_, :)) * TY(:,2:Ny_,:)
-    ! V.z
-    V(3, 1:Nx_, 1:Ny_, 2:Nz_) = (P(:, :, 1:Nz_ - 1) - P(:, :, 2:Nz_)) * TZ(:,:,2:Nz_)
-end subroutine tpfa
+  ! V.x
+  V(1, 2:Nx_, 1:Ny_, 1:Nz_) = (P(1:Nx_ - 1, :, :) - P(2:Nx_, :, :)) * TX(2:Nx_,:,:)
+  ! V.y
+  V(2, 1:Nx_, 2:Ny_, 1:Nz_) = (P(:, 1:Ny_ - 1, :) - P(:, 2:Ny_, :)) * TY(:,2:Ny_,:)
+  ! V.z
+  V(3, 1:Nx_, 1:Ny_, 2:Nz_) = (P(:, :, 1:Nz_ - 1) - P(:, :, 2:Nz_)) * TZ(:,:,2:Nz_)
+end subroutine TPFA
 
 !
 ! Creates sparse diags matrix from rectangular matrix having the diagonals
 ! orow_compressed is not populated.
 subroutine spdiags_fvm(imatrix, onnz, orow_index, &
                        orow_compressed, ocol_index, ovalues)
-    implicit none
-    logical :: done
-    double precision :: elm
-    integer :: i, j, start_row_imatrix, end_row_imatrix, row, col
+  implicit none
+  logical :: done
+  double precision :: elm
+  integer :: i, j, start_row_imatrix, end_row_imatrix, row, col
 
-    double precision, dimension(N_, 7) :: imatrix
-    integer, dimension(7) :: idiags
-                                                   
-    integer :: onnz
-    integer, dimension(7 * N_) :: orow_index
-    integer, dimension(7 * N_) :: ocol_index
-    double precision, dimension(7 * N_) :: ovalues
-    integer, dimension(N_ + 1) :: orow_compressed
+  double precision, dimension(N_, 7) :: imatrix
+  integer, dimension(7) :: idiags 
+  integer :: onnz
+  integer, dimension(7 * N_) :: orow_index
+  integer, dimension(7 * N_) :: ocol_index
+  double precision, dimension(7 * N_) :: ovalues
+  integer, dimension(N_ + 1) :: orow_compressed
 
-    idiags(1) = -Nx_ * Ny_
-    idiags(2) =  -Nx_
-    idiags(3) = -1
-    idiags(4) = 0
-    idiags(5) = 1
-    idiags(6) = Nx_
-    idiags(7) = Nx_ * Ny_
+  idiags(1) = -Nx_ * Ny_
+  idiags(2) =  -Nx_
+  idiags(3) = -1
+  idiags(4) = 0
+  idiags(5) = 1
+  idiags(6) = Nx_
+  idiags(7) = Nx_ * Ny_
     
-    onnz = 0
-    orow_compressed = 0
-    
-    do i = 1, 7
-      if (idiags(i) > 0) then
-        start_row_imatrix = idiags(i) + 1
-        end_row_imatrix = N_
-      else if (idiags(i) <= 0) then
-        start_row_imatrix = 1
-        end_row_imatrix = N_ + idiags(i)
+  onnz = 0
+  orow_compressed = 0
+  
+  do i = 1, 7
+    if (idiags(i) > 0) then
+      start_row_imatrix = idiags(i) + 1
+      end_row_imatrix = N_
+    else if (idiags(i) <= 0) then
+      start_row_imatrix = 1
+      end_row_imatrix = N_ + idiags(i)
+    end if
+
+    call firstelm(idiags(i), row, col)
+
+    do j = start_row_imatrix,end_row_imatrix
+      if (row == col .or. imatrix(j, i) /= 0) then
+        onnz = onnz + 1
+        orow_index(onnz) = row
+        ocol_index(onnz) = col
+        ovalues(onnz) = imatrix(j, i)
       end if
-
-      call firstelm(idiags(i), row, col)
-
-      do j = start_row_imatrix,end_row_imatrix
-        if (row == col .or. imatrix(j, i) /= 0) then
-          onnz = onnz + 1
-          orow_index(onnz) = row
-          ocol_index(onnz) = col
-          ovalues(onnz) = imatrix(j, i)
-        end if
-        row = row + 1
-        col = col + 1
-      enddo
+      row = row + 1
+      col = col + 1
     enddo
+  enddo
 end subroutine spdiags_fvm
 
 !
@@ -1155,23 +1115,23 @@ end subroutine spdiags_fvm
 !
 subroutine spdiags_fvm_csr(imatrix, onnz, orow_index,&
                            orow_compressed, ocol_index, ovalues)
-    implicit none
-    logical :: done
-    double precision :: elm
-    integer :: i, j, rownnz
+  implicit none
+  logical :: done
+  double precision :: elm
+  integer :: i, j, rownnz
 
-    double precision, dimension(N_, 7) :: imatrix
-    integer, dimension(7) :: idiags 
-    integer, dimension(7) :: start_row_imatrix, end_row_imatrix
-    integer, dimension(7) :: row_diag, col_diag      ! row, column along diagonal
+  double precision, dimension(N_, 7) :: imatrix
+  integer, dimension(7) :: idiags
+  integer, dimension(7) :: start_row_imatrix, end_row_imatrix
+  integer, dimension(7) :: row_diag, col_diag      ! row, column along diagonal
 
-                                                   
-    integer :: onnz
-    integer, dimension(7 * N_) :: orow_index
-    integer, dimension(7 * N_) :: ocol_index
-    double precision, dimension(7 * N_) :: ovalues
-    integer, dimension(N_ + 1) :: orow_compressed
 
+
+  integer :: onnz
+  integer, dimension(7 * N_) :: orow_index
+  integer, dimension(7 * N_) :: ocol_index
+  double precision, dimension(7 * N_) :: ovalues
+  integer, dimension(N_ + 1) :: orow_compressed
 
     idiags(1) = -Nx_ * Ny_
     idiags(2) =  -Nx_
@@ -1181,57 +1141,50 @@ subroutine spdiags_fvm_csr(imatrix, onnz, orow_index,&
     idiags(6) = Nx_
     idiags(7) = Nx_ * Ny_
 
-    onnz = 0
-    orow_compressed(1) = 1                      ! compressed row storage
+  onnz = 0
+  orow_compressed(1) = 1                      ! compressed row storage
+  
+  do i = 1, 7
+    if (idiags(i) > 0) then
+      start_row_imatrix(i) = idiags(i) + 1
+      end_row_imatrix(i) = N_  
+    else if (idiags(i) <= 0) then
+      start_row_imatrix(i) = 1
+      end_row_imatrix(i) = N_ + idiags(i)
+    end if
     
-    do i = 1, 7
-      if (idiags(i) > 0) then
-        start_row_imatrix(i) = idiags(i) + 1
-        end_row_imatrix(i) = N_  
-      else if (idiags(i) <= 0) then
-        start_row_imatrix(i) = 1
-        end_row_imatrix(i) = N_ + idiags(i)
-      end if
-      
-      call firstelm(idiags(i), row_diag(i), col_diag(i))
-    enddo 
-    
-    ! Do for each row in imatrix
-    do i = 1, N_
-      rownnz = 0                        ! count the number of nonzeros in row
-      ! Do for each column in imatrix
-      do j = 1, 7
-      ! Need to check if that column has any entry in this row
-        if(row_diag(j) <= i .and.  &    ! checks that you are past the beginning of diagonal, remains fixed
-          start_row_imatrix(j) <= end_row_imatrix(j)) then ! checks that you have not exhausted the diagonal
-          if(imatrix(start_row_imatrix(j), j) /= 0.0d0) then ! checks that the diagonal entry is non zero
-            onnz = onnz + 1
-            rownnz = rownnz + 1
-            orow_index(onnz) = i
-            ocol_index(onnz) = col_diag(j)
-            ovalues(onnz) = imatrix(start_row_imatrix(j), j)
-          endif
-          start_row_imatrix(j) = start_row_imatrix(j) + 1
-          col_diag(j) = col_diag(j) + 1
+    call firstelm(idiags(i), row_diag(i), col_diag(i))
+  enddo 
+  
+  ! Do for each row in imatrix
+  do i = 1, N_
+    rownnz = 0                        ! count the number of nonzeros in row
+    ! Do for each column in imatrix
+    do j = 1, 7
+    ! Need to check if that column has any entry in this row
+      if(row_diag(j) <= i .and.  &    ! checks that you are past the beginning of diagonal, remains fixed
+        start_row_imatrix(j) <= end_row_imatrix(j)) then ! checks that you have not exhausted the diagonal
+        if(imatrix(start_row_imatrix(j), j) /= 0.0d0) then ! checks that the diagonal entry is non zero
+          onnz = onnz + 1
+          rownnz = rownnz + 1
+          orow_index(onnz) = i
+          ocol_index(onnz) = col_diag(j)
+          ovalues(onnz) = imatrix(start_row_imatrix(j), j)
         endif
-      enddo
-      orow_compressed(i + 1) = orow_compressed(i) + rownnz
+        start_row_imatrix(j) = start_row_imatrix(j) + 1
+        col_diag(j) = col_diag(j) + 1
+      endif
     enddo
+    orow_compressed(i + 1) = orow_compressed(i) + rownnz
+  enddo
 end subroutine spdiags_fvm_csr
-
-end module fvm
-
-module head
-  use grid
+end module finitevolume
+module simulation
+  use parameters
   use matrix
-  use fvm
+  use finitevolume
 
   implicit none
-  integer :: St, Pt, ND
-
-  parameter(St = 5,            &                  ! Max saturation time step
-            Pt = 100,          &                  ! Pressure time step
-            ND = 2000)                            ! Number of days in simulation
 contains
 
 !
@@ -1241,7 +1194,7 @@ contains
 subroutine read_permeability_and_porosity(PERM, POR)
     integer :: i, j, k, l, m
 
-    double precision, dimension(N_) :: POR      ! Porosities
+    double precision, dimension(N_) :: POR                 ! Porosities
     double precision, dimension(3, Nx_, Ny_, Nz_) :: PERM  ! Permeabilities
 
     double precision, dimension(Nx_, Ny_, Nz_) :: P
@@ -1257,7 +1210,7 @@ subroutine read_permeability_and_porosity(PERM, POR)
     POR = 0.0d0
 
     ! read KUr
-    open(1,file='KUr.txt',status='old')
+    open(1,file=permeability_file,status='old')
     read(1,*) ((KUr(i,j), j=1,maxNy * maxNz), i=1,3 * maxNx)
     close(1)
 
@@ -1283,7 +1236,7 @@ subroutine read_permeability_and_porosity(PERM, POR)
     call myreshape_1_4(KUrl(Kindices), PERM)
 
     ! read KUr
-    open(1,file='pUr.txt',status='old')
+    open(1,file=porosity_file,status='old')
     read(1,*) (pUr(i), i=1,maxNx * maxNy * maxNz)
     close(1)
 
@@ -1298,7 +1251,6 @@ subroutine read_permeability_and_porosity(PERM, POR)
         end do
     end do
 
-    !POR = max(pUr(Pindices), 1.0d-3)
     call mymax_1_0_double(pUr(Pindices), 1.0d-3, POR)
 end subroutine read_permeability_and_porosity
 
@@ -1306,60 +1258,55 @@ end subroutine read_permeability_and_porosity
 !
 ! Initialize inflow and outflow.
 !
-subroutine init_flw_trnc_norm_xin_pt_out(ir, mu, sigma, Q)
-    !!use gnufor2
-    integer :: i, j
-    double precision, dimension(Nx_) :: idx
-    double precision :: x, pi, pdf, mass
-    double precision :: mu, sigma, ir
-    double precision, dimension(N_) :: Q
-    double precision, dimension(Nx_) :: Q_x
+subroutine init_flw_trnc_norm_xin_pt_out(mu, sigma, Q)
+  double precision :: mu, sigma
+  double precision, dimension(N_) :: Q
 
-    ! value of pi
-    pi = 3.14159265358979323d0
+  integer :: i, j
+  double precision :: x, pi, pdf, mass
+  double precision, dimension(Nx_) :: idx
+  double precision, dimension(Nx_) :: Q_x
 
-    !initialize the total mass to 0
-    mass = 0.0d0
-    Q_x = 0.0d0
+  ! value of pi
+  pi = 3.14159265358979323d0
 
-    ! Note that the portion of the  Standard Normal distribution between
-    ! -3sigma/2 to 3sigma/2 is assumed to fit the 1..Nx where sigma is 1
-    do i = 1, Nx_
-        ! get the real x coordinate
-        x = -1.5d0 + ((i - 1) * 3.0d0)/(Nx_ - 1)    ! Mapping x = [-1.5, 1.5] to Nx_ dimension
+  !initialize the total mass to 0
+  mass = 0.0d0
+  Q_x = 0.0d0
 
-        ! Now use mu and sigma to find the pdf value at x
-        pdf = 1.0d0/(sigma * sqrt(2.0d0 * pi)) * exp(-(((x - mu)/sigma)**2.0d0)/2.0d0)
+  ! Note that the portion of the  Standard Normal distribution between
+  ! -3sigma/2 to 3sigma/2 is assumed to fit the 1..Nx where sigma is 1
+  do i = 1, Nx_
+      ! get the real x coordinate
+      x = -1.5d0 + ((i - 1) * 3.0d0)/(Nx_ - 1)    ! Mapping x = [-1.5, 1.5] to Nx_ dimension
 
-        ! set the value at the index equal to the pdf value at that point
-        Q_x(i) = pdf
+      ! Now use mu and sigma to find the pdf value at x
+      pdf = 1.0d0/(sigma * sqrt(2.0d0 * pi)) * exp(-(((x - mu)/sigma)**2.0d0)/2.0d0)
 
-        ! increment the mass by the value of the pdf
-        mass = mass + pdf
+      ! set the value at the index equal to the pdf value at that point
+      Q_x(i) = pdf
 
-        ! index to test initialization by plot
-        idx(i) = i * 1.0
-    end do
+      ! increment the mass by the value of the pdf
+      mass = mass + pdf
 
-    ! now rescale all the entities
-    Q_x = Q_x/mass * ir
+      ! index to test initialization by plot
+      idx(i) = i * 1.0
+  end do
 
-    ! Assign Q_x to Q
-    j = 1
-    do i = 1, Nx_* Ny_, Ny_
-      Q(i) = Q_x(j)
-      j = j + 1
-    end do
+  ! now rescale all the entities
+  do i = 1, Nx_
+     Q_x(i) = Q_x(i)/mass * ir
+  end do
 
-    ! now set the output
-    Q(N_) = -ir
+  ! Assign Q_x to Q
+  j = 1
+  do i = 1, Nx_* Ny_, Ny_
+    Q(i) = Q_x(j)
+    j = j + 1
+  end do
 
-   !---------------------------------------------------------------------------
-   ! Call GNUPLOT through the interface module.
-   ! Uncomment these plot calls after verifying you have GNUPlot installed.
-   !---------------------------------------------------------------------------
-   ! Plot the Q and check if it is correct.
-   !call plot(idx, Q_x, terminal='png', filename='inflow.png')
+  ! now set the output
+  Q(N_) = -ir
 end subroutine init_flw_trnc_norm_xin_pt_out
 
 
@@ -1367,21 +1314,20 @@ end subroutine init_flw_trnc_norm_xin_pt_out
 ! This subroutine simulates the reservoir
 ! model.
 !
-subroutine simulate_reservoir(Q, S, P, V, St, Pt, Tt, ND, Mw, Mo, Mt, Pc, oil, &
-                              solver_inner, solver_outer, verbose)
-    use grid
-    use fluid
-    logical :: verbose
-    integer :: solver_inner, solver_outer
-    integer :: i, j, k, ND, St, Pt
-    double precision :: Mw, Mo, Mt, tempoil1, tempoil2
-    double precision ::  oil
-    double precision, dimension((ND/St) + 1) :: Tt
-    double precision, dimension(N_) :: S
+subroutine simulate_reservoir(Q, S, P, V, Tt, Pc, oil)
+    use parameters
+    
     double precision, dimension(N_) :: Q
-    double precision, dimension(2, (ND/St) + 1) :: Pc
+    double precision, dimension(N_) :: S
     double precision, dimension(Nx_, Ny_, Nz_) :: P
     double precision, dimension(3, Nx_ + 1, Ny_ + 1, Nz_ + 1) :: V
+    
+    double precision, dimension((ND/St) + 1) :: Tt   
+    double precision, dimension(2, (ND/St) + 1) :: Pc
+    double precision ::  oil
+    
+    integer :: i, j, k
+    double precision :: Mw, Mo, Mt, tempoil1, tempoil2
 
     S = swc_                            ! initial saturation
 
@@ -1391,19 +1337,22 @@ subroutine simulate_reservoir(Q, S, P, V, St, Pt, Tt, ND, Mw, Mo, Mt, Pc, oil, &
 
     tempoil1 = 0.0d0
     tempoil2 = 0.0d0
+    
     k = 1
     do i = 1, ND/Pt
-        call Pres(S, Q, P, V, solver_inner, solver_outer, verbose) ! Pressure solver
-!        write (*,*) 'PRESSURE========================================================'
          do j = 1, Pt/St
-!            write(*,*) "Outer:", i, "Inner:", j
             k = k + 1
-            call NewtRaph(S, V, Q, St, solver_inner, solver_outer, verbose) ! Solve for saturation
-            call RelPerm(S(N_), Mw, Mo)             ! Mobilities in well-block
+            
+            if (j == 1) then
+              call stepforward(1, Q, S, P, V, Mw, Mo)
+            else
+              call stepforward(0, Q, S, P, V, Mw, Mo)            
+            endif
 
+            
+            ! update quantites
             Mt = Mw + Mo
-
-            Tt(k) = 1.0d0 * k * St
+            Tt(k) = 1.0d0 * k * St  
             Pc(1,k) = Mw/Mt
             Pc(2,k) = Mo/Mt
 
@@ -1415,6 +1364,22 @@ subroutine simulate_reservoir(Q, S, P, V, St, Pt, Tt, ND, Mw, Mo, Mt, Pc, oil, &
     oil = tempoil2
 end subroutine simulate_reservoir
 
+subroutine stepforward(pressure_step, Q, S, P, V, Mw, Mo)
+  integer :: pressure_step
+  double precision, dimension(N_) :: Q
+  double precision, dimension(N_) :: S
+  double precision, dimension(Nx_, Ny_, Nz_) :: P
+  double precision, dimension(3, Nx_ + 1, Ny_ + 1, Nz_ + 1) :: V
+  double precision :: Mw, Mo
+  
+  if (pressure_step == 1) then
+    ! solve pressure
+    call Pres(Q, S, P, V)    ! Pressure solver
+  endif
+
+  call NewtRaph(Q, V, S)      ! Solve for saturation
+  call RelPerm(S(N_), Mw, Mo)         ! Mobilities in well-block
+end subroutine stepforward
 
 subroutine update_oil(Pc, k, St, oilin, oilout)
   integer :: St, k
@@ -1425,32 +1390,20 @@ subroutine update_oil(Pc, k, St, oilin, oilout)
   oilout = oilin +  Pc(2, k) * St                     ! Reimann sum
 end subroutine update_oil
 
-subroutine wrapper(ir, mu, sigma, Q, S, P, V, St, Pt, Tt, ND, Mw, Mo, &
-&                  Mt, Pc, oil, solver_inner, solver_outer, verbose)
-  use grid
-  use fluid
-  integer :: ND, St, Pt
-  logical :: verbose
-  integer :: solver_inner, solver_outer
-  double precision :: mu, sigma, ir
-  double precision :: Mw, Mo, Mt
-  double precision :: oil
-  double precision, dimension((ND/St) + 1) :: Tt
-  double precision, dimension(N_) :: S
+subroutine wrapper(mu, sigma, Q, S, P, V, Tt, Pc, oil) 
+  double precision :: mu, sigma
   double precision, dimension(N_) :: Q
-  double precision, dimension(2, (ND/St) + 1) :: Pc
+  double precision, dimension(N_) :: S
   double precision, dimension(Nx_, Ny_, Nz_) :: P
   double precision, dimension(3, Nx_ + 1, Ny_ + 1, Nz_ + 1) :: V
+  double precision, dimension((ND/St) + 1) :: Tt
+  double precision, dimension(2, (ND/St) + 1) :: Pc
+  double precision :: oil
 
   !$openad independent(mu)
   !$openad independent(sigma)
-  !$openad independent(ir)
-
-
-  call init_flw_trnc_norm_xin_pt_out(ir, mu, sigma, Q)
-  call simulate_reservoir(Q, S, P, V, St, Pt, Tt, ND, Mw, Mo, Mt, Pc, &
-&                         oil, solver_inner, solver_outer, verbose)
-
+  call init_flw_trnc_norm_xin_pt_out(mu, sigma, Q)
+  call simulate_reservoir(Q, S, P, V, Tt, Pc, oil)
   !$openad dependent(oil)
 end subroutine wrapper
-end module head
+end module simulation

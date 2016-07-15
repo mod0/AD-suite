@@ -174,7 +174,6 @@ end subroutine Pres
 ! Relative Permeabilities
 !
 subroutine RelPerm_vector(S, Mw, Mo, dMw, dMo)
-    !use print_active
     implicit none
     double precision, dimension(N_) :: S
     double precision, dimension(N_) :: Mw

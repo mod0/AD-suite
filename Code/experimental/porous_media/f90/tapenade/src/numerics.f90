@@ -850,7 +850,6 @@ end subroutine Pres
 ! Relative Permeabilities
 !
 subroutine RelPerm_vector(S, Mw, Mo, dMw, dMo)
-    !use print_active
     implicit none
     double precision, dimension(N_) :: S
     double precision, dimension(N_) :: Mw
@@ -1191,8 +1190,8 @@ contains
 subroutine read_permeability_and_porosity(PERM, POR)
     integer :: i, j, k, l, m
 
-    double precision, dimension(N_), intent(out) :: POR                 ! Porosities
-    double precision, dimension(3, Nx_, Ny_, Nz_), intent(out) :: PERM  ! Permeabilities
+    double precision, dimension(N_) :: POR                 ! Porosities
+    double precision, dimension(3, Nx_, Ny_, Nz_) :: PERM  ! Permeabilities
 
     double precision, dimension(Nx_, Ny_, Nz_) :: P
     double precision, dimension(maxNx * maxNy * maxNz) :: pUr
@@ -1256,8 +1255,8 @@ end subroutine read_permeability_and_porosity
 ! Initialize inflow and outflow.
 !
 subroutine init_flw_trnc_norm_xin_pt_out(mu, sigma, Q)
-  double precision, intent(in) :: mu, sigma
-  double precision, dimension(N_), intent(out) :: Q
+  double precision :: mu, sigma
+  double precision, dimension(N_) :: Q
 
   integer :: i, j
   double precision :: x, pi, pdf, mass
@@ -1313,7 +1312,6 @@ subroutine simulate_reservoir(Q, S, P, V, Tt, Pc, oil)
     use parameters
     
     double precision, dimension(N_) :: Q
-    
     double precision, dimension(N_) :: S
     double precision, dimension(Nx_, Ny_, Nz_) :: P
     double precision, dimension(3, Nx_ + 1, Ny_ + 1, Nz_ + 1) :: V
