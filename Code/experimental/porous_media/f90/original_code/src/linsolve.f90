@@ -33,7 +33,7 @@ contains
     double precision, dimension(n) :: b
     double precision, dimension(n) :: x
 
-    call sparse_dummy_method(n, annz, 7 * n, arow_index, arow_compressed,&
+    call sparse_pmgmres_method(n, annz, 7 * n, arow_index, arow_compressed,&
          acol_index, avalues, b, x, solver_inner, solver_outer, verbose)
   end subroutine sparse_solve
 end module linsolve

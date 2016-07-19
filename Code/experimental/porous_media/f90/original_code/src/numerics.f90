@@ -4,36 +4,8 @@ module parameters
   integer :: scenario_id
   double precision :: hx_, hy_, hz_, V_, ir
 
-  parameter(scenario_id = 1, &
-       hx_ = 20.0d0 * 0.3048d0, &    ! step size in x-direction
-       hy_ = 10.0d0 * 0.3048d0, &    ! step size in y-direction
-       hz_ = 2.0d0 * 0.3048d0, &     ! step size in z-direction
-       V_ = hx_ * hy_ * hz_)        ! Volume of each grid cell
-
   ! fluid parameters
   double precision :: vw_, vo_, swc_, sor_
-  parameter(vw_ = 3d-4, &      ! Viscosity of Water
-            vo_ = 3d-3, &      ! Viscosity of Oil
-            swc_ = 0.2d0, &    ! Saturation of water cut
-            sor_ = 0.2d0)      ! Saturation of oil cut
-
-  ! timestepping parameters
-  integer :: St_, Pt_, ND_
-  parameter(St_ = 5,            &                  ! Max saturation time step
-            Pt_ = 100,          &                  ! Pressure time step
-            ND_ = 2000)                            ! Number of days in simulation
-
-  ! filenames
-  character(*), parameter :: data_directory = "../data/data_1/"
-  character(*), parameter :: results_directory = "results/"
-  character(*), parameter :: porosity_file = data_directory//"pUr.txt"
-  character(*), parameter :: permeability_file = data_directory//"KUr.txt"
-  character(*), parameter :: results_eval_original_code = &
-       results_directory//"results_eval_original_code.nc"
-  character(*), parameter :: results_eval_deriv_tapenade_1_fwd = &
-       results_directory//"results_eval_deriv_tapenade_1_forward.nc"
-  character(*), parameter :: results_eval_deriv_tapenade_1_rev = &
-       results_directory//"results_eval_deriv_tapenade_1_reverse.nc"
 
   ! PARAMETERS READ FROM FILE
   ! porosity and permeability parameters
@@ -44,10 +16,6 @@ module parameters
   ! linear solver parameters
   logical :: verbose
   integer :: solver_inner, solver_outer
-
-  parameter(verbose = .false.,   &              ! Verbose solver output
-       solver_inner = 64,        &              ! Number of inner iterations
-       solver_outer = 100000)                   ! Number of outer iterations
 end module parameters
 module mathutil
   implicit none
@@ -1168,75 +1136,6 @@ module simulation
   use finitevolume
   implicit none
 contains
-
-  !
-  ! This routine opens the permeability and porosity used by
-  ! the MATLAB program and uses it for the simulation.
-  !
-  subroutine read_permeability_and_porosity(nx, ny, nz, maxnx, maxny, maxnz, PERM, POR)
-    integer :: i, j, k, l, m
-    integer :: nx, ny, nz
-    integer :: maxnx, maxny, maxnz
-    double precision, dimension((nx * ny * nz)) :: POR                 ! Porosities
-    double precision, dimension(3, nx, ny, nz) :: PERM  ! Permeabilities
-
-    double precision, dimension(nx, ny, nz) :: P
-    double precision, dimension(maxnx * maxny * maxnz) :: pUr
-    double precision, dimension(3 * maxnx, maxny * maxnz) :: KUr
-    double precision, dimension(3 * maxnx * maxny * maxnz) :: KUrl
-
-    integer, dimension(nx * ny * nz) :: Pindices
-    integer, dimension(3 * nx * ny * nz) :: Kindices
-
-    ! initialize porosity and permeability to zero
-    PERM = 0.0d0
-    POR = 0.0d0
-
-    ! read KUr
-    open(1,file=permeability_file,status='old')
-    read(1,*) ((KUr(i,j), j=1,maxny * maxnz), i=1,3 * maxnx)
-    close(1)
-
-    ! reshape 2 dimension to 1 dimension
-    call myreshape_2_1(KUr, KUrl)
-
-    ! select according to specified dimension
-    m = 0
-    do l = 1, nz
-       do k = 1,ny
-          do j = 1,nx
-             do i = 1,3
-                m = m + 1
-                Kindices(m) = ((l - 1) * (maxnx * maxny * 3) &
-                     + (k - 1) * (maxnx * 3) &
-                     + 3 * (j-1) + i)
-             end do
-          end do
-       end do
-    end do
-
-    ! then reshape 1 dimension to 4 dimension (hack for time being)
-    call myreshape_1_4(KUrl(Kindices), PERM)
-
-    ! read KUr
-    open(1,file=porosity_file,status='old')
-    read(1,*) (pUr(i), i=1,maxnx * maxny * maxnz)
-    close(1)
-
-    m = 0
-    do k = 1,nz
-       do j = 1,ny
-          do i = 1,nx
-             m = m + 1
-             Pindices(m) = ((k - 1) * (maxnx * maxny) &
-                  + (j - 1) * (maxnx) + i)
-          end do
-       end do
-    end do
-
-    call mymax_1_0_double(pUr(Pindices), 1.0d-3, POR)
-  end subroutine read_permeability_and_porosity
-
 
   !
   ! Initialize inflow and outflow.
