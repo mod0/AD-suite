@@ -377,6 +377,80 @@ contains
     call mymax_1_0_double(POR_temp, 1.0d-3, POR)
   end subroutine read_permeability_and_porosity
 
+  ! !
+  ! ! This routine opens the permeability and porosity used by
+  ! ! the MATLAB program and uses it for the simulation.
+  ! !
+  ! subroutine read_permeability_and_porosity(data_directory, nx, ny, nz, PERM, POR)   
+    
+  !   integer :: i, j, k, l, m
+  !   integer :: nx, ny, nz
+  !   integer :: maxnx, maxny, maxnz
+  !   parameter(maxnx = 60, maxny = 220, maxnz = 85)
+  !   character(len = *) :: data_directory                             ! directory location of parameters 
+  !   double precision, dimension((nx * ny * nz)) :: POR                 ! Porosities
+  !   double precision, dimension(3, nx, ny, nz) :: PERM  ! Permeabilities
+
+  !   double precision, dimension(nx, ny, nz) :: P
+  !   double precision, dimension(maxnx * maxny * maxnz) :: pUr
+  !   double precision, dimension(3 * maxnx, maxny * maxnz) :: KUr
+  !   double precision, dimension(3 * maxnx * maxny * maxnz) :: KUrl
+
+  !   integer, dimension(nx * ny * nz) :: Pindices
+  !   integer, dimension(3 * nx * ny * nz) :: Kindices
+
+  !   ! initialize porosity and permeability to zero
+  !   PERM = 0.0d0
+  !   POR = 0.0d0
+
+
+
+  !   ! read KUr
+  !   open(1,file=trim(adjustl(data_directory))//"KUr.txt",status='old')
+  !   read(1,*) ((KUr(i,j), j=1,maxny * maxnz), i=1,3 * maxnx)
+  !   close(1)
+
+  !   ! reshape 2 dimension to 1 dimension
+  !   call myreshape_2_1(KUr, KUrl)
+
+  !   ! select according to specified dimension
+  !   m = 0
+  !   do l = 1, nz
+  !      do k = 1,ny
+  !         do j = 1,nx
+  !            do i = 1,3
+  !               m = m + 1
+  !               Kindices(m) = ((l - 1) * (maxnx * maxny * 3) &
+  !                    + (k - 1) * (maxnx * 3) &
+  !                    + 3 * (j-1) + i)
+  !            end do
+  !         end do
+  !      end do
+  !   end do
+
+  !   ! then reshape 1 dimension to 4 dimension (hack for time being)
+  !   call myreshape_1_4(KUrl(Kindices), PERM)
+
+  !   ! read KUr
+  !   open(1,file=trim(adjustl(data_directory))//"pUr.txt",status='old')
+  !   read(1,*) (pUr(i), i=1,maxnx * maxny * maxnz)
+
+  !   close(1)
+
+  !   m = 0
+  !   do k = 1,nz
+  !      do j = 1,ny
+  !         do i = 1,nx
+  !            m = m + 1
+  !            Pindices(m) = ((k - 1) * (maxnx * maxny) &
+  !                 + (j - 1) * (maxnx) + i)
+  !         end do
+  !      end do
+  !   end do
+
+  !   call mymax_1_0_double(pUr(Pindices), 1.0d-3, POR) 
+  ! end subroutine read_permeability_and_porosity
+
   ! netCDF Error Check Routine
   subroutine iserror(status)
     integer, intent ( in) :: status

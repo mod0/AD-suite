@@ -509,6 +509,7 @@ subroutine ilu_cr ( n, nz_num, ia, ja, a, ua, l )
 !
   l(1:nz_num) = a(1:nz_num)
 
+
   do i = 1, n
 !
 !  IW points to the nonzero entries in row I.
@@ -521,7 +522,7 @@ subroutine ilu_cr ( n, nz_num, ia, ja, a, ua, l )
 
     do j = ia(i), ia(i+1) - 1                  ! ith row entries
       jrow = ja(j)                             ! column corresponding to each entry
-      if ( i <= jrow ) then
+      if ( i <= jrow ) then                    ! exit when col >= current row.
         exit
       end if
       tl = l(j) * l(ua(jrow))
@@ -536,8 +537,8 @@ subroutine ilu_cr ( n, nz_num, ia, ja, a, ua, l )
 
     ua(i) = j
 
-    if ( jrow /= i ) then
-      write ( *, '(a)' ) ' '
+    if ( jrow /= i ) then                     ! This condition relies on the exit 14 lines above.
+      write ( *, '(a)' ) ' '                  ! It checks whether the diagonal entry is zero or not.
       write ( *, '(a)' ) 'ILU_CR - Fatal error!'
       write ( *, '(a)' ) '  JROW ~= I'
       write ( *, '(a,i8)' ) '  JROW = ', jrow

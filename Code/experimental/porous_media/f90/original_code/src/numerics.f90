@@ -1115,7 +1115,8 @@ contains
           ! Need to check if that column has any entry in this row
           if(row_diag(j) <= i .and.  &    ! checks that you are past the beginning of diagonal, remains fixed
                start_row_imatrix(j) <= end_row_imatrix(j)) then ! checks that you have not exhausted the diagonal
-             if(imatrix(start_row_imatrix(j), j) /= 0.0d0) then ! checks that the diagonal entry is non zero
+             if(imatrix(start_row_imatrix(j), j) /= 0.0d0 .or. &
+                  idiags(j) == 0) then ! checks that the diagonal entry is non zero or is the main diagonal
                 onnz = onnz + 1
                 rownnz = rownnz + 1
                 orow_index(onnz) = i
