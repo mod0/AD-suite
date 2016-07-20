@@ -5,9 +5,14 @@ MOD_DIR = modules
 APP_SRC_DIR = src
 OBJS_SUPP = supporting_routines.o 
 OBJS_AD_SUPP = adBuffer.o adStack.o
-OBJS_SIM = numerics_d.o numerics_b.o
-OBJS = ${OBJS_SUPP} ${OBJS_AD_SUPP} ${OBJS_SIM}
-OBJS_MAIN = eval_deriv_tapenade_1_forward.o eval_deriv_tapenade_1_reverse.o  
+OBJS_SIM_TL = numerics_d.o
+OBJS_SIM_ADJ = numerics_b.o
+OBJS_EXT_TL = sparse_pmgmres_template_tangent_linear.o
+OBJS_EXT_ADJ = sparse_pmgmres_template_adjoint.o
+OBJS_MAIN_TL = eval_deriv_tapenade_1_forward.o 
+OBJS_MAIN_ADJ = eval_deriv_tapenade_1_reverse.o  
+OBJS_TL = ${OBJS_SUPP} ${OBJS_AD_SUPP} ${OBJS_SIM_TL} ${OBJS_EXT_TL}
+OBJS_ADJ = ${OBJS_SUPP} ${OBJS_AD_SUPP} ${OBJS_SIM_ADJ} ${OBJS_EXT_ADJ}
 
 # Determine if this directory needs to be built
 # Refer: http://stackoverflow.com/a/28790801/1220493
@@ -20,7 +25,7 @@ FLAG=$(shell echo $$(((${IS_FORTRAN} + ${IS_ALL_LANG}) * (${IS_TAPENADE} + ${IS_
 # Add targets if directory needs to be built
 CONDITIONAL_BUILD =
 ifneq	(${FLAG}, 0)
-	CONDITIONAL_BUILD += cdir cpmod src ${OBJS_MAIN} link
+	CONDITIONAL_BUILD += cdir cpmod src ${OBJS_MAIN_TL} ${OBJS_MAIN_ADJ} link
 endif
 
 .PHONY: cdir cpmod src build link clean
@@ -29,8 +34,8 @@ build: ${CONDITIONAL_BUILD}
 
 
 link:
-	${FORT} ${FFLAGS} $(addprefix ${OBJ_DIR}/, ${OBJS}) ${OBJ_DIR}/eval_deriv_tapenade_1_forward.o -o ../eval_deriv_tapenade_1_forward -J${MOD_DIR} $(addprefix -, ${F90_LIBS})
-	${FORT} ${FFLAGS} $(addprefix ${OBJ_DIR}/, ${OBJS}) ${OBJ_DIR}/eval_deriv_tapenade_1_reverse.o -o ../eval_deriv_tapenade_1_reverse -J${MOD_DIR} $(addprefix -, ${F90_LIBS})
+	${FORT} ${FFLAGS} $(addprefix ${OBJ_DIR}/, ${OBJS_TL}) ${OBJ_DIR}/${OBJS_MAIN_TL} -o ../eval_deriv_tapenade_1_forward -J${MOD_DIR} $(addprefix -, ${F90_LIBS})
+	${FORT} ${FFLAGS} $(addprefix ${OBJ_DIR}/, ${OBJS_ADJ}) ${OBJ_DIR}/${OBJS_MAIN_ADJ} -o ../eval_deriv_tapenade_1_reverse -J${MOD_DIR} $(addprefix -, ${F90_LIBS})
 
 cdir: 
 	mkdir -p ${OBJ_DIR}

@@ -3,63 +3,22 @@
 !
 MODULE PARAMETERS_B
   IMPLICIT NONE
-! Number of outer iterations
 ! FIXED PARAMETERS
 ! grid parameters 
-  INTEGER :: nx_, ny_, nz_, n_, scenario_id
+  INTEGER :: scenario_id
   DOUBLE PRECISION :: hx_, hy_, hz_, v_, ir
-  INTEGER :: maxnx, maxny, maxnz
-  PARAMETER (maxnx=60, maxny=220, maxnz=85)
-  PARAMETER (scenario_id=1, nx_=10, ny_=10, nz_=2, hx_=20.0d0*0.3048d0, &
-& hy_=10.0d0*0.3048d0, hz_=2.0d0*0.3048d0, n_=nx_*ny_*nz_, v_=hx_*hy_*&
-&   hz_, ir=795.0*nx_*ny_*nz_/(maxnx*maxny*maxnz))
-! Dimension in x-direction
-! Dimension in y-direction
-! Dimension in z-direction
-! step size in x-direction
-! step size in y-direction
-! step size in z-direction
-! Total number of grid cells
-! Volume of each grid cell
-! Magic number
 ! fluid parameters
   DOUBLE PRECISION :: vw_, vo_, swc_, sor_
-  PARAMETER (vw_=3d-4, vo_=3d-3, swc_=0.2d0, sor_=0.2d0)
-! Viscosity of Water
-! Viscosity of Oil
-! Saturation of water cut
-! Saturation of oil cut
-! timestepping parameters
-  INTEGER :: st, pt, nd
-  PARAMETER (st=5, pt=100, nd=2000)
-! Max saturation time step
-! Pressure time step
-! Number of days in simulation
-! filenames
-  CHARACTER(len=*), PARAMETER :: data_directory='../data/data_1/'
-  CHARACTER(len=*), PARAMETER :: results_directory='results/'
-  CHARACTER(len=*), PARAMETER :: porosity_file=data_directory//'pUr.txt'
-  CHARACTER(len=*), PARAMETER :: permeability_file=data_directory//&
-&   'KUr.txt'
-  CHARACTER(len=*), PARAMETER :: results_eval_original_code=&
-&   results_directory//'results_eval_original_code.nc'
-  CHARACTER(len=*), PARAMETER :: results_eval_deriv_tapenade_1_fwd=&
-&   results_directory//'results_eval_deriv_tapenade_1_forward.nc'
-  CHARACTER(len=*), PARAMETER :: results_eval_deriv_tapenade_1_rev=&
-&   results_directory//'results_eval_deriv_tapenade_1_reverse.nc'
 ! PARAMETERS READ FROM FILE
 ! porosity and permeability parameters
 ! Porosities
-  DOUBLE PRECISION, DIMENSION(n_) :: por
+  DOUBLE PRECISION, DIMENSION(:), ALLOCATABLE :: por
 ! Permeabilities  
-  DOUBLE PRECISION, DIMENSION(3, nx_, ny_, nz_) :: perm
+  DOUBLE PRECISION, DIMENSION(:, :, :, :), ALLOCATABLE :: perm
 ! PARAMETERS SET IN DRIVER
 ! linear solver parameters
   LOGICAL :: verbose
   INTEGER :: solver_inner, solver_outer
-  PARAMETER (verbose=.false., solver_inner=64, solver_outer=100000)
-! Verbose solver output
-! Number of inner iterations
 END MODULE PARAMETERS_B
 
 MODULE MATHUTIL_B
@@ -149,7 +108,7 @@ MODULE MATRIX_B
       MODULE PROCEDURE SPMAT_MULTIPLY_DIAGONAL
       MODULE PROCEDURE SPMAT_MULTIPLY_VECTOR
       MODULE PROCEDURE SCALAR_MULTIPLY_SPMAT
-  END INTERFACE
+  END INTERFACE SPMAT_MULTIPLY
 
   INTERFACE SPMAT_MULTIPLY_B
       MODULE PROCEDURE SPMAT_MULTIPLY_DIAGONAL_B
@@ -181,15 +140,15 @@ CONTAINS
 ! !
 ! ! Display the matrix entries
 ! !
-! subroutine disp_spmat(innz, irow_index, irow_compressed, icol_index, ivalues, output)
+! subroutine disp_spmat(n, innz, irow_index, irow_compressed, icol_index, ivalues, output)
 !     implicit none
 !     integer :: k, output
-!
-!     integer ::  innz
-!     integer, dimension(7 * N_) :: irow_index
-!     integer, dimension(7 * N_) :: icol_index
-!     double precision, dimension(7 * N_) :: ivalues
-!     integer, dimension(N_ + 1) :: irow_compressed
+!     integer :: n
+!     integer :: innz
+!     integer, dimension(7 * n) :: irow_index
+!     integer, dimension(7 * n) :: icol_index
+!     double precision, dimension(7 * n) :: ivalues
+!     integer, dimension(n + 1) :: irow_compressed
 !
 !     if(output /= 0) then
 !         do k = 1, innz
@@ -206,16 +165,16 @@ CONTAINS
 ! the column matrix. Further the element may be non-existent. Structure of
 ! SPMAT has to be changed to allow arbitrary fill-ins.
 !
-  SUBROUTINE ADDX_ELEM(innz, irow_index, irow_compressed, icol_index, &
-&   ivalues, x, row, col)
+  SUBROUTINE ADDX_ELEM(n, innz, irow_index, irow_compressed, icol_index&
+&   , ivalues, x, row, col)
     IMPLICIT NONE
     DOUBLE PRECISION :: x
     INTEGER :: i, row, col
     INTEGER :: n, innz
-    INTEGER, DIMENSION(7*n_) :: irow_index
-    INTEGER, DIMENSION(7*n_) :: icol_index
-    DOUBLE PRECISION, DIMENSION(7*n_) :: ivalues
-    INTEGER, DIMENSION(n_ + 1) :: irow_compressed
+    INTEGER, DIMENSION(7*n) :: irow_index
+    INTEGER, DIMENSION(7*n) :: icol_index
+    DOUBLE PRECISION, DIMENSION(7*n) :: ivalues
+    INTEGER, DIMENSION(n + 1) :: irow_compressed
     DO i=1,innz
       IF (irow_index(i) .EQ. row .AND. icol_index(i) .EQ. col) THEN
         ivalues(i) = ivalues(i) + x
@@ -233,17 +192,17 @@ CONTAINS
 ! , for other than the main diagonal, entries are skipped if they are 0.0 in
 ! the column matrix
 !
-  SUBROUTINE ADDX_DIAGONAL_B(innz, irow_index, irow_compressed, &
+  SUBROUTINE ADDX_DIAGONAL_B(n, innz, irow_index, irow_compressed, &
 &   icol_index, ivalues, ivaluesb, x, diag)
     IMPLICIT NONE
     INTEGER :: i, diag
     DOUBLE PRECISION :: x
-    INTEGER :: innz
-    INTEGER, DIMENSION(7*n_) :: irow_index
-    INTEGER, DIMENSION(7*n_) :: icol_index
-    DOUBLE PRECISION, DIMENSION(7*n_) :: ivalues
-    DOUBLE PRECISION, DIMENSION(7*n_) :: ivaluesb
-    INTEGER, DIMENSION(n_ + 1) :: irow_compressed
+    INTEGER :: n, innz
+    INTEGER, DIMENSION(7*n) :: irow_index
+    INTEGER, DIMENSION(7*n) :: icol_index
+    DOUBLE PRECISION, DIMENSION(7*n) :: ivalues
+    DOUBLE PRECISION, DIMENSION(7*n) :: ivaluesb
+    INTEGER, DIMENSION(n + 1) :: irow_compressed
   END SUBROUTINE ADDX_DIAGONAL_B
 !
 ! Subroutine adds x to a particular diagonal
@@ -251,16 +210,16 @@ CONTAINS
 ! , for other than the main diagonal, entries are skipped if they are 0.0 in
 ! the column matrix
 !
-  SUBROUTINE ADDX_DIAGONAL(innz, irow_index, irow_compressed, icol_index&
-&   , ivalues, x, diag)
+  SUBROUTINE ADDX_DIAGONAL(n, innz, irow_index, irow_compressed, &
+&   icol_index, ivalues, x, diag)
     IMPLICIT NONE
     INTEGER :: i, diag
     DOUBLE PRECISION :: x
-    INTEGER :: innz
-    INTEGER, DIMENSION(7*n_) :: irow_index
-    INTEGER, DIMENSION(7*n_) :: icol_index
-    DOUBLE PRECISION, DIMENSION(7*n_) :: ivalues
-    INTEGER, DIMENSION(n_ + 1) :: irow_compressed
+    INTEGER :: n, innz
+    INTEGER, DIMENSION(7*n) :: irow_index
+    INTEGER, DIMENSION(7*n) :: icol_index
+    DOUBLE PRECISION, DIMENSION(7*n) :: ivalues
+    INTEGER, DIMENSION(n + 1) :: irow_compressed
     DO i=1,innz
       IF (icol_index(i) - irow_index(i) .EQ. diag) ivalues(i) = ivalues(&
 &         i) + x
@@ -573,26 +532,28 @@ CONTAINS
 !
 ! This routine pre-multiplies a diagonal matrix by a sparse matrix
 !
-  SUBROUTINE SPMAT_MULTIPLY_DIAGONAL_B(annz, arow_index, arow_compressed&
-&   , acol_index, avalues, avaluesb, dmatrix, dmatrixb, rnnz, rrow_index&
-&   , rrow_compressed, rcol_index, rvalues, rvaluesb, order)
+  SUBROUTINE SPMAT_MULTIPLY_DIAGONAL_B(n, annz, arow_index, &
+&   arow_compressed, acol_index, avalues, avaluesb, dmatrix, dmatrixb, &
+&   rnnz, rrow_index, rrow_compressed, rcol_index, rvalues, rvaluesb, &
+&   order)
     IMPLICIT NONE
     INTEGER :: i, alloc_err
     CHARACTER(len=3) :: order
+    INTEGER :: n
     INTEGER :: annz
-    INTEGER, DIMENSION(7*n_) :: arow_index
-    INTEGER, DIMENSION(7*n_) :: acol_index
-    DOUBLE PRECISION, DIMENSION(7*n_) :: avalues
-    DOUBLE PRECISION, DIMENSION(7*n_) :: avaluesb
-    INTEGER, DIMENSION(n_ + 1) :: arow_compressed
+    INTEGER, DIMENSION(7*n) :: arow_index
+    INTEGER, DIMENSION(7*n) :: acol_index
+    DOUBLE PRECISION, DIMENSION(7*n) :: avalues
+    DOUBLE PRECISION, DIMENSION(7*n) :: avaluesb
+    INTEGER, DIMENSION(n + 1) :: arow_compressed
     INTEGER :: rnnz
-    INTEGER, DIMENSION(7*n_) :: rrow_index
-    INTEGER, DIMENSION(7*n_) :: rcol_index
-    DOUBLE PRECISION, DIMENSION(7*n_) :: rvalues
-    DOUBLE PRECISION, DIMENSION(7*n_) :: rvaluesb
-    INTEGER, DIMENSION(n_ + 1) :: rrow_compressed
-    DOUBLE PRECISION, DIMENSION(n_) :: dmatrix
-    DOUBLE PRECISION, DIMENSION(n_) :: dmatrixb
+    INTEGER, DIMENSION(7*n) :: rrow_index
+    INTEGER, DIMENSION(7*n) :: rcol_index
+    DOUBLE PRECISION, DIMENSION(7*n) :: rvalues
+    DOUBLE PRECISION, DIMENSION(7*n) :: rvaluesb
+    INTEGER, DIMENSION(n + 1) :: rrow_compressed
+    DOUBLE PRECISION, DIMENSION(n) :: dmatrix
+    DOUBLE PRECISION, DIMENSION(n) :: dmatrixb
     IF (order .EQ. 'PRE') THEN
       dmatrixb = 0.D0
       DO i=annz,1,-1
@@ -616,23 +577,24 @@ CONTAINS
 !
 ! This routine pre-multiplies a diagonal matrix by a sparse matrix
 !
-  SUBROUTINE SPMAT_MULTIPLY_DIAGONAL(annz, arow_index, arow_compressed, &
-&   acol_index, avalues, dmatrix, rnnz, rrow_index, rrow_compressed, &
-&   rcol_index, rvalues, order)
+  SUBROUTINE SPMAT_MULTIPLY_DIAGONAL(n, annz, arow_index, &
+&   arow_compressed, acol_index, avalues, dmatrix, rnnz, rrow_index, &
+&   rrow_compressed, rcol_index, rvalues, order)
     IMPLICIT NONE
     INTEGER :: i, alloc_err
     CHARACTER(len=3) :: order
+    INTEGER :: n
     INTEGER :: annz
-    INTEGER, DIMENSION(7*n_) :: arow_index
-    INTEGER, DIMENSION(7*n_) :: acol_index
-    DOUBLE PRECISION, DIMENSION(7*n_) :: avalues
-    INTEGER, DIMENSION(n_ + 1) :: arow_compressed
+    INTEGER, DIMENSION(7*n) :: arow_index
+    INTEGER, DIMENSION(7*n) :: acol_index
+    DOUBLE PRECISION, DIMENSION(7*n) :: avalues
+    INTEGER, DIMENSION(n + 1) :: arow_compressed
     INTEGER :: rnnz
-    INTEGER, DIMENSION(7*n_) :: rrow_index
-    INTEGER, DIMENSION(7*n_) :: rcol_index
-    DOUBLE PRECISION, DIMENSION(7*n_) :: rvalues
-    INTEGER, DIMENSION(n_ + 1) :: rrow_compressed
-    DOUBLE PRECISION, DIMENSION(n_) :: dmatrix
+    INTEGER, DIMENSION(7*n) :: rrow_index
+    INTEGER, DIMENSION(7*n) :: rcol_index
+    DOUBLE PRECISION, DIMENSION(7*n) :: rvalues
+    INTEGER, DIMENSION(n + 1) :: rrow_compressed
+    DOUBLE PRECISION, DIMENSION(n) :: dmatrix
     rnnz = annz
     rrow_compressed = arow_compressed
     IF (order .EQ. 'PRE') THEN
@@ -657,22 +619,23 @@ CONTAINS
 !
 ! The routine multiplies a vector by a sparse matrix (PRE/POST)
 !
-  SUBROUTINE SPMAT_MULTIPLY_VECTOR_B(annz, arow_index, arow_compressed, &
-&   acol_index, avalues, avaluesb, bvector, bvectorb, cvector, cvectorb&
-&   , order)
+  SUBROUTINE SPMAT_MULTIPLY_VECTOR_B(n, annz, arow_index, &
+&   arow_compressed, acol_index, avalues, avaluesb, bvector, bvectorb, &
+&   cvector, cvectorb, order)
     IMPLICIT NONE
     INTEGER :: i
     CHARACTER(len=3) :: order
+    INTEGER :: n
     INTEGER :: annz
-    INTEGER, DIMENSION(7*n_) :: arow_index
-    INTEGER, DIMENSION(7*n_) :: acol_index
-    DOUBLE PRECISION, DIMENSION(7*n_) :: avalues
-    DOUBLE PRECISION, DIMENSION(7*n_) :: avaluesb
-    INTEGER, DIMENSION(n_ + 1) :: arow_compressed
-    DOUBLE PRECISION, DIMENSION(n_) :: bvector
-    DOUBLE PRECISION, DIMENSION(n_) :: bvectorb
-    DOUBLE PRECISION, DIMENSION(n_) :: cvector
-    DOUBLE PRECISION, DIMENSION(n_) :: cvectorb
+    INTEGER, DIMENSION(7*n) :: arow_index
+    INTEGER, DIMENSION(7*n) :: acol_index
+    DOUBLE PRECISION, DIMENSION(7*n) :: avalues
+    DOUBLE PRECISION, DIMENSION(7*n) :: avaluesb
+    INTEGER, DIMENSION(n + 1) :: arow_compressed
+    DOUBLE PRECISION, DIMENSION(n) :: bvector
+    DOUBLE PRECISION, DIMENSION(n) :: bvectorb
+    DOUBLE PRECISION, DIMENSION(n) :: cvector
+    DOUBLE PRECISION, DIMENSION(n) :: cvectorb
     IF (order .EQ. 'PRE') THEN
       bvectorb = 0.D0
       DO i=annz,1,-1
@@ -696,18 +659,19 @@ CONTAINS
 !
 ! The routine multiplies a vector by a sparse matrix (PRE/POST)
 !
-  SUBROUTINE SPMAT_MULTIPLY_VECTOR(annz, arow_index, arow_compressed, &
-&   acol_index, avalues, bvector, cvector, order)
+  SUBROUTINE SPMAT_MULTIPLY_VECTOR(n, annz, arow_index, arow_compressed&
+&   , acol_index, avalues, bvector, cvector, order)
     IMPLICIT NONE
     INTEGER :: i
     CHARACTER(len=3) :: order
+    INTEGER :: n
     INTEGER :: annz
-    INTEGER, DIMENSION(7*n_) :: arow_index
-    INTEGER, DIMENSION(7*n_) :: acol_index
-    DOUBLE PRECISION, DIMENSION(7*n_) :: avalues
-    INTEGER, DIMENSION(n_ + 1) :: arow_compressed
-    DOUBLE PRECISION, DIMENSION(n_) :: bvector
-    DOUBLE PRECISION, DIMENSION(n_) :: cvector
+    INTEGER, DIMENSION(7*n) :: arow_index
+    INTEGER, DIMENSION(7*n) :: acol_index
+    DOUBLE PRECISION, DIMENSION(7*n) :: avalues
+    INTEGER, DIMENSION(n + 1) :: arow_compressed
+    DOUBLE PRECISION, DIMENSION(n) :: bvector
+    DOUBLE PRECISION, DIMENSION(n) :: cvector
     cvector = 0.0d0
     IF (order .EQ. 'PRE') THEN
       DO i=1,annz
@@ -728,22 +692,23 @@ CONTAINS
 ! by a scalar.
 ! Allows amatrix to be the same as rmatrix
 !
-  SUBROUTINE SCALAR_MULTIPLY_SPMAT(annz, arow_index, arow_compressed, &
-&   acol_index, avalues, scalar, rnnz, rrow_index, rrow_compressed, &
+  SUBROUTINE SCALAR_MULTIPLY_SPMAT(n, annz, arow_index, arow_compressed&
+&   , acol_index, avalues, scalar, rnnz, rrow_index, rrow_compressed, &
 &   rcol_index, rvalues)
     IMPLICIT NONE
     INTEGER :: i, alloc_err
     DOUBLE PRECISION :: scalar
+    INTEGER :: n
     INTEGER :: annz
-    INTEGER, DIMENSION(7*n_) :: arow_index
-    INTEGER, DIMENSION(7*n_) :: acol_index
-    DOUBLE PRECISION, DIMENSION(7*n_) :: avalues
-    INTEGER, DIMENSION(n_ + 1) :: arow_compressed
+    INTEGER, DIMENSION(7*n) :: arow_index
+    INTEGER, DIMENSION(7*n) :: acol_index
+    DOUBLE PRECISION, DIMENSION(7*n) :: avalues
+    INTEGER, DIMENSION(n + 1) :: arow_compressed
     INTEGER :: rnnz
-    INTEGER, DIMENSION(7*n_) :: rrow_index
-    INTEGER, DIMENSION(7*n_) :: rcol_index
-    DOUBLE PRECISION, DIMENSION(7*n_) :: rvalues
-    INTEGER, DIMENSION(n_ + 1) :: rrow_compressed
+    INTEGER, DIMENSION(7*n) :: rrow_index
+    INTEGER, DIMENSION(7*n) :: rcol_index
+    DOUBLE PRECISION, DIMENSION(7*n) :: rvalues
+    INTEGER, DIMENSION(n + 1) :: rrow_compressed
     rnnz = annz
     rrow_compressed = arow_compressed
     DO i=1,annz
@@ -908,198 +873,54 @@ MODULE LINSOLVE_B
 CONTAINS
 !  Differentiation of sparse_solve in reverse (adjoint) mode (with options noISIZE):
 !   gradient     of useful results: avalues x b
-!   with respect to varying inputs: avalues b
+!   with respect to varying inputs: avalues x b
 !
 ! Calls a specific solver - here the jacobi method
 !
-  SUBROUTINE SPARSE_SOLVE_B(annz, arow_index, arow_compressed, &
+  SUBROUTINE SPARSE_SOLVE_B(n, annz, arow_index, arow_compressed, &
 &   acol_index, avalues, avaluesb, b, bb, x, xb)
     IMPLICIT NONE
     INTEGER :: annz
-    INTEGER, PARAMETER :: matdim=n_
-    INTEGER, PARAMETER :: maxlen=7*matdim
-    INTEGER, DIMENSION(7*n_) :: arow_index
-    INTEGER, DIMENSION(7*n_) :: acol_index
-    DOUBLE PRECISION, DIMENSION(7*n_) :: avalues
-    DOUBLE PRECISION, DIMENSION(7*n_) :: avaluesb
-    INTEGER, DIMENSION(n_ + 1) :: arow_compressed
-    DOUBLE PRECISION, DIMENSION(n_) :: b
-    DOUBLE PRECISION, DIMENSION(n_) :: bb
-    DOUBLE PRECISION, DIMENSION(n_) :: x
-    DOUBLE PRECISION, DIMENSION(n_) :: xb
-    call sparse_pmgmres_method_b(matdim, annz, maxlen, arow_index, &
-&                        arow_compressed, acol_index, avalues, avaluesb&
-&                        , b, bb, x, xb, solver_inner, solver_outer, &
-&                        verbose)
+    INTEGER :: n
+    INTEGER, DIMENSION(7*n) :: arow_index
+    INTEGER, DIMENSION(7*n) :: acol_index
+    DOUBLE PRECISION, DIMENSION(7*n) :: avalues
+    DOUBLE PRECISION, DIMENSION(7*n) :: avaluesb
+    INTEGER, DIMENSION(n + 1) :: arow_compressed
+    DOUBLE PRECISION, DIMENSION(n) :: b
+    DOUBLE PRECISION, DIMENSION(n) :: bb
+    DOUBLE PRECISION, DIMENSION(n) :: x
+    DOUBLE PRECISION, DIMENSION(n) :: xb
+    EXTERNAL SPARSE_PMGMRES_METHOD
+    EXTERNAL SPARSE_PMGMRES_METHOD_B
+    INTEGER :: arg1
+    arg1 = 7*n
+    CALL SPARSE_PMGMRES_METHOD_B(n, annz, arg1, arow_index, &
+&                          arow_compressed, acol_index, avalues, &
+&                          avaluesb, b, bb, x, xb, solver_inner, &
+&                          solver_outer, verbose)
   END SUBROUTINE SPARSE_SOLVE_B
 !
 ! Calls a specific solver - here the jacobi method
 !
-  SUBROUTINE SPARSE_SOLVE(annz, arow_index, arow_compressed, acol_index&
-&   , avalues, b, x)
+  SUBROUTINE SPARSE_SOLVE(n, annz, arow_index, arow_compressed, &
+&   acol_index, avalues, b, x)
     IMPLICIT NONE
     INTEGER :: annz
-    INTEGER, PARAMETER :: matdim=n_
-    INTEGER, PARAMETER :: maxlen=7*matdim
-    INTEGER, DIMENSION(7*n_) :: arow_index
-    INTEGER, DIMENSION(7*n_) :: acol_index
-    DOUBLE PRECISION, DIMENSION(7*n_) :: avalues
-    INTEGER, DIMENSION(n_ + 1) :: arow_compressed
-    DOUBLE PRECISION, DIMENSION(n_) :: b
-    DOUBLE PRECISION, DIMENSION(n_) :: x
-    call sparse_pmgmres_method(matdim, annz, maxlen, arow_index, &
-&                      arow_compressed, acol_index, avalues, b, x, &
-&                      solver_inner, solver_outer, verbose)
-  END SUBROUTINE SPARSE_SOLVE
-!  Differentiation of sparse_dummy_method in reverse (adjoint) mode (with options noISIZE):
-!   gradient     of useful results: avalues x b
-!   with respect to varying inputs: avalues b
-!
-! A wrapper for pmgmres_ilu_cr
-!
-SUBROUTINE SPARSE_PMGMRES_METHOD_B(n, annz, alen, arow_index,   &
-                                  &   arow_compressed, acol_index, avalues,&
-                                  &   avaluesb, b, bb, x, xb,              &
-                                  &   solver_inner, solver_outer, verbose)
-                                  
-  USE MGMRES
-  USE MATHUTIL_B
-  USE UTILS
-  IMPLICIT NONE
-  INTEGER :: i, curr_nnz, curr_row
-  INTEGER :: itr_max, mr
-  LOGICAL :: verbose
-  INTEGER :: solver_inner, solver_outer
-  DOUBLE PRECISION :: tol_abs, tol_rel, nrm
-  INTEGER :: n, annz, alen
-  INTEGER, DIMENSION(alen) :: arow_index
-  INTEGER, DIMENSION(alen) :: acol_index
-  DOUBLE PRECISION, DIMENSION(alen) :: avalues
-  DOUBLE PRECISION, DIMENSION(alen) :: avaluesb
-  INTEGER, DIMENSION(n + 1) :: arow_compressed
-  DOUBLE PRECISION, DIMENSION(n) :: b
-  DOUBLE PRECISION, DIMENSION(n) :: bb
-  DOUBLE PRECISION, DIMENSION(n) :: x
-  DOUBLE PRECISION, DIMENSION(n) :: xb
-
-  DOUBLE PRECISION, DIMENSION(n) :: incrbb
-  
-  INTEGER, DIMENSION(alen) :: arow_index_transposed
-  INTEGER, DIMENSION(alen) :: acol_index_transposed
-  DOUBLE PRECISION, DIMENSION(alen) :: avalues_transposed
-  INTEGER, DIMENSION(n + 1) :: arow_compressed_transposed
-  
-  INTEGER, DIMENSION(2,annz)  :: column_index_key_value 
-  
-  tol_abs = 1.0d-8
-  tol_rel = 1.0d-8
-  itr_max = solver_outer
-  mr = solver_inner
- 
-  ! Transpose the matrix A
-  ! First get the columns and its indices
-  DO i = 1,annz
-    column_index_key_value(1, i) = acol_index(i)        ! key
-    column_index_key_value(2, i) = i                    ! value
-  ENDDO
-  
-  ! Sort the indices based on the column indices
-  CALL SORT(column_index_key_value, annz)
-  
-  ! Now use the transposed entries to create A^T compressed row
-  DO i = 1,annz
-    arow_index_transposed(i) = acol_index(column_index_key_value(2, i))
-    acol_index_transposed(i) = arow_index(column_index_key_value(2, i))
-    avalues_transposed(i) = avalues(column_index_key_value(2, i))
-  ENDDO
-       
-  ! Now create row compressed for A^T
-  i = 1
-  curr_nnz = 0
-  curr_row = 1
-  arow_compressed_transposed(:) = 0
-  arow_compressed_transposed(1) = 1
-
-  DO WHILE (i <= annz .and. curr_row <= n) 
-    IF(arow_index_transposed(i) == curr_row) THEN
-      curr_nnz = curr_nnz + 1
-      i = i + 1
-    ELSE
-      curr_row = curr_row + 1
-      arow_compressed_transposed(curr_row) = &
-                    arow_compressed_transposed(curr_row - 1) + curr_nnz
-      curr_nnz = 0  
-    ENDIF
-  ENDDO
-  
-  IF(curr_row == n) THEN 
-    curr_row = curr_row + 1
-    arow_compressed_transposed(curr_row) = &
-          arow_compressed_transposed(curr_row - 1) + curr_nnz
-  ELSEIF(curr_row < n .or. i <= annz) THEN
-    stop "The matrix is singular"
-  ENDIF
-  
-  call dnrm2(xb,n, nrm)
-  incrbb = 0.0d0
-  if(nrm /= 0.0d0) then
-    CALL PMGMRES_ILU_CR (n, annz, arow_compressed_transposed, &
-                        acol_index_transposed, avalues_transposed, &
-                        incrbb, xb, itr_max, mr, tol_abs, tol_rel, verbose)
-    bb = bb + incrbb
-  endif
-    
-  CALL DNRM2(b, n, nrm)
-  x = 0.0d0
-  IF(nrm /= 0.0d0) THEN  
-    CALL PMGMRES_ILU_CR (n, annz, arow_compressed, acol_index, avalues, &
-                x, b, itr_max, mr, tol_abs, tol_rel, verbose)
-  ENDIF
-  
-  DO i = 1,annz
-    avaluesb(i) = avaluesb(i) - x(acol_index(i)) * incrbb(arow_index(i))
-  ENDDO
-  
-  xb = 0.0d0
-
-  RETURN
-END SUBROUTINE SPARSE_PMGMRES_METHOD_B
-
-!
-! A wrapper for pmgmres_ilu_cr
-!
-SUBROUTINE SPARSE_PMGMRES_METHOD(n, annz, alen, arow_index, arow_compressed, &
-                                  acol_index, avalues, b, x, solver_inner, &
-                                  solver_outer, verbose)
-    USE MGMRES
-    use mathutil_b
-    IMPLICIT NONE
-    INTEGER :: itr_max, mr
-    LOGICAL :: verbose
-    INTEGER :: solver_inner, solver_outer
-    DOUBLE PRECISION :: tol_abs, tol_rel, nrm
-    INTEGER :: n,  annz, alen
-    INTEGER, DIMENSION(alen) :: arow_index
-    INTEGER, DIMENSION(alen) :: acol_index
-    DOUBLE PRECISION, DIMENSION(alen) :: avalues
+    INTEGER :: n
+    INTEGER, DIMENSION(7*n) :: arow_index
+    INTEGER, DIMENSION(7*n) :: acol_index
+    DOUBLE PRECISION, DIMENSION(7*n) :: avalues
     INTEGER, DIMENSION(n + 1) :: arow_compressed
     DOUBLE PRECISION, DIMENSION(n) :: b
     DOUBLE PRECISION, DIMENSION(n) :: x
-
-    tol_abs = 1.0d-8
-    tol_rel = 1.0d-8
-    itr_max = solver_outer
-    mr = solver_inner
-    
-    CALL DNRM2(b, n, nrm)
-    x = 0.0d0   
-    IF(nrm /= 0.0d0) THEN
-       CALL PMGMRES_ILU_CR (n, annz, arow_compressed, acol_index, avalues, &
-                  x, b, itr_max, mr, tol_abs, tol_rel, verbose)
-    ENDIF
-    RETURN
-END SUBROUTINE SPARSE_PMGMRES_METHOD
-
+    EXTERNAL SPARSE_PMGMRES_METHOD
+    INTEGER :: arg1
+    arg1 = 7*n
+    CALL SPARSE_PMGMRES_METHOD(n, annz, arg1, arow_index, &
+&                        arow_compressed, acol_index, avalues, b, x, &
+&                        solver_inner, solver_outer, verbose)
+  END SUBROUTINE SPARSE_SOLVE
 END MODULE LINSOLVE_B
 
 MODULE FINITEVOLUME_B
@@ -1126,61 +947,64 @@ CONTAINS
 !
 ! Performs Newton Raphson to solve for saturations
 !
-  SUBROUTINE NEWTRAPH_B(q, qb, v, vb, s, sb)
+  SUBROUTINE NEWTRAPH_B(nx, ny, nz, nd, pt, st, q, qb, v, vb, s, sb)
     IMPLICIT NONE
     INTEGER :: i, j, it
     LOGICAL :: converged
     DOUBLE PRECISION :: dt, dsn
-    DOUBLE PRECISION, DIMENSION(n_) :: s
-    DOUBLE PRECISION, DIMENSION(n_) :: sb
-    DOUBLE PRECISION, DIMENSION(n_) :: q
-    DOUBLE PRECISION, DIMENSION(n_) :: qb
-    DOUBLE PRECISION, DIMENSION(n_) :: s_copy
-    DOUBLE PRECISION, DIMENSION(n_) :: s_copyb
-    DOUBLE PRECISION, DIMENSION(n_) :: s_iter_copy
-    DOUBLE PRECISION, DIMENSION(n_) :: s_iter_copyb
-    DOUBLE PRECISION, DIMENSION(n_) :: dtx
-    DOUBLE PRECISION, DIMENSION(n_) :: dtxb
-    DOUBLE PRECISION, DIMENSION(n_) :: fi
-    DOUBLE PRECISION, DIMENSION(n_) :: fib
-    DOUBLE PRECISION, DIMENSION(n_) :: fw
-    DOUBLE PRECISION, DIMENSION(n_) :: fwb
-    DOUBLE PRECISION, DIMENSION(n_) :: mw
-    DOUBLE PRECISION, DIMENSION(n_) :: mwb
-    DOUBLE PRECISION, DIMENSION(n_) :: mo
-    DOUBLE PRECISION, DIMENSION(n_) :: mob
-    DOUBLE PRECISION, DIMENSION(n_) :: dmw
-    DOUBLE PRECISION, DIMENSION(n_) :: dmwb
-    DOUBLE PRECISION, DIMENSION(n_) :: dmo
-    DOUBLE PRECISION, DIMENSION(n_) :: dmob
-    DOUBLE PRECISION, DIMENSION(n_) :: df
-    DOUBLE PRECISION, DIMENSION(n_) :: dfb
-    DOUBLE PRECISION, DIMENSION(n_) :: g
-    DOUBLE PRECISION, DIMENSION(n_) :: gb
-    DOUBLE PRECISION, DIMENSION(n_) :: ds
-    DOUBLE PRECISION, DIMENSION(n_) :: dsb
-    DOUBLE PRECISION, DIMENSION(n_) :: bfw
-    DOUBLE PRECISION, DIMENSION(n_) :: bfwb
-    DOUBLE PRECISION, DIMENSION(3, nx_ + 1, ny_ + 1, nz_ + 1) :: v
-    DOUBLE PRECISION, DIMENSION(3, nx_+1, ny_+1, nz_+1) :: vb
+    INTEGER :: nx, ny, nz
+    INTEGER :: nd, pt, st
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: s
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: sb
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: q
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: qb
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: s_copy
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: s_copyb
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: s_iter_copy
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: s_iter_copyb
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: dtx
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: dtxb
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: fi
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: fib
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: fw
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: fwb
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: mw
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: mwb
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: mo
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: mob
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: dmw
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: dmwb
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: dmo
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: dmob
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: df
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: dfb
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: g
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: gb
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: ds
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: dsb
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: bfw
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: bfwb
+    DOUBLE PRECISION, DIMENSION(3, nx + 1, ny + 1, nz + 1) :: v
+    DOUBLE PRECISION, DIMENSION(3, nx+1, ny+1, nz+1) :: vb
     INTEGER :: annz
-    INTEGER, DIMENSION(7*n_) :: arow_index
-    INTEGER, DIMENSION(7*n_) :: acol_index
-    DOUBLE PRECISION, DIMENSION(7*n_) :: avalues
-    DOUBLE PRECISION, DIMENSION(7*n_) :: avaluesb
-    INTEGER, DIMENSION(n_ + 1) :: arow_compressed
+    INTEGER, DIMENSION(7*(nx*ny*nz)) :: arow_index
+    INTEGER, DIMENSION(7*(nx*ny*nz)) :: acol_index
+    DOUBLE PRECISION, DIMENSION(7*(nx*ny*nz)) :: avalues
+    DOUBLE PRECISION, DIMENSION(7*(nx*ny*nz)) :: avaluesb
+    INTEGER, DIMENSION(nx*ny*nz + 1) :: arow_compressed
     INTEGER :: bnnz
-    INTEGER, DIMENSION(7*n_) :: brow_index
-    INTEGER, DIMENSION(7*n_) :: bcol_index
-    DOUBLE PRECISION, DIMENSION(7*n_) :: bvalues
-    DOUBLE PRECISION, DIMENSION(7*n_) :: bvaluesb
-    INTEGER, DIMENSION(n_ + 1) :: brow_compressed
+    INTEGER, DIMENSION(7*(nx*ny*nz)) :: brow_index
+    INTEGER, DIMENSION(7*(nx*ny*nz)) :: bcol_index
+    DOUBLE PRECISION, DIMENSION(7*(nx*ny*nz)) :: bvalues
+    DOUBLE PRECISION, DIMENSION(7*(nx*ny*nz)) :: bvaluesb
+    INTEGER, DIMENSION(nx*ny*nz + 1) :: brow_compressed
     INTEGER :: dgnnz
-    INTEGER, DIMENSION(7*n_) :: dgrow_index
-    INTEGER, DIMENSION(7*n_) :: dgcol_index
-    DOUBLE PRECISION, DIMENSION(7*n_) :: dgvalues
-    DOUBLE PRECISION, DIMENSION(7*n_) :: dgvaluesb
-    INTEGER, DIMENSION(n_ + 1) :: dgrow_compressed
+    INTEGER, DIMENSION(7*(nx*ny*nz)) :: dgrow_index
+    INTEGER, DIMENSION(7*(nx*ny*nz)) :: dgcol_index
+    DOUBLE PRECISION, DIMENSION(7*(nx*ny*nz)) :: dgvalues
+    DOUBLE PRECISION, DIMENSION(7*(nx*ny*nz)) :: dgvaluesb
+    INTEGER, DIMENSION(nx*ny*nz + 1) :: dgrow_compressed
+    INTEGER :: arg1
     INTEGER :: ad_count
     INTEGER :: i0
     INTEGER :: ad_count0
@@ -1188,17 +1012,17 @@ CONTAINS
     INTEGER :: branch
     INTEGER :: ad_count1
     INTEGER :: i2
-    DOUBLE PRECISION :: tempb4(n_)
-    DOUBLE PRECISION :: tempb3(n_)
-    DOUBLE PRECISION :: tempb2(n_)
-    DOUBLE PRECISION :: tempb1(n_)
-    DOUBLE PRECISION :: tempb0(n_)
-    DOUBLE PRECISION :: tempb(n_)
+    DOUBLE PRECISION :: tempb4(nx*ny*nz)
+    DOUBLE PRECISION :: tempb3(nx*ny*nz)
+    DOUBLE PRECISION :: tempb2(nx*ny*nz)
+    DOUBLE PRECISION :: tempb1(nx*ny*nz)
+    DOUBLE PRECISION :: tempb0(nx*ny*nz)
+    DOUBLE PRECISION :: tempb(nx*ny*nz)
 ! not yet converged
     converged = .false.
 ! Assemble system matrix
-    CALL GENA(v, q, annz, arow_index, arow_compressed, acol_index, &
-&       avalues)
+    CALL GENA(nx, ny, nz, v, q, annz, arow_index, arow_compressed, &
+&       acol_index, avalues)
 ! copy S over
     s_copy = s
 ! set scaling factor
@@ -1210,14 +1034,14 @@ CONTAINS
       CALL MYMAX_1_0_DOUBLE(q, 0.0d0, fi)
       fi = fi*dtx
 ! Matrix-diagonal matrix product
-      CALL PUSHREAL8ARRAY(bvalues, 1400)
-      CALL PUSHINTEGER4ARRAY(bcol_index, 1400)
-      CALL PUSHINTEGER4ARRAY(brow_index, 1400)
+      CALL PUSHREAL8ARRAY(bvalues, 7*nx*ny*nz)
+      CALL PUSHINTEGER4ARRAY(bcol_index, 7*nx*ny*nz)
+      CALL PUSHINTEGER4ARRAY(brow_index, 7*nx*ny*nz)
       CALL PUSHINTEGER4(bnnz)
-      CALL SPMAT_MULTIPLY_DIAGONAL(annz, arow_index, arow_compressed, &
-&                            acol_index, avalues, dtx, bnnz, brow_index&
-&                            , brow_compressed, bcol_index, bvalues, &
-&                            'POS')
+      CALL SPMAT_MULTIPLY_DIAGONAL(arg1, annz, arow_index, &
+&                            arow_compressed, acol_index, avalues, dtx, &
+&                            bnnz, brow_index, brow_compressed, &
+&                            bcol_index, bvalues, 'POS')
       i = 0
       ad_count0 = 0
       DO WHILE (i .LT. 2**it)
@@ -1227,32 +1051,44 @@ CONTAINS
         s_iter_copy = s
         ad_count = 0
         DO WHILE (dsn .GT. 1.0d-3 .AND. j .LT. 10)
-          CALL PUSHREAL8ARRAY(dmo, 200)
-          CALL PUSHREAL8ARRAY(dmw, 200)
-          CALL PUSHREAL8ARRAY(mo, 200)
-          CALL PUSHREAL8ARRAY(mw, 200)
-          CALL RELPERM(s, mw, mo, dmw, dmo)
+          CALL PUSHREAL8ARRAY(dmo, nx*ny*nz)
+          CALL PUSHREAL8ARRAY(dmw, nx*ny*nz)
+          CALL PUSHREAL8ARRAY(mo, nx*ny*nz)
+          CALL PUSHREAL8ARRAY(mw, nx*ny*nz)
+          CALL RELPERM(nx, ny, nz, s, mw, mo, dmw, dmo)
           df = dmw/(mw+mo) - mw/(mw+mo)**2*(dmw+dmo)
 ! Matrix-diagonal matrix product
-          CALL PUSHREAL8ARRAY(dgvalues, 1400)
-          CALL PUSHINTEGER4(dgnnz)
-          CALL SPMAT_MULTIPLY_DIAGONAL(bnnz, brow_index, brow_compressed&
-&                                , bcol_index, bvalues, df, dgnnz, &
-&                                dgrow_index, dgrow_compressed, &
-&                                dgcol_index, dgvalues, 'PRE')
-          CALL ADDX_DIAGONAL(dgnnz, dgrow_index, dgrow_compressed, &
-&                      dgcol_index, dgvalues, -1.0d0, 0)
+          CALL SPMAT_MULTIPLY_DIAGONAL(arg1, bnnz, brow_index, &
+&                                brow_compressed, bcol_index, bvalues, &
+&                                df, dgnnz, dgrow_index, &
+&                                dgrow_compressed, dgcol_index, dgvalues&
+&                                , 'PRE')
+          CALL ADDX_DIAGONAL(arg1, dgnnz, dgrow_index, dgrow_compressed&
+&                      , dgcol_index, dgvalues, -1.0d0, 0)
           fw = mw/(mw+mo)
 ! Matrix-vector matrix product
-          CALL SPMAT_MULTIPLY_VECTOR(bnnz, brow_index, brow_compressed, &
-&                              bcol_index, bvalues, fw, bfw, 'PRE')
-          CALL PUSHREAL8ARRAY(g, 200)
+          CALL SPMAT_MULTIPLY_VECTOR(arg1, bnnz, brow_index, &
+&                              brow_compressed, bcol_index, bvalues, fw&
+&                              , bfw, 'PRE')
           g = s - s_iter_copy - bfw - fi
-          CALL SOLVE(dgnnz, dgrow_index, dgrow_compressed, dgcol_index, &
-&              dgvalues, g, ds)
-          CALL PUSHREAL8ARRAY(s, 200)
+          arg1 = nx*ny*nz
+          CALL PUSHBOOLEAN(verbose)
+          CALL PUSHINTEGER4(solver_outer)
+          CALL PUSHINTEGER4(solver_inner)
+          CALL PUSHREAL8ARRAY(ds, nx*ny*nz)
+          CALL PUSHREAL8ARRAY(g, nx*ny*nz)
+          CALL PUSHREAL8ARRAY(dgvalues, 7*nx*ny*nz)
+          CALL PUSHINTEGER4ARRAY(dgcol_index, 7*nx*ny*nz)
+          CALL PUSHINTEGER4ARRAY(dgrow_compressed, nx*ny*nz + 1)
+          CALL PUSHINTEGER4ARRAY(dgrow_index, 7*nx*ny*nz)
+          CALL PUSHINTEGER4(dgnnz)
+          CALL PUSHINTEGER4(arg1)
+          CALL SOLVE(arg1, dgnnz, dgrow_index, dgrow_compressed, &
+&              dgcol_index, dgvalues, g, ds)
+          CALL PUSHREAL8ARRAY(s, nx*ny*nz)
           s = s + ds
-          CALL DNRM2(ds, n_, dsn)
+          arg1 = nx*ny*nz
+          CALL DNRM2(ds, arg1, dsn)
           j = j + 1
           ad_count = ad_count + 1
         END DO
@@ -1260,7 +1096,7 @@ CONTAINS
         IF (dsn .GT. 1.0d-3) THEN
 ! Breaks out of while loop.
           i = 2**it
-          CALL PUSHREAL8ARRAY(s, 200)
+          CALL PUSHREAL8ARRAY(s, nx*ny*nz)
           s = s_copy
           CALL PUSHCONTROL1B(1)
         ELSE
@@ -1280,6 +1116,7 @@ CONTAINS
       ad_count1 = ad_count1 + 1
     END DO
     avaluesb = 0.D0
+    dsb = 0.D0
     s_copyb = 0.D0
     dgvaluesb = 0.D0
     fib = 0.D0
@@ -1293,39 +1130,47 @@ CONTAINS
       DO i1=1,ad_count0
         CALL POPCONTROL1B(branch)
         IF (branch .NE. 0) THEN
-          CALL POPREAL8ARRAY(s, 200)
+          CALL POPREAL8ARRAY(s, nx*ny*nz)
           s_copyb = s_copyb + sb
           sb = 0.D0
         END IF
         s_iter_copyb = 0.D0
         CALL POPINTEGER4(ad_count)
         DO i0=1,ad_count
-          dsb = 0.D0
-          CALL POPREAL8ARRAY(s, 200)
-          dsb = sb
+          CALL POPREAL8ARRAY(s, nx*ny*nz)
+          dsb = dsb + sb
+          CALL POPINTEGER4(arg1)
+          CALL POPINTEGER4(dgnnz)
+          CALL POPINTEGER4ARRAY(dgrow_index, 7*nx*ny*nz)
+          CALL POPINTEGER4ARRAY(dgrow_compressed, nx*ny*nz + 1)
+          CALL POPINTEGER4ARRAY(dgcol_index, 7*nx*ny*nz)
+          CALL POPREAL8ARRAY(dgvalues, 7*nx*ny*nz)
+          CALL POPREAL8ARRAY(g, nx*ny*nz)
+          CALL POPREAL8ARRAY(ds, nx*ny*nz)
+          CALL POPINTEGER4(solver_inner)
+          CALL POPINTEGER4(solver_outer)
+          CALL POPBOOLEAN(verbose)
           gb = 0.D0
-          CALL SOLVE_B(dgnnz, dgrow_index, dgrow_compressed, dgcol_index&
-&                , dgvalues, dgvaluesb, g, gb, ds, dsb)
+          CALL SOLVE_B(arg1, dgnnz, dgrow_index, dgrow_compressed, &
+&                dgcol_index, dgvalues, dgvaluesb, g, gb, ds, dsb)
           bfwb = 0.D0
-          CALL POPREAL8ARRAY(g, 200)
           sb = sb + gb
           s_iter_copyb = s_iter_copyb - gb
           bfwb = -gb
           fib = fib - gb
           fw = mw/(mw+mo)
-          CALL SPMAT_MULTIPLY_VECTOR_B(bnnz, brow_index, brow_compressed&
-&                                , bcol_index, bvalues, bvaluesb, fw, &
-&                                fwb, bfw, bfwb, 'PRE')
+          CALL SPMAT_MULTIPLY_VECTOR_B(arg1, bnnz, brow_index, &
+&                                brow_compressed, bcol_index, bvalues, &
+&                                bvaluesb, fw, fwb, bfw, bfwb, 'PRE')
           mob = 0.D0
           mwb = 0.D0
           tempb = fwb/(mw+mo)
           tempb0 = -(mw*tempb/(mw+mo))
-          CALL ADDX_DIAGONAL_B(dgnnz, dgrow_index, dgrow_compressed, &
-&                        dgcol_index, dgvalues, dgvaluesb, -1.0d0, 0)
+          CALL ADDX_DIAGONAL_B(arg1, dgnnz, dgrow_index, &
+&                        dgrow_compressed, dgcol_index, dgvalues, &
+&                        dgvaluesb, -1.0d0, 0)
           df = dmw/(mw+mo) - mw/(mw+mo)**2*(dmw+dmo)
-          CALL POPINTEGER4(dgnnz)
-          CALL POPREAL8ARRAY(dgvalues, 1400)
-          CALL SPMAT_MULTIPLY_DIAGONAL_B(bnnz, brow_index, &
+          CALL SPMAT_MULTIPLY_DIAGONAL_B(arg1, bnnz, brow_index, &
 &                                  brow_compressed, bcol_index, bvalues&
 &                                  , bvaluesb, df, dfb, dgnnz, &
 &                                  dgrow_index, dgrow_compressed, &
@@ -1339,75 +1184,80 @@ CONTAINS
           mob = tempb1 + tempb3 + tempb0
           dmwb = dmwb + mw*tempb2 + tempb4
           dmob = dmob + mw*tempb2
-          CALL POPREAL8ARRAY(mw, 200)
-          CALL POPREAL8ARRAY(mo, 200)
-          CALL POPREAL8ARRAY(dmw, 200)
-          CALL POPREAL8ARRAY(dmo, 200)
-          CALL RELPERM_B(s, sb, mw, mwb, mo, mob, dmw, dmwb, dmo, dmob)
+          CALL POPREAL8ARRAY(mw, nx*ny*nz)
+          CALL POPREAL8ARRAY(mo, nx*ny*nz)
+          CALL POPREAL8ARRAY(dmw, nx*ny*nz)
+          CALL POPREAL8ARRAY(dmo, nx*ny*nz)
+          CALL RELPERM_B(nx, ny, nz, s, sb, mw, mwb, mo, mob, dmw, dmwb&
+&                  , dmo, dmob)
         END DO
         sb = sb + s_iter_copyb
       END DO
       dt = 1.0d0*st/2**it
       dtx = dt/(v_*por)
       CALL POPINTEGER4(bnnz)
-      CALL POPINTEGER4ARRAY(brow_index, 1400)
-      CALL POPINTEGER4ARRAY(bcol_index, 1400)
-      CALL POPREAL8ARRAY(bvalues, 1400)
-      CALL SPMAT_MULTIPLY_DIAGONAL_B(annz, arow_index, arow_compressed, &
-&                              acol_index, avalues, avaluesb, dtx, dtxb&
-&                              , bnnz, brow_index, brow_compressed, &
-&                              bcol_index, bvalues, bvaluesb, 'POS')
+      CALL POPINTEGER4ARRAY(brow_index, 7*nx*ny*nz)
+      CALL POPINTEGER4ARRAY(bcol_index, 7*nx*ny*nz)
+      CALL POPREAL8ARRAY(bvalues, 7*nx*ny*nz)
+      CALL SPMAT_MULTIPLY_DIAGONAL_B(arg1, annz, arow_index, &
+&                              arow_compressed, acol_index, avalues, &
+&                              avaluesb, dtx, dtxb, bnnz, brow_index, &
+&                              brow_compressed, bcol_index, bvalues, &
+&                              bvaluesb, 'POS')
       fib = dtx*fib
       CALL MYMAX_1_0_DOUBLE_B(q, qb, 0.0d0, fi, fib)
     END DO
     sb = sb + s_copyb
-    CALL GENA_B(v, vb, q, qb, annz, arow_index, arow_compressed, &
-&         acol_index, avalues, avaluesb)
+    CALL GENA_B(nx, ny, nz, v, vb, q, qb, annz, arow_index, &
+&         arow_compressed, acol_index, avalues, avaluesb)
   END SUBROUTINE NEWTRAPH_B
 !
 ! Performs Newton Raphson to solve for saturations
 !
-  SUBROUTINE NEWTRAPH(q, v, s)
+  SUBROUTINE NEWTRAPH(nx, ny, nz, nd, pt, st, q, v, s)
     IMPLICIT NONE
     INTEGER :: i, j, it
     LOGICAL :: converged
     DOUBLE PRECISION :: dt, dsn
-    DOUBLE PRECISION, DIMENSION(n_) :: s
-    DOUBLE PRECISION, DIMENSION(n_) :: q
-    DOUBLE PRECISION, DIMENSION(n_) :: s_copy
-    DOUBLE PRECISION, DIMENSION(n_) :: s_iter_copy
-    DOUBLE PRECISION, DIMENSION(n_) :: dtx
-    DOUBLE PRECISION, DIMENSION(n_) :: fi
-    DOUBLE PRECISION, DIMENSION(n_) :: fw
-    DOUBLE PRECISION, DIMENSION(n_) :: mw
-    DOUBLE PRECISION, DIMENSION(n_) :: mo
-    DOUBLE PRECISION, DIMENSION(n_) :: dmw
-    DOUBLE PRECISION, DIMENSION(n_) :: dmo
-    DOUBLE PRECISION, DIMENSION(n_) :: df
-    DOUBLE PRECISION, DIMENSION(n_) :: g
-    DOUBLE PRECISION, DIMENSION(n_) :: ds
-    DOUBLE PRECISION, DIMENSION(n_) :: bfw
-    DOUBLE PRECISION, DIMENSION(3, nx_ + 1, ny_ + 1, nz_ + 1) :: v
+    INTEGER :: nx, ny, nz
+    INTEGER :: nd, pt, st
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: s
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: q
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: s_copy
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: s_iter_copy
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: dtx
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: fi
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: fw
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: mw
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: mo
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: dmw
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: dmo
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: df
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: g
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: ds
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: bfw
+    DOUBLE PRECISION, DIMENSION(3, nx + 1, ny + 1, nz + 1) :: v
     INTEGER :: annz
-    INTEGER, DIMENSION(7*n_) :: arow_index
-    INTEGER, DIMENSION(7*n_) :: acol_index
-    DOUBLE PRECISION, DIMENSION(7*n_) :: avalues
-    INTEGER, DIMENSION(n_ + 1) :: arow_compressed
+    INTEGER, DIMENSION(7*(nx*ny*nz)) :: arow_index
+    INTEGER, DIMENSION(7*(nx*ny*nz)) :: acol_index
+    DOUBLE PRECISION, DIMENSION(7*(nx*ny*nz)) :: avalues
+    INTEGER, DIMENSION(nx*ny*nz + 1) :: arow_compressed
     INTEGER :: bnnz
-    INTEGER, DIMENSION(7*n_) :: brow_index
-    INTEGER, DIMENSION(7*n_) :: bcol_index
-    DOUBLE PRECISION, DIMENSION(7*n_) :: bvalues
-    INTEGER, DIMENSION(n_ + 1) :: brow_compressed
+    INTEGER, DIMENSION(7*(nx*ny*nz)) :: brow_index
+    INTEGER, DIMENSION(7*(nx*ny*nz)) :: bcol_index
+    DOUBLE PRECISION, DIMENSION(7*(nx*ny*nz)) :: bvalues
+    INTEGER, DIMENSION(nx*ny*nz + 1) :: brow_compressed
     INTEGER :: dgnnz
-    INTEGER, DIMENSION(7*n_) :: dgrow_index
-    INTEGER, DIMENSION(7*n_) :: dgcol_index
-    DOUBLE PRECISION, DIMENSION(7*n_) :: dgvalues
-    INTEGER, DIMENSION(n_ + 1) :: dgrow_compressed
+    INTEGER, DIMENSION(7*(nx*ny*nz)) :: dgrow_index
+    INTEGER, DIMENSION(7*(nx*ny*nz)) :: dgcol_index
+    DOUBLE PRECISION, DIMENSION(7*(nx*ny*nz)) :: dgvalues
+    INTEGER, DIMENSION(nx*ny*nz + 1) :: dgrow_compressed
+    INTEGER :: arg1
 ! not yet converged
     converged = .false.
 ! Assemble system matrix
-    CALL GENA(v, q, annz, arow_index, arow_compressed, acol_index, &
-&       avalues)
+    CALL GENA(nx, ny, nz, v, q, annz, arow_index, arow_compressed, &
+&       acol_index, avalues)
 ! copy S over
     s_copy = s
 ! set scaling factor
@@ -1418,10 +1268,11 @@ CONTAINS
       CALL MYMAX_1_0_DOUBLE(q, 0.0d0, fi)
       fi = fi*dtx
 ! Matrix-diagonal matrix product
-      CALL SPMAT_MULTIPLY_DIAGONAL(annz, arow_index, arow_compressed, &
-&                            acol_index, avalues, dtx, bnnz, brow_index&
-&                            , brow_compressed, bcol_index, bvalues, &
-&                            'POS')
+      arg1 = nx*ny*nz
+      CALL SPMAT_MULTIPLY_DIAGONAL(arg1, annz, arow_index, &
+&                            arow_compressed, acol_index, avalues, dtx, &
+&                            bnnz, brow_index, brow_compressed, &
+&                            bcol_index, bvalues, 'POS')
       i = 0
       DO WHILE (i .LT. 2**it)
         j = 0
@@ -1429,24 +1280,31 @@ CONTAINS
         dsn = 1.0d0
         s_iter_copy = s
         DO WHILE (dsn .GT. 1.0d-3 .AND. j .LT. 10)
-          CALL RELPERM(s, mw, mo, dmw, dmo)
+          CALL RELPERM(nx, ny, nz, s, mw, mo, dmw, dmo)
           df = dmw/(mw+mo) - mw/(mw+mo)**2*(dmw+dmo)
 ! Matrix-diagonal matrix product
-          CALL SPMAT_MULTIPLY_DIAGONAL(bnnz, brow_index, brow_compressed&
-&                                , bcol_index, bvalues, df, dgnnz, &
-&                                dgrow_index, dgrow_compressed, &
-&                                dgcol_index, dgvalues, 'PRE')
-          CALL ADDX_DIAGONAL(dgnnz, dgrow_index, dgrow_compressed, &
-&                      dgcol_index, dgvalues, -1.0d0, 0)
+          arg1 = nx*ny*nz
+          CALL SPMAT_MULTIPLY_DIAGONAL(arg1, bnnz, brow_index, &
+&                                brow_compressed, bcol_index, bvalues, &
+&                                df, dgnnz, dgrow_index, &
+&                                dgrow_compressed, dgcol_index, dgvalues&
+&                                , 'PRE')
+          arg1 = nx*ny*nz
+          CALL ADDX_DIAGONAL(arg1, dgnnz, dgrow_index, dgrow_compressed&
+&                      , dgcol_index, dgvalues, -1.0d0, 0)
           fw = mw/(mw+mo)
 ! Matrix-vector matrix product
-          CALL SPMAT_MULTIPLY_VECTOR(bnnz, brow_index, brow_compressed, &
-&                              bcol_index, bvalues, fw, bfw, 'PRE')
+          arg1 = nx*ny*nz
+          CALL SPMAT_MULTIPLY_VECTOR(arg1, bnnz, brow_index, &
+&                              brow_compressed, bcol_index, bvalues, fw&
+&                              , bfw, 'PRE')
           g = s - s_iter_copy - bfw - fi
-          CALL SOLVE(dgnnz, dgrow_index, dgrow_compressed, dgcol_index, &
-&              dgvalues, g, ds)
+          arg1 = nx*ny*nz
+          CALL SOLVE(arg1, dgnnz, dgrow_index, dgrow_compressed, &
+&              dgcol_index, dgvalues, g, ds)
           s = s + ds
-          CALL DNRM2(ds, n_, dsn)
+          arg1 = nx*ny*nz
+          CALL DNRM2(ds, arg1, dsn)
           j = j + 1
         END DO
         IF (dsn .GT. 1.0d-3) THEN
@@ -1468,42 +1326,43 @@ CONTAINS
 !
 ! Pressure Solver
 !
-  SUBROUTINE PRES_B(q, qb, s, sb, p, pb, v, vb)
+  SUBROUTINE PRES_B(nx, ny, nz, q, qb, s, sb, p, pb, v, vb)
     IMPLICIT NONE
     INTEGER :: i
-    DOUBLE PRECISION, DIMENSION(n_) :: s
-    DOUBLE PRECISION, DIMENSION(n_) :: sb
-    DOUBLE PRECISION, DIMENSION(n_) :: q
-    DOUBLE PRECISION, DIMENSION(n_) :: qb
-    DOUBLE PRECISION, DIMENSION(3*n_) :: m
-    DOUBLE PRECISION, DIMENSION(3*n_) :: mb
-    DOUBLE PRECISION, DIMENSION(nx_, ny_, nz_) :: p
-    DOUBLE PRECISION, DIMENSION(nx_, ny_, nz_) :: pb
-    DOUBLE PRECISION, DIMENSION(3, nx_, ny_, nz_) :: km
-    DOUBLE PRECISION, DIMENSION(3, nx_, ny_, nz_) :: kmb
-    DOUBLE PRECISION, DIMENSION(3, nx_ + 1, ny_ + 1, nz_ + 1) :: v
-    DOUBLE PRECISION, DIMENSION(3, nx_+1, ny_+1, nz_+1) :: vb
-    DOUBLE PRECISION, DIMENSION(n_) :: mw
-    DOUBLE PRECISION, DIMENSION(n_) :: mwb
-    DOUBLE PRECISION, DIMENSION(n_) :: mo
-    DOUBLE PRECISION, DIMENSION(n_) :: mob
-    CALL RELPERM(s, mw, mo)
-    DO i=1,n_
+    INTEGER :: nx, ny, nz
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: s
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: sb
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: q
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: qb
+    DOUBLE PRECISION, DIMENSION(3*(nx*ny*nz)) :: m
+    DOUBLE PRECISION, DIMENSION(3*(nx*ny*nz)) :: mb
+    DOUBLE PRECISION, DIMENSION(nx, ny, nz) :: p
+    DOUBLE PRECISION, DIMENSION(nx, ny, nz) :: pb
+    DOUBLE PRECISION, DIMENSION(3, nx, ny, nz) :: km
+    DOUBLE PRECISION, DIMENSION(3, nx, ny, nz) :: kmb
+    DOUBLE PRECISION, DIMENSION(3, nx + 1, ny + 1, nz + 1) :: v
+    DOUBLE PRECISION, DIMENSION(3, nx+1, ny+1, nz+1) :: vb
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: mw
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: mwb
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: mo
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: mob
+    CALL RELPERM(nx, ny, nz, s, mw, mo)
+    DO i=1,nx*ny*nz
       m(1+(i-1)*3) = mw(i) + mo(i)
       m(2+(i-1)*3) = m(1+(i-1)*3)
       m(3+(i-1)*3) = m(1+(i-1)*3)
     END DO
-    CALL PUSHREAL8ARRAY(km, 3*10**2*2)
+    CALL PUSHREAL8ARRAY(km, 3*nx*ny*nz)
     CALL MYRESHAPE_1_4(m, km)
 ! point-wise multiply
     km = km*perm
-    CALL TPFA_B(km, kmb, q, qb, p, pb, v, vb)
+    CALL TPFA_B(nx, ny, nz, km, kmb, q, qb, p, pb, v, vb)
     kmb = perm*kmb
-    CALL POPREAL8ARRAY(km, 3*10**2*2)
+    CALL POPREAL8ARRAY(km, 3*nx*ny*nz)
     CALL MYRESHAPE_1_4_B(m, mb, km, kmb)
     mob = 0.D0
     mwb = 0.D0
-    DO i=n_,1,-1
+    DO i=nx*ny*nz,1,-1
       mb(1+(i-1)*3) = mb(1+(i-1)*3) + mb(3+(i-1)*3)
       mb(3+(i-1)*3) = 0.D0
       mb(1+(i-1)*3) = mb(1+(i-1)*3) + mb(2+(i-1)*3)
@@ -1512,24 +1371,25 @@ CONTAINS
       mob(i) = mob(i) + mb(1+(i-1)*3)
       mb(1+(i-1)*3) = 0.D0
     END DO
-    CALL RELPERM_B(s, sb, mw, mwb, mo, mob)
+    CALL RELPERM_B(nx, ny, nz, s, sb, mw, mwb, mo, mob)
   END SUBROUTINE PRES_B
 !
 ! Pressure Solver
 !
-  SUBROUTINE PRES(q, s, p, v)
+  SUBROUTINE PRES(nx, ny, nz, q, s, p, v)
     IMPLICIT NONE
     INTEGER :: i
-    DOUBLE PRECISION, DIMENSION(n_) :: s
-    DOUBLE PRECISION, DIMENSION(n_) :: q
-    DOUBLE PRECISION, DIMENSION(3*n_) :: m
-    DOUBLE PRECISION, DIMENSION(nx_, ny_, nz_) :: p
-    DOUBLE PRECISION, DIMENSION(3, nx_, ny_, nz_) :: km
-    DOUBLE PRECISION, DIMENSION(3, nx_ + 1, ny_ + 1, nz_ + 1) :: v
-    DOUBLE PRECISION, DIMENSION(n_) :: mw
-    DOUBLE PRECISION, DIMENSION(n_) :: mo
-    CALL RELPERM(s, mw, mo)
-    DO i=1,n_
+    INTEGER :: nx, ny, nz
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: s
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: q
+    DOUBLE PRECISION, DIMENSION(3*(nx*ny*nz)) :: m
+    DOUBLE PRECISION, DIMENSION(nx, ny, nz) :: p
+    DOUBLE PRECISION, DIMENSION(3, nx, ny, nz) :: km
+    DOUBLE PRECISION, DIMENSION(3, nx + 1, ny + 1, nz + 1) :: v
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: mw
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: mo
+    CALL RELPERM(nx, ny, nz, s, mw, mo)
+    DO i=1,nx*ny*nz
       m(1+(i-1)*3) = mw(i) + mo(i)
       m(2+(i-1)*3) = m(1+(i-1)*3)
       m(3+(i-1)*3) = m(1+(i-1)*3)
@@ -1537,7 +1397,7 @@ CONTAINS
     CALL MYRESHAPE_1_4(m, km)
 ! point-wise multiply
     km = km*perm
-    CALL TPFA(km, q, p, v)
+    CALL TPFA(nx, ny, nz, km, q, p, v)
   END SUBROUTINE PRES
 !  Differentiation of relperm_vector in reverse (adjoint) mode (with options noISIZE):
 !   gradient     of useful results: s dmo mo dmw mw
@@ -1545,21 +1405,22 @@ CONTAINS
 !
 ! Relative Permeabilities
 !
-  SUBROUTINE RELPERM_VECTOR_B(s, sb, mw, mwb, mo, mob, dmw, dmwb, dmo, &
-&   dmob)
+  SUBROUTINE RELPERM_VECTOR_B(nx, ny, nz, s, sb, mw, mwb, mo, mob, dmw, &
+&   dmwb, dmo, dmob)
     IMPLICIT NONE
-    DOUBLE PRECISION, DIMENSION(n_) :: s
-    DOUBLE PRECISION, DIMENSION(n_) :: sb
-    DOUBLE PRECISION, DIMENSION(n_) :: mw
-    DOUBLE PRECISION, DIMENSION(n_) :: mwb
-    DOUBLE PRECISION, DIMENSION(n_) :: mo
-    DOUBLE PRECISION, DIMENSION(n_) :: mob
-    DOUBLE PRECISION, DIMENSION(n_) :: s_temp
-    DOUBLE PRECISION, DIMENSION(n_) :: s_tempb
-    DOUBLE PRECISION, DIMENSION(n_), OPTIONAL :: dmw
-    DOUBLE PRECISION, DIMENSION(n_), OPTIONAL :: dmwb
-    DOUBLE PRECISION, DIMENSION(n_), OPTIONAL :: dmo
-    DOUBLE PRECISION, DIMENSION(n_), OPTIONAL :: dmob
+    INTEGER :: nx, ny, nz
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: s
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: sb
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: mw
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: mwb
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: mo
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: mob
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: s_temp
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: s_tempb
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz), OPTIONAL :: dmw
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz), OPTIONAL :: dmwb
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz), OPTIONAL :: dmo
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz), OPTIONAL :: dmob
     INTRINSIC PRESENT
 ! rescale saturation
     s_temp = (s-swc_)/(1.0d0-swc_-sor_)
@@ -1577,14 +1438,15 @@ CONTAINS
 !
 ! Relative Permeabilities
 !
-  SUBROUTINE RELPERM_VECTOR(s, mw, mo, dmw, dmo)
+  SUBROUTINE RELPERM_VECTOR(nx, ny, nz, s, mw, mo, dmw, dmo)
     IMPLICIT NONE
-    DOUBLE PRECISION, DIMENSION(n_) :: s
-    DOUBLE PRECISION, DIMENSION(n_) :: mw
-    DOUBLE PRECISION, DIMENSION(n_) :: mo
-    DOUBLE PRECISION, DIMENSION(n_) :: s_temp
-    DOUBLE PRECISION, DIMENSION(n_), OPTIONAL :: dmw
-    DOUBLE PRECISION, DIMENSION(n_), OPTIONAL :: dmo
+    INTEGER :: nx, ny, nz
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: s
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: mw
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: mo
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: s_temp
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz), OPTIONAL :: dmw
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz), OPTIONAL :: dmo
     INTRINSIC PRESENT
 ! rescale saturation
     s_temp = (s-swc_)/(1.0d0-swc_-sor_)
@@ -1635,83 +1497,84 @@ CONTAINS
 !
 ! Generate A matrix
 !
-  SUBROUTINE GENA_B(v, vb, q, qb, annz, arow_index, arow_compressed, &
-&   acol_index, avalues, avaluesb)
+  SUBROUTINE GENA_B(nx, ny, nz, v, vb, q, qb, annz, arow_index, &
+&   arow_compressed, acol_index, avalues, avaluesb)
     IMPLICIT NONE
+    INTEGER :: nx, ny, nz
     INTEGER, DIMENSION(7) :: idiags
-    DOUBLE PRECISION, DIMENSION(n_) :: q
-    DOUBLE PRECISION, DIMENSION(n_) :: qb
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: q
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: qb
 ! the matrix containing the diagonal entries
-    DOUBLE PRECISION, DIMENSION(n_, 7) :: diags
-    DOUBLE PRECISION, DIMENSION(n_, 7) :: diagsb
-    DOUBLE PRECISION, DIMENSION(n_) :: diag_tmp
-    DOUBLE PRECISION, DIMENSION(n_) :: diag_tmpb
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz, 7) :: diags
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz, 7) :: diagsb
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: diag_tmp
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: diag_tmpb
 ! V has an extra length
-    DOUBLE PRECISION, DIMENSION(3, nx_ + 1, ny_ + 1, nz_ + 1) :: v
-    DOUBLE PRECISION, DIMENSION(3, nx_+1, ny_+1, nz_+1) :: vb
+    DOUBLE PRECISION, DIMENSION(3, nx + 1, ny + 1, nz + 1) :: v
+    DOUBLE PRECISION, DIMENSION(3, nx+1, ny+1, nz+1) :: vb
 ! across each x, y, z
-    DOUBLE PRECISION, DIMENSION(nx_, ny_, nz_) :: vxyz
-    DOUBLE PRECISION, DIMENSION(nx_, ny_, nz_) :: vxyzb
+    DOUBLE PRECISION, DIMENSION(nx, ny, nz) :: vxyz
+    DOUBLE PRECISION, DIMENSION(nx, ny, nz) :: vxyzb
     INTEGER :: annz
-    INTEGER, DIMENSION(7*n_) :: arow_index
-    INTEGER, DIMENSION(7*n_) :: acol_index
-    DOUBLE PRECISION, DIMENSION(7*n_) :: avalues
-    DOUBLE PRECISION, DIMENSION(7*n_) :: avaluesb
-    INTEGER, DIMENSION(n_ + 1) :: arow_compressed
+    INTEGER, DIMENSION(7*(nx*ny*nz)) :: arow_index
+    INTEGER, DIMENSION(7*(nx*ny*nz)) :: acol_index
+    DOUBLE PRECISION, DIMENSION(7*(nx*ny*nz)) :: avalues
+    DOUBLE PRECISION, DIMENSION(7*(nx*ny*nz)) :: avaluesb
+    INTEGER, DIMENSION(nx*ny*nz + 1) :: arow_compressed
 ! initialize diags
     diags = 0.0d0
 ! reshape arrays first
-    vxyz = v(3, 1:nx_, 1:ny_, 2:nz_+1)
+    vxyz = v(3, 1:nx, 1:ny, 2:nz+1)
     CALL MYRESHAPE_3_1(vxyz, diags(:, 1))
 ! z2
-    vxyz = v(2, 1:nx_, 2:ny_+1, 1:nz_)
+    vxyz = v(2, 1:nx, 2:ny+1, 1:nz)
     CALL MYRESHAPE_3_1(vxyz, diags(:, 2))
 ! y2
-    vxyz = v(1, 2:nx_+1, 1:ny_, 1:nz_)
+    vxyz = v(1, 2:nx+1, 1:ny, 1:nz)
     CALL MYRESHAPE_3_1(vxyz, diags(:, 3))
 ! x2
-    vxyz = v(1, 1:nx_, 1:ny_, 1:nz_)
+    vxyz = v(1, 1:nx, 1:ny, 1:nz)
     CALL MYRESHAPE_3_1(vxyz, diags(:, 5))
 ! x1
-    vxyz = v(2, 1:nx_, 1:ny_, 1:nz_)
+    vxyz = v(2, 1:nx, 1:ny, 1:nz)
     CALL MYRESHAPE_3_1(vxyz, diags(:, 6))
 ! y1
-    vxyz = v(3, 1:nx_, 1:ny_, 1:nz_)
+    vxyz = v(3, 1:nx, 1:ny, 1:nz)
     CALL MYRESHAPE_3_1(vxyz, diags(:, 7))
 ! z1
     diag_tmp = 0.0d0
     CALL MYMAX_1_0_DOUBLE(diags(:, 1), 0.0d0, diag_tmp)
-    CALL PUSHREAL8ARRAY(diags(:, 1), 200)
+    CALL PUSHREAL8ARRAY(diags(:, 1), nx*ny*nz)
     diags(:, 1) = diag_tmp
     diag_tmp = 0.0d0
     CALL MYMAX_1_0_DOUBLE(diags(:, 2), 0.0d0, diag_tmp)
-    CALL PUSHREAL8ARRAY(diags(:, 2), 200)
+    CALL PUSHREAL8ARRAY(diags(:, 2), nx*ny*nz)
     diags(:, 2) = diag_tmp
     diag_tmp = 0.0d0
     CALL MYMAX_1_0_DOUBLE(diags(:, 3), 0.0d0, diag_tmp)
-    CALL PUSHREAL8ARRAY(diags(:, 3), 200)
+    CALL PUSHREAL8ARRAY(diags(:, 3), nx*ny*nz)
     diags(:, 3) = diag_tmp
     diag_tmp = 0.0d0
     CALL MYMIN_1_0_DOUBLE(diags(:, 5), 0.0d0, diag_tmp)
-    CALL PUSHREAL8ARRAY(diags(:, 5), 200)
+    CALL PUSHREAL8ARRAY(diags(:, 5), nx*ny*nz)
     diags(:, 5) = -diag_tmp
     diag_tmp = 0.0d0
     CALL MYMIN_1_0_DOUBLE(diags(:, 6), 0.0d0, diag_tmp)
-    CALL PUSHREAL8ARRAY(diags(:, 6), 200)
+    CALL PUSHREAL8ARRAY(diags(:, 6), nx*ny*nz)
     diags(:, 6) = -diag_tmp
     diag_tmp = 0.0d0
     CALL MYMIN_1_0_DOUBLE(diags(:, 7), 0.0d0, diag_tmp)
-    CALL PUSHREAL8ARRAY(diags(:, 7), 200)
+    CALL PUSHREAL8ARRAY(diags(:, 7), nx*ny*nz)
     diags(:, 7) = -diag_tmp
     diag_tmp = 0.0d0
     CALL MYMIN_1_0_DOUBLE(q, 0.0d0, diag_tmp)
-    CALL PUSHREAL8ARRAY(diags(:, 4), 200)
+    CALL PUSHREAL8ARRAY(diags(:, 4), nx*ny*nz)
     diags(:, 4) = diag_tmp - diags(:, 5) - diags(:, 3) - diags(:, 6) - &
 &     diags(:, 2) - diags(:, 7) - diags(:, 1)
-    CALL SPDIAGS_FVM_CSR_B(diags, diagsb, annz, arow_index, &
+    CALL SPDIAGS_FVM_CSR_B(nx, ny, nz, diags, diagsb, annz, arow_index, &
 &                    arow_compressed, acol_index, avalues, avaluesb)
     diag_tmpb = 0.D0
-    CALL POPREAL8ARRAY(diags(:, 4), 200)
+    CALL POPREAL8ARRAY(diags(:, 4), nx*ny*nz)
     diag_tmpb = diagsb(:, 4)
     diagsb(:, 5) = diagsb(:, 5) - diagsb(:, 4)
     diagsb(:, 3) = diagsb(:, 3) - diagsb(:, 4)
@@ -1722,98 +1585,99 @@ CONTAINS
     diagsb(:, 4) = 0.D0
     CALL MYMIN_1_0_DOUBLE_B(q, qb, 0.0d0, diag_tmp, diag_tmpb)
     diag_tmpb = 0.D0
-    CALL POPREAL8ARRAY(diags(:, 7), 200)
+    CALL POPREAL8ARRAY(diags(:, 7), nx*ny*nz)
     diag_tmpb = -diagsb(:, 7)
     diagsb(:, 7) = 0.D0
     CALL MYMIN_1_0_DOUBLE_B(diags(:, 7), diagsb(:, 7), 0.0d0, diag_tmp, &
 &                     diag_tmpb)
     diag_tmpb = 0.D0
-    CALL POPREAL8ARRAY(diags(:, 6), 200)
+    CALL POPREAL8ARRAY(diags(:, 6), nx*ny*nz)
     diag_tmpb = -diagsb(:, 6)
     diagsb(:, 6) = 0.D0
     CALL MYMIN_1_0_DOUBLE_B(diags(:, 6), diagsb(:, 6), 0.0d0, diag_tmp, &
 &                     diag_tmpb)
     diag_tmpb = 0.D0
-    CALL POPREAL8ARRAY(diags(:, 5), 200)
+    CALL POPREAL8ARRAY(diags(:, 5), nx*ny*nz)
     diag_tmpb = -diagsb(:, 5)
     diagsb(:, 5) = 0.D0
     CALL MYMIN_1_0_DOUBLE_B(diags(:, 5), diagsb(:, 5), 0.0d0, diag_tmp, &
 &                     diag_tmpb)
     diag_tmpb = 0.D0
-    CALL POPREAL8ARRAY(diags(:, 3), 200)
+    CALL POPREAL8ARRAY(diags(:, 3), nx*ny*nz)
     diag_tmpb = diagsb(:, 3)
     diagsb(:, 3) = 0.D0
     CALL MYMAX_1_0_DOUBLE_B(diags(:, 3), diagsb(:, 3), 0.0d0, diag_tmp, &
 &                     diag_tmpb)
     diag_tmpb = 0.D0
-    CALL POPREAL8ARRAY(diags(:, 2), 200)
+    CALL POPREAL8ARRAY(diags(:, 2), nx*ny*nz)
     diag_tmpb = diagsb(:, 2)
     diagsb(:, 2) = 0.D0
     CALL MYMAX_1_0_DOUBLE_B(diags(:, 2), diagsb(:, 2), 0.0d0, diag_tmp, &
 &                     diag_tmpb)
     diag_tmpb = 0.D0
-    CALL POPREAL8ARRAY(diags(:, 1), 200)
+    CALL POPREAL8ARRAY(diags(:, 1), nx*ny*nz)
     diag_tmpb = diagsb(:, 1)
     diagsb(:, 1) = 0.D0
     CALL MYMAX_1_0_DOUBLE_B(diags(:, 1), diagsb(:, 1), 0.0d0, diag_tmp, &
 &                     diag_tmpb)
     CALL MYRESHAPE_3_1_B(vxyz, vxyzb, diags(:, 7), diagsb(:, 7))
-    vb(3, 1:nx_, 1:ny_, 1:nz_) = vb(3, 1:nx_, 1:ny_, 1:nz_) + vxyzb
-    vxyz = v(2, 1:nx_, 1:ny_, 1:nz_)
+    vb(3, 1:nx, 1:ny, 1:nz) = vb(3, 1:nx, 1:ny, 1:nz) + vxyzb
+    vxyz = v(2, 1:nx, 1:ny, 1:nz)
     CALL MYRESHAPE_3_1_B(vxyz, vxyzb, diags(:, 6), diagsb(:, 6))
-    vb(2, 1:nx_, 1:ny_, 1:nz_) = vb(2, 1:nx_, 1:ny_, 1:nz_) + vxyzb
-    vxyz = v(1, 1:nx_, 1:ny_, 1:nz_)
+    vb(2, 1:nx, 1:ny, 1:nz) = vb(2, 1:nx, 1:ny, 1:nz) + vxyzb
+    vxyz = v(1, 1:nx, 1:ny, 1:nz)
     CALL MYRESHAPE_3_1_B(vxyz, vxyzb, diags(:, 5), diagsb(:, 5))
-    vb(1, 1:nx_, 1:ny_, 1:nz_) = vb(1, 1:nx_, 1:ny_, 1:nz_) + vxyzb
-    vxyz = v(1, 2:nx_+1, 1:ny_, 1:nz_)
+    vb(1, 1:nx, 1:ny, 1:nz) = vb(1, 1:nx, 1:ny, 1:nz) + vxyzb
+    vxyz = v(1, 2:nx+1, 1:ny, 1:nz)
     CALL MYRESHAPE_3_1_B(vxyz, vxyzb, diags(:, 3), diagsb(:, 3))
-    vb(1, 2:nx_+1, 1:ny_, 1:nz_) = vb(1, 2:nx_+1, 1:ny_, 1:nz_) + vxyzb
-    vxyz = v(2, 1:nx_, 2:ny_+1, 1:nz_)
+    vb(1, 2:nx+1, 1:ny, 1:nz) = vb(1, 2:nx+1, 1:ny, 1:nz) + vxyzb
+    vxyz = v(2, 1:nx, 2:ny+1, 1:nz)
     CALL MYRESHAPE_3_1_B(vxyz, vxyzb, diags(:, 2), diagsb(:, 2))
-    vb(2, 1:nx_, 2:ny_+1, 1:nz_) = vb(2, 1:nx_, 2:ny_+1, 1:nz_) + vxyzb
-    vxyz = v(3, 1:nx_, 1:ny_, 2:nz_+1)
+    vb(2, 1:nx, 2:ny+1, 1:nz) = vb(2, 1:nx, 2:ny+1, 1:nz) + vxyzb
+    vxyz = v(3, 1:nx, 1:ny, 2:nz+1)
     CALL MYRESHAPE_3_1_B(vxyz, vxyzb, diags(:, 1), diagsb(:, 1))
-    vb(3, 1:nx_, 1:ny_, 2:nz_+1) = vb(3, 1:nx_, 1:ny_, 2:nz_+1) + vxyzb
+    vb(3, 1:nx, 1:ny, 2:nz+1) = vb(3, 1:nx, 1:ny, 2:nz+1) + vxyzb
   END SUBROUTINE GENA_B
 !
 ! Generate A matrix
 !
-  SUBROUTINE GENA(v, q, annz, arow_index, arow_compressed, acol_index, &
-&   avalues)
+  SUBROUTINE GENA(nx, ny, nz, v, q, annz, arow_index, arow_compressed, &
+&   acol_index, avalues)
     IMPLICIT NONE
+    INTEGER :: nx, ny, nz
     INTEGER, DIMENSION(7) :: idiags
-    DOUBLE PRECISION, DIMENSION(n_) :: q
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: q
 ! the matrix containing the diagonal entries
-    DOUBLE PRECISION, DIMENSION(n_, 7) :: diags
-    DOUBLE PRECISION, DIMENSION(n_) :: diag_tmp
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz, 7) :: diags
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: diag_tmp
 ! V has an extra length
-    DOUBLE PRECISION, DIMENSION(3, nx_ + 1, ny_ + 1, nz_ + 1) :: v
+    DOUBLE PRECISION, DIMENSION(3, nx + 1, ny + 1, nz + 1) :: v
 ! across each x, y, z
-    DOUBLE PRECISION, DIMENSION(nx_, ny_, nz_) :: vxyz
+    DOUBLE PRECISION, DIMENSION(nx, ny, nz) :: vxyz
     INTEGER :: annz
-    INTEGER, DIMENSION(7*n_) :: arow_index
-    INTEGER, DIMENSION(7*n_) :: acol_index
-    DOUBLE PRECISION, DIMENSION(7*n_) :: avalues
-    INTEGER, DIMENSION(n_ + 1) :: arow_compressed
+    INTEGER, DIMENSION(7*(nx*ny*nz)) :: arow_index
+    INTEGER, DIMENSION(7*(nx*ny*nz)) :: acol_index
+    DOUBLE PRECISION, DIMENSION(7*(nx*ny*nz)) :: avalues
+    INTEGER, DIMENSION(nx*ny*nz + 1) :: arow_compressed
 ! initialize diags
     diags = 0.0d0
 ! reshape arrays first
-    vxyz = v(3, 1:nx_, 1:ny_, 2:nz_+1)
+    vxyz = v(3, 1:nx, 1:ny, 2:nz+1)
     CALL MYRESHAPE_3_1(vxyz, diags(:, 1))
 ! z2
-    vxyz = v(2, 1:nx_, 2:ny_+1, 1:nz_)
+    vxyz = v(2, 1:nx, 2:ny+1, 1:nz)
     CALL MYRESHAPE_3_1(vxyz, diags(:, 2))
 ! y2
-    vxyz = v(1, 2:nx_+1, 1:ny_, 1:nz_)
+    vxyz = v(1, 2:nx+1, 1:ny, 1:nz)
     CALL MYRESHAPE_3_1(vxyz, diags(:, 3))
 ! x2
-    vxyz = v(1, 1:nx_, 1:ny_, 1:nz_)
+    vxyz = v(1, 1:nx, 1:ny, 1:nz)
     CALL MYRESHAPE_3_1(vxyz, diags(:, 5))
 ! x1
-    vxyz = v(2, 1:nx_, 1:ny_, 1:nz_)
+    vxyz = v(2, 1:nx, 1:ny, 1:nz)
     CALL MYRESHAPE_3_1(vxyz, diags(:, 6))
 ! y1
-    vxyz = v(3, 1:nx_, 1:ny_, 1:nz_)
+    vxyz = v(3, 1:nx, 1:ny, 1:nz)
     CALL MYRESHAPE_3_1(vxyz, diags(:, 7))
 ! z1
     diag_tmp = 0.0d0
@@ -1838,8 +1702,8 @@ CONTAINS
     CALL MYMIN_1_0_DOUBLE(q, 0.0d0, diag_tmp)
     diags(:, 4) = diag_tmp - diags(:, 5) - diags(:, 3) - diags(:, 6) - &
 &     diags(:, 2) - diags(:, 7) - diags(:, 1)
-    CALL SPDIAGS_FVM_CSR(diags, annz, arow_index, arow_compressed, &
-&                  acol_index, avalues)
+    CALL SPDIAGS_FVM_CSR(nx, ny, nz, diags, annz, arow_index, &
+&                  arow_compressed, acol_index, avalues)
   END SUBROUTINE GENA
 !  Differentiation of tpfa in reverse (adjoint) mode (with options noISIZE):
 !   gradient     of useful results: p q v
@@ -1847,55 +1711,58 @@ CONTAINS
 !
 ! Two point flux approximation.
 !
-  SUBROUTINE TPFA_B(k, kb, q, qb, p, pb, v, vb)
+  SUBROUTINE TPFA_B(nx, ny, nz, k, kb, q, qb, p, pb, v, vb)
     IMPLICIT NONE
+    INTEGER :: nx, ny, nz
     INTEGER :: i
     INTEGER, DIMENSION(7) :: idiags
 ! the matrix containing the diagonal entries
-    DOUBLE PRECISION, DIMENSION(n_, 7) :: diags
-    DOUBLE PRECISION, DIMENSION(n_, 7) :: diagsb
-    DOUBLE PRECISION, DIMENSION(n_) :: q
-    DOUBLE PRECISION, DIMENSION(n_) :: qb
-    DOUBLE PRECISION, DIMENSION(nx_, ny_, nz_) :: p
-    DOUBLE PRECISION, DIMENSION(nx_, ny_, nz_) :: pb
-    DOUBLE PRECISION, DIMENSION(3, nx_, ny_, nz_) :: k
-    DOUBLE PRECISION, DIMENSION(3, nx_, ny_, nz_) :: kb
-    DOUBLE PRECISION, DIMENSION(3, nx_ + 1, ny_ + 1, nz_ + 1) :: v
-    DOUBLE PRECISION, DIMENSION(3, nx_+1, ny_+1, nz_+1) :: vb
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz, 7) :: diags
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz, 7) :: diagsb
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: q
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: qb
+    DOUBLE PRECISION, DIMENSION(nx, ny, nz) :: p
+    DOUBLE PRECISION, DIMENSION(nx, ny, nz) :: pb
+    DOUBLE PRECISION, DIMENSION(3, nx, ny, nz) :: k
+    DOUBLE PRECISION, DIMENSION(3, nx, ny, nz) :: kb
+    DOUBLE PRECISION, DIMENSION(3, nx + 1, ny + 1, nz + 1) :: v
+    DOUBLE PRECISION, DIMENSION(3, nx+1, ny+1, nz+1) :: vb
 ! local variables
     DOUBLE PRECISION :: tx_, ty_, tz_
-    DOUBLE PRECISION, DIMENSION(nx_ + 1, ny_, nz_) :: tx
-    DOUBLE PRECISION, DIMENSION(nx_+1, ny_, nz_) :: txb
-    DOUBLE PRECISION, DIMENSION(nx_, ny_ + 1, nz_) :: ty
-    DOUBLE PRECISION, DIMENSION(nx_, ny_+1, nz_) :: tyb
-    DOUBLE PRECISION, DIMENSION(nx_, ny_, nz_ + 1) :: tz
-    DOUBLE PRECISION, DIMENSION(nx_, ny_, nz_+1) :: tzb
-    DOUBLE PRECISION, DIMENSION(nx_, ny_, nz_) :: txyz
-    DOUBLE PRECISION, DIMENSION(nx_, ny_, nz_) :: txyzb
+    DOUBLE PRECISION, DIMENSION(nx + 1, ny, nz) :: tx
+    DOUBLE PRECISION, DIMENSION(nx+1, ny, nz) :: txb
+    DOUBLE PRECISION, DIMENSION(nx, ny + 1, nz) :: ty
+    DOUBLE PRECISION, DIMENSION(nx, ny+1, nz) :: tyb
+    DOUBLE PRECISION, DIMENSION(nx, ny, nz + 1) :: tz
+    DOUBLE PRECISION, DIMENSION(nx, ny, nz+1) :: tzb
+    DOUBLE PRECISION, DIMENSION(nx, ny, nz) :: txyz
+    DOUBLE PRECISION, DIMENSION(nx, ny, nz) :: txyzb
 ! solution to the linear system
-    DOUBLE PRECISION, DIMENSION(n_) :: u
-    DOUBLE PRECISION, DIMENSION(n_) :: ub
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: u
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: ub
 ! point-wise inverse of permeability
-    DOUBLE PRECISION, DIMENSION(3, nx_, ny_, nz_) :: l
-    DOUBLE PRECISION, DIMENSION(3, nx_, ny_, nz_) :: lb
+    DOUBLE PRECISION, DIMENSION(3, nx, ny, nz) :: l
+    DOUBLE PRECISION, DIMENSION(3, nx, ny, nz) :: lb
 ! sparse matrix
     INTEGER :: annz
-    INTEGER, DIMENSION(7*n_) :: arow_index
-    INTEGER, DIMENSION(7*n_) :: acol_index
-    DOUBLE PRECISION, DIMENSION(7*n_) :: avalues
-    DOUBLE PRECISION, DIMENSION(7*n_) :: avaluesb
-    INTEGER, DIMENSION(n_ + 1) :: arow_compressed
+    INTEGER, DIMENSION(7*(nx*ny*nz)) :: arow_index
+    INTEGER, DIMENSION(7*(nx*ny*nz)) :: acol_index
+    DOUBLE PRECISION, DIMENSION(7*(nx*ny*nz)) :: avalues
+    DOUBLE PRECISION, DIMENSION(7*(nx*ny*nz)) :: avaluesb
+    INTEGER, DIMENSION(nx*ny*nz + 1) :: arow_compressed
     INTRINSIC MOD
+    INTEGER :: arg1
+    INTEGER :: ad_to
     INTEGER :: branch
-    DOUBLE PRECISION :: temp1(nx_, ny_, nz_-1)
-    DOUBLE PRECISION :: temp0(nx_, ny_-1, nz_)
-    DOUBLE PRECISION :: tempb4(nx_-1, 10, 2)
-    DOUBLE PRECISION :: tempb3(10, ny_-1, 2)
-    DOUBLE PRECISION :: tempb2(10, 10, nz_-1)
-    DOUBLE PRECISION :: tempb1(nx_-1, ny_, nz_)
-    DOUBLE PRECISION :: tempb0(nx_, ny_-1, nz_)
-    DOUBLE PRECISION :: tempb(nx_, ny_, nz_-1)
-    DOUBLE PRECISION :: temp(nx_-1, ny_, nz_)
+    DOUBLE PRECISION :: temp1(nx, ny, nz-1)
+    DOUBLE PRECISION :: temp0(nx, ny-1, nz)
+    DOUBLE PRECISION :: tempb4(nx-1, ny, nz)
+    DOUBLE PRECISION :: tempb3(nx, ny-1, nz)
+    DOUBLE PRECISION :: tempb2(nx, ny, nz-1)
+    DOUBLE PRECISION :: tempb1(nx-1, ny, nz)
+    DOUBLE PRECISION :: tempb0(nx, ny-1, nz)
+    DOUBLE PRECISION :: tempb(nx, ny, nz-1)
+    DOUBLE PRECISION :: temp(nx-1, ny, nz)
 ! get the point-wise inverse of the permeability matrix
     l = 1.0d0/k
     tx_ = 2.0d0*hy_*hz_/hx_
@@ -1905,45 +1772,45 @@ CONTAINS
     ty = 0.0d0
     tz = 0.0d0
 ! Compute transmissibilities by averaging harmonically
-    tx(2:nx_, 1:ny_, 1:nz_) = tx_/(l(1, 1:nx_-1, 1:ny_, 1:nz_)+l(1, 2:&
-&     nx_, 1:ny_, 1:nz_))
-    ty(1:nx_, 2:ny_, 1:nz_) = ty_/(l(2, 1:nx_, 1:ny_-1, 1:nz_)+l(2, 1:&
-&     nx_, 2:ny_, 1:nz_))
-    tz(1:nx_, 1:ny_, 2:nz_) = tz_/(l(3, 1:nx_, 1:ny_, 1:nz_-1)+l(3, 1:&
-&     nx_, 1:ny_, 2:nz_))
+    tx(2:nx, 1:ny, 1:nz) = tx_/(l(1, 1:nx-1, 1:ny, 1:nz)+l(1, 2:nx, 1:ny&
+&     , 1:nz))
+    ty(1:nx, 2:ny, 1:nz) = ty_/(l(2, 1:nx, 1:ny-1, 1:nz)+l(2, 1:nx, 2:ny&
+&     , 1:nz))
+    tz(1:nx, 1:ny, 2:nz) = tz_/(l(3, 1:nx, 1:ny, 1:nz-1)+l(3, 1:nx, 1:ny&
+&     , 2:nz))
 ! initialize diags
     diags = 0.0d0
-    txyz = -tx(1:nx_, 1:ny_, 1:nz_)
+    txyz = -tx(1:nx, 1:ny, 1:nz)
     CALL MYRESHAPE_3_1(txyz, diags(:, 5))
 ! -x1
-    txyz = -ty(1:nx_, 1:ny_, 1:nz_)
+    txyz = -ty(1:nx, 1:ny, 1:nz)
     CALL MYRESHAPE_3_1(txyz, diags(:, 6))
 ! -y1
-    txyz = -tz(1:nx_, 1:ny_, 1:nz_)
+    txyz = -tz(1:nx, 1:ny, 1:nz)
     CALL MYRESHAPE_3_1(txyz, diags(:, 7))
 ! -z1
-    txyz = -tx(2:nx_+1, 1:ny_, 1:nz_)
+    txyz = -tx(2:nx+1, 1:ny, 1:nz)
     CALL MYRESHAPE_3_1(txyz, diags(:, 3))
 ! -x2
-    txyz = -ty(1:nx_, 2:ny_+1, 1:nz_)
+    txyz = -ty(1:nx, 2:ny+1, 1:nz)
     CALL MYRESHAPE_3_1(txyz, diags(:, 2))
 ! -y2
-    txyz = -tz(1:nx_, 1:ny_, 2:nz_+1)
+    txyz = -tz(1:nx, 1:ny, 2:nz+1)
     CALL MYRESHAPE_3_1(txyz, diags(:, 1))
 ! -z2
 ! Assemble discretization matrix
     diags(:, 4) = -(diags(:, 1)+diags(:, 2)+diags(:, 3)+diags(:, 5)+&
 &     diags(:, 6)+diags(:, 7))
-    CALL SPDIAGS_FVM_CSR(diags, annz, arow_index, arow_compressed, &
-&                  acol_index, avalues)
+    CALL SPDIAGS_FVM_CSR(nx, ny, nz, diags, annz, arow_index, &
+&                  arow_compressed, acol_index, avalues)
 ! ! Increment the 1,1 element of A
 !     call addx_elem(annz, arow_index, arow_compressed,&
 !                     acol_index, avalues, &
 !                     PERM(1,1,1,1) + PERM(2,1,1,1) + PERM(3,1,1,1), 1, 1)
 ! Fix the pressure at the inlets
     DO i=1,annz
-      IF (arow_index(i) .LT. nx_*ny_ .AND. MOD(arow_index(i), ny_) .EQ. &
-&         1) THEN
+      IF (arow_index(i) .LT. nx*ny .AND. MOD(arow_index(i), ny) .EQ. 1) &
+&     THEN
         IF (arow_index(i) .EQ. acol_index(i)) THEN
           avalues(i) = 1
           CALL PUSHCONTROL2B(2)
@@ -1955,43 +1822,68 @@ CONTAINS
         CALL PUSHCONTROL2B(0)
       END IF
     END DO
+    CALL PUSHINTEGER4(i - 1)
 ! solve the linear system
 ! Pass the rows_index, cols_index, values separately.
-    CALL SOLVE(annz, arow_index, arow_compressed, acol_index, avalues, q&
-&        , u)
+    arg1 = nx*ny*nz
+    CALL PUSHBOOLEAN(verbose)
+    CALL PUSHINTEGER4(solver_outer)
+    CALL PUSHINTEGER4(solver_inner)
+    CALL PUSHREAL8ARRAY(u, nx*ny*nz)
+    CALL PUSHREAL8ARRAY(q, nx*ny*nz)
+    CALL PUSHREAL8ARRAY(avalues, 7*nx*ny*nz)
+    CALL PUSHINTEGER4ARRAY(acol_index, 7*nx*ny*nz)
+    CALL PUSHINTEGER4ARRAY(arow_compressed, nx*ny*nz + 1)
+    CALL PUSHINTEGER4ARRAY(arow_index, 7*nx*ny*nz)
+    CALL PUSHINTEGER4(annz)
+    CALL PUSHINTEGER4(arg1)
+    CALL SOLVE(arg1, annz, arow_index, arow_compressed, acol_index, &
+&        avalues, q, u)
 ! reshape the solution
-    CALL PUSHREAL8ARRAY(p, 10**2*2)
+    CALL PUSHREAL8ARRAY(p, nx*ny*nz)
     CALL MYRESHAPE_1_3(u, p)
 ! V.x
 ! V.y
 ! V.z
     tzb = 0.D0
-    tempb2 = tz(:, :, 2:nz_)*vb(3, 1:nx_, 1:ny_, 2:nz_)
-    pb(:, :, 1:nz_-1) = pb(:, :, 1:nz_-1) + tempb2
-    pb(:, :, 2:nz_) = pb(:, :, 2:nz_) - tempb2
-    tzb(:, :, 2:nz_) = tzb(:, :, 2:nz_) + (p(:, :, 1:nz_-1)-p(:, :, 2:&
-&     nz_))*vb(3, 1:nx_, 1:ny_, 2:nz_)
-    vb(3, 1:nx_, 1:ny_, 2:nz_) = 0.D0
+    tempb2 = tz(:, :, 2:nz)*vb(3, 1:nx, 1:ny, 2:nz)
+    pb(:, :, 1:nz-1) = pb(:, :, 1:nz-1) + tempb2
+    pb(:, :, 2:nz) = pb(:, :, 2:nz) - tempb2
+    tzb(:, :, 2:nz) = tzb(:, :, 2:nz) + (p(:, :, 1:nz-1)-p(:, :, 2:nz))*&
+&     vb(3, 1:nx, 1:ny, 2:nz)
+    vb(3, 1:nx, 1:ny, 2:nz) = 0.D0
     tyb = 0.D0
-    tempb3 = ty(:, 2:ny_, :)*vb(2, 1:nx_, 2:ny_, 1:nz_)
-    pb(:, 1:ny_-1, :) = pb(:, 1:ny_-1, :) + tempb3
-    pb(:, 2:ny_, :) = pb(:, 2:ny_, :) - tempb3
-    tyb(:, 2:ny_, :) = tyb(:, 2:ny_, :) + (p(:, 1:ny_-1, :)-p(:, 2:ny_, &
-&     :))*vb(2, 1:nx_, 2:ny_, 1:nz_)
-    vb(2, 1:nx_, 2:ny_, 1:nz_) = 0.D0
+    tempb3 = ty(:, 2:ny, :)*vb(2, 1:nx, 2:ny, 1:nz)
+    pb(:, 1:ny-1, :) = pb(:, 1:ny-1, :) + tempb3
+    pb(:, 2:ny, :) = pb(:, 2:ny, :) - tempb3
+    tyb(:, 2:ny, :) = tyb(:, 2:ny, :) + (p(:, 1:ny-1, :)-p(:, 2:ny, :))*&
+&     vb(2, 1:nx, 2:ny, 1:nz)
+    vb(2, 1:nx, 2:ny, 1:nz) = 0.D0
     txb = 0.D0
-    tempb4 = tx(2:nx_, :, :)*vb(1, 2:nx_, 1:ny_, 1:nz_)
-    pb(1:nx_-1, :, :) = pb(1:nx_-1, :, :) + tempb4
-    pb(2:nx_, :, :) = pb(2:nx_, :, :) - tempb4
-    txb(2:nx_, :, :) = txb(2:nx_, :, :) + (p(1:nx_-1, :, :)-p(2:nx_, :, &
-&     :))*vb(1, 2:nx_, 1:ny_, 1:nz_)
-    vb(1, 2:nx_, 1:ny_, 1:nz_) = 0.D0
-    CALL POPREAL8ARRAY(p, 10**2*2)
+    tempb4 = tx(2:nx, :, :)*vb(1, 2:nx, 1:ny, 1:nz)
+    pb(1:nx-1, :, :) = pb(1:nx-1, :, :) + tempb4
+    pb(2:nx, :, :) = pb(2:nx, :, :) - tempb4
+    txb(2:nx, :, :) = txb(2:nx, :, :) + (p(1:nx-1, :, :)-p(2:nx, :, :))*&
+&     vb(1, 2:nx, 1:ny, 1:nz)
+    vb(1, 2:nx, 1:ny, 1:nz) = 0.D0
+    CALL POPREAL8ARRAY(p, nx*ny*nz)
     CALL MYRESHAPE_1_3_B(u, ub, p, pb)
+    CALL POPINTEGER4(arg1)
+    CALL POPINTEGER4(annz)
+    CALL POPINTEGER4ARRAY(arow_index, 7*nx*ny*nz)
+    CALL POPINTEGER4ARRAY(arow_compressed, nx*ny*nz + 1)
+    CALL POPINTEGER4ARRAY(acol_index, 7*nx*ny*nz)
+    CALL POPREAL8ARRAY(avalues, 7*nx*ny*nz)
+    CALL POPREAL8ARRAY(q, nx*ny*nz)
+    CALL POPREAL8ARRAY(u, nx*ny*nz)
+    CALL POPINTEGER4(solver_inner)
+    CALL POPINTEGER4(solver_outer)
+    CALL POPBOOLEAN(verbose)
     avaluesb = 0.D0
-    CALL SOLVE_B(annz, arow_index, arow_compressed, acol_index, avalues&
-&          , avaluesb, q, qb, u, ub)
-    DO i=annz,1,-1
+    CALL SOLVE_B(arg1, annz, arow_index, arow_compressed, acol_index, &
+&          avalues, avaluesb, q, qb, u, ub)
+    CALL POPINTEGER4(ad_to)
+    DO i=ad_to,1,-1
       CALL POPCONTROL2B(branch)
       IF (branch .NE. 0) THEN
         IF (branch .EQ. 1) THEN
@@ -2001,7 +1893,7 @@ CONTAINS
         END IF
       END IF
     END DO
-    CALL SPDIAGS_FVM_CSR_B(diags, diagsb, annz, arow_index, &
+    CALL SPDIAGS_FVM_CSR_B(nx, ny, nz, diags, diagsb, annz, arow_index, &
 &                    arow_compressed, acol_index, avalues, avaluesb)
     diagsb(:, 1) = diagsb(:, 1) - diagsb(:, 4)
     diagsb(:, 2) = diagsb(:, 2) - diagsb(:, 4)
@@ -2011,68 +1903,70 @@ CONTAINS
     diagsb(:, 7) = diagsb(:, 7) - diagsb(:, 4)
     diagsb(:, 4) = 0.D0
     CALL MYRESHAPE_3_1_B(txyz, txyzb, diags(:, 1), diagsb(:, 1))
-    tzb(:, :, 2:nz_+1) = tzb(:, :, 2:nz_+1) - txyzb
-    txyz = -ty(1:nx_, 2:ny_+1, 1:nz_)
+    tzb(:, :, 2:nz+1) = tzb(:, :, 2:nz+1) - txyzb
+    txyz = -ty(1:nx, 2:ny+1, 1:nz)
     CALL MYRESHAPE_3_1_B(txyz, txyzb, diags(:, 2), diagsb(:, 2))
-    tyb(:, 2:ny_+1, :) = tyb(:, 2:ny_+1, :) - txyzb
-    txyz = -tx(2:nx_+1, 1:ny_, 1:nz_)
+    tyb(:, 2:ny+1, :) = tyb(:, 2:ny+1, :) - txyzb
+    txyz = -tx(2:nx+1, 1:ny, 1:nz)
     CALL MYRESHAPE_3_1_B(txyz, txyzb, diags(:, 3), diagsb(:, 3))
-    txb(2:nx_+1, :, :) = txb(2:nx_+1, :, :) - txyzb
-    txyz = -tz(1:nx_, 1:ny_, 1:nz_)
+    txb(2:nx+1, :, :) = txb(2:nx+1, :, :) - txyzb
+    txyz = -tz(1:nx, 1:ny, 1:nz)
     CALL MYRESHAPE_3_1_B(txyz, txyzb, diags(:, 7), diagsb(:, 7))
-    tzb(:, :, 1:nz_) = tzb(:, :, 1:nz_) - txyzb
-    txyz = -ty(1:nx_, 1:ny_, 1:nz_)
+    tzb(:, :, 1:nz) = tzb(:, :, 1:nz) - txyzb
+    txyz = -ty(1:nx, 1:ny, 1:nz)
     CALL MYRESHAPE_3_1_B(txyz, txyzb, diags(:, 6), diagsb(:, 6))
-    tyb(:, 1:ny_, :) = tyb(:, 1:ny_, :) - txyzb
-    txyz = -tx(1:nx_, 1:ny_, 1:nz_)
+    tyb(:, 1:ny, :) = tyb(:, 1:ny, :) - txyzb
+    txyz = -tx(1:nx, 1:ny, 1:nz)
     CALL MYRESHAPE_3_1_B(txyz, txyzb, diags(:, 5), diagsb(:, 5))
-    txb(1:nx_, :, :) = txb(1:nx_, :, :) - txyzb
+    txb(1:nx, :, :) = txb(1:nx, :, :) - txyzb
     lb = 0.D0
-    temp1 = l(3, 1:nx_, 1:ny_, 1:nz_-1) + l(3, 1:nx_, 1:ny_, 2:nz_)
-    tempb = -(tz_*tzb(1:nx_, 1:ny_, 2:nz_)/temp1**2)
-    lb(3, :, :, 1:nz_-1) = lb(3, :, :, 1:nz_-1) + tempb
-    lb(3, :, :, 2:nz_) = lb(3, :, :, 2:nz_) + tempb
-    temp0 = l(2, 1:nx_, 1:ny_-1, 1:nz_) + l(2, 1:nx_, 2:ny_, 1:nz_)
-    tempb0 = -(ty_*tyb(1:nx_, 2:ny_, 1:nz_)/temp0**2)
-    lb(2, :, 1:ny_-1, :) = lb(2, :, 1:ny_-1, :) + tempb0
-    lb(2, :, 2:ny_, :) = lb(2, :, 2:ny_, :) + tempb0
-    temp = l(1, 1:nx_-1, 1:ny_, 1:nz_) + l(1, 2:nx_, 1:ny_, 1:nz_)
-    tempb1 = -(tx_*txb(2:nx_, 1:ny_, 1:nz_)/temp**2)
-    lb(1, 1:nx_-1, :, :) = lb(1, 1:nx_-1, :, :) + tempb1
-    lb(1, 2:nx_, :, :) = lb(1, 2:nx_, :, :) + tempb1
+    temp1 = l(3, 1:nx, 1:ny, 1:nz-1) + l(3, 1:nx, 1:ny, 2:nz)
+    tempb = -(tz_*tzb(1:nx, 1:ny, 2:nz)/temp1**2)
+    lb(3, :, :, 1:nz-1) = lb(3, :, :, 1:nz-1) + tempb
+    lb(3, :, :, 2:nz) = lb(3, :, :, 2:nz) + tempb
+    temp0 = l(2, 1:nx, 1:ny-1, 1:nz) + l(2, 1:nx, 2:ny, 1:nz)
+    tempb0 = -(ty_*tyb(1:nx, 2:ny, 1:nz)/temp0**2)
+    lb(2, :, 1:ny-1, :) = lb(2, :, 1:ny-1, :) + tempb0
+    lb(2, :, 2:ny, :) = lb(2, :, 2:ny, :) + tempb0
+    temp = l(1, 1:nx-1, 1:ny, 1:nz) + l(1, 2:nx, 1:ny, 1:nz)
+    tempb1 = -(tx_*txb(2:nx, 1:ny, 1:nz)/temp**2)
+    lb(1, 1:nx-1, :, :) = lb(1, 1:nx-1, :, :) + tempb1
+    lb(1, 2:nx, :, :) = lb(1, 2:nx, :, :) + tempb1
     kb = 0.D0
     kb = -(lb/k**2)
   END SUBROUTINE TPFA_B
 !
 ! Two point flux approximation.
 !
-  SUBROUTINE TPFA(k, q, p, v)
+  SUBROUTINE TPFA(nx, ny, nz, k, q, p, v)
     IMPLICIT NONE
+    INTEGER :: nx, ny, nz
     INTEGER :: i
     INTEGER, DIMENSION(7) :: idiags
 ! the matrix containing the diagonal entries
-    DOUBLE PRECISION, DIMENSION(n_, 7) :: diags
-    DOUBLE PRECISION, DIMENSION(n_) :: q
-    DOUBLE PRECISION, DIMENSION(nx_, ny_, nz_) :: p
-    DOUBLE PRECISION, DIMENSION(3, nx_, ny_, nz_) :: k
-    DOUBLE PRECISION, DIMENSION(3, nx_ + 1, ny_ + 1, nz_ + 1) :: v
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz, 7) :: diags
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: q
+    DOUBLE PRECISION, DIMENSION(nx, ny, nz) :: p
+    DOUBLE PRECISION, DIMENSION(3, nx, ny, nz) :: k
+    DOUBLE PRECISION, DIMENSION(3, nx + 1, ny + 1, nz + 1) :: v
 ! local variables
     DOUBLE PRECISION :: tx_, ty_, tz_
-    DOUBLE PRECISION, DIMENSION(nx_ + 1, ny_, nz_) :: tx
-    DOUBLE PRECISION, DIMENSION(nx_, ny_ + 1, nz_) :: ty
-    DOUBLE PRECISION, DIMENSION(nx_, ny_, nz_ + 1) :: tz
-    DOUBLE PRECISION, DIMENSION(nx_, ny_, nz_) :: txyz
+    DOUBLE PRECISION, DIMENSION(nx + 1, ny, nz) :: tx
+    DOUBLE PRECISION, DIMENSION(nx, ny + 1, nz) :: ty
+    DOUBLE PRECISION, DIMENSION(nx, ny, nz + 1) :: tz
+    DOUBLE PRECISION, DIMENSION(nx, ny, nz) :: txyz
 ! solution to the linear system
-    DOUBLE PRECISION, DIMENSION(n_) :: u
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: u
 ! point-wise inverse of permeability
-    DOUBLE PRECISION, DIMENSION(3, nx_, ny_, nz_) :: l
+    DOUBLE PRECISION, DIMENSION(3, nx, ny, nz) :: l
 ! sparse matrix
     INTEGER :: annz
-    INTEGER, DIMENSION(7*n_) :: arow_index
-    INTEGER, DIMENSION(7*n_) :: acol_index
-    DOUBLE PRECISION, DIMENSION(7*n_) :: avalues
-    INTEGER, DIMENSION(n_ + 1) :: arow_compressed
+    INTEGER, DIMENSION(7*(nx*ny*nz)) :: arow_index
+    INTEGER, DIMENSION(7*(nx*ny*nz)) :: acol_index
+    DOUBLE PRECISION, DIMENSION(7*(nx*ny*nz)) :: avalues
+    INTEGER, DIMENSION(nx*ny*nz + 1) :: arow_compressed
     INTRINSIC MOD
+    INTEGER :: arg1
 ! get the point-wise inverse of the permeability matrix
     l = 1.0d0/k
     tx_ = 2.0d0*hy_*hz_/hx_
@@ -2082,45 +1976,45 @@ CONTAINS
     ty = 0.0d0
     tz = 0.0d0
 ! Compute transmissibilities by averaging harmonically
-    tx(2:nx_, 1:ny_, 1:nz_) = tx_/(l(1, 1:nx_-1, 1:ny_, 1:nz_)+l(1, 2:&
-&     nx_, 1:ny_, 1:nz_))
-    ty(1:nx_, 2:ny_, 1:nz_) = ty_/(l(2, 1:nx_, 1:ny_-1, 1:nz_)+l(2, 1:&
-&     nx_, 2:ny_, 1:nz_))
-    tz(1:nx_, 1:ny_, 2:nz_) = tz_/(l(3, 1:nx_, 1:ny_, 1:nz_-1)+l(3, 1:&
-&     nx_, 1:ny_, 2:nz_))
+    tx(2:nx, 1:ny, 1:nz) = tx_/(l(1, 1:nx-1, 1:ny, 1:nz)+l(1, 2:nx, 1:ny&
+&     , 1:nz))
+    ty(1:nx, 2:ny, 1:nz) = ty_/(l(2, 1:nx, 1:ny-1, 1:nz)+l(2, 1:nx, 2:ny&
+&     , 1:nz))
+    tz(1:nx, 1:ny, 2:nz) = tz_/(l(3, 1:nx, 1:ny, 1:nz-1)+l(3, 1:nx, 1:ny&
+&     , 2:nz))
 ! initialize diags
     diags = 0.0d0
-    txyz = -tx(1:nx_, 1:ny_, 1:nz_)
+    txyz = -tx(1:nx, 1:ny, 1:nz)
     CALL MYRESHAPE_3_1(txyz, diags(:, 5))
 ! -x1
-    txyz = -ty(1:nx_, 1:ny_, 1:nz_)
+    txyz = -ty(1:nx, 1:ny, 1:nz)
     CALL MYRESHAPE_3_1(txyz, diags(:, 6))
 ! -y1
-    txyz = -tz(1:nx_, 1:ny_, 1:nz_)
+    txyz = -tz(1:nx, 1:ny, 1:nz)
     CALL MYRESHAPE_3_1(txyz, diags(:, 7))
 ! -z1
-    txyz = -tx(2:nx_+1, 1:ny_, 1:nz_)
+    txyz = -tx(2:nx+1, 1:ny, 1:nz)
     CALL MYRESHAPE_3_1(txyz, diags(:, 3))
 ! -x2
-    txyz = -ty(1:nx_, 2:ny_+1, 1:nz_)
+    txyz = -ty(1:nx, 2:ny+1, 1:nz)
     CALL MYRESHAPE_3_1(txyz, diags(:, 2))
 ! -y2
-    txyz = -tz(1:nx_, 1:ny_, 2:nz_+1)
+    txyz = -tz(1:nx, 1:ny, 2:nz+1)
     CALL MYRESHAPE_3_1(txyz, diags(:, 1))
 ! -z2
 ! Assemble discretization matrix
     diags(:, 4) = -(diags(:, 1)+diags(:, 2)+diags(:, 3)+diags(:, 5)+&
 &     diags(:, 6)+diags(:, 7))
-    CALL SPDIAGS_FVM_CSR(diags, annz, arow_index, arow_compressed, &
-&                  acol_index, avalues)
+    CALL SPDIAGS_FVM_CSR(nx, ny, nz, diags, annz, arow_index, &
+&                  arow_compressed, acol_index, avalues)
 ! ! Increment the 1,1 element of A
 !     call addx_elem(annz, arow_index, arow_compressed,&
 !                     acol_index, avalues, &
 !                     PERM(1,1,1,1) + PERM(2,1,1,1) + PERM(3,1,1,1), 1, 1)
 ! Fix the pressure at the inlets
     DO i=1,annz
-      IF (arow_index(i) .LT. nx_*ny_ .AND. MOD(arow_index(i), ny_) .EQ. &
-&         1) THEN
+      IF (arow_index(i) .LT. nx*ny .AND. MOD(arow_index(i), ny) .EQ. 1) &
+&     THEN
         IF (arow_index(i) .EQ. acol_index(i)) THEN
           avalues(i) = 1
         ELSE
@@ -2130,48 +2024,56 @@ CONTAINS
     END DO
 ! solve the linear system
 ! Pass the rows_index, cols_index, values separately.
-    CALL SOLVE(annz, arow_index, arow_compressed, acol_index, avalues, q&
-&        , u)
+    arg1 = nx*ny*nz
+    CALL SOLVE(arg1, annz, arow_index, arow_compressed, acol_index, &
+&        avalues, q, u)
 ! reshape the solution
     CALL MYRESHAPE_1_3(u, p)
 ! V.x
 ! V.y
 ! V.z
-    v(1, 2:nx_, 1:ny_, 1:nz_) = (p(1:nx_-1, :, :)-p(2:nx_, :, :))*tx(2:&
-&     nx_, :, :)
+    v(1, 2:nx, 1:ny, 1:nz) = (p(1:nx-1, :, :)-p(2:nx, :, :))*tx(2:nx, :&
+&     , :)
 ! V.y
-    v(2, 1:nx_, 2:ny_, 1:nz_) = (p(:, 1:ny_-1, :)-p(:, 2:ny_, :))*ty(:, &
-&     2:ny_, :)
+    v(2, 1:nx, 2:ny, 1:nz) = (p(:, 1:ny-1, :)-p(:, 2:ny, :))*ty(:, 2:ny&
+&     , :)
 ! V.z
-    v(3, 1:nx_, 1:ny_, 2:nz_) = (p(:, :, 1:nz_-1)-p(:, :, 2:nz_))*tz(:, &
-&     :, 2:nz_)
+    v(3, 1:nx, 1:ny, 2:nz) = (p(:, :, 1:nz-1)-p(:, :, 2:nz))*tz(:, :, 2:&
+&     nz)
   END SUBROUTINE TPFA
 !
 ! Creates sparse diags matrix from rectangular matrix having the diagonals
 ! orow_compressed is not populated.
-  SUBROUTINE SPDIAGS_FVM(imatrix, onnz, orow_index, orow_compressed, &
-&   ocol_index, ovalues)
+  SUBROUTINE SPDIAGS_FVM(nx, ny, nz, imatrix, onnz, orow_index, &
+&   orow_compressed, ocol_index, ovalues)
     IMPLICIT NONE
     LOGICAL :: done
+    INTEGER :: nx, ny, nz
     DOUBLE PRECISION :: elm
     INTEGER :: i, j, start_row_imatrix, end_row_imatrix, row, col
-    DOUBLE PRECISION, DIMENSION(n_, 7) :: imatrix
-    INTEGER, DIMENSION(7), PARAMETER :: idiags=(/-(nx_*ny_), -nx_, -1, 0&
-&     , 1, nx_, nx_*ny_/)
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz, 7) :: imatrix
+    INTEGER, DIMENSION(7) :: idiags
     INTEGER :: onnz
-    INTEGER, DIMENSION(7*n_) :: orow_index
-    INTEGER, DIMENSION(7*n_) :: ocol_index
-    DOUBLE PRECISION, DIMENSION(7*n_) :: ovalues
-    INTEGER, DIMENSION(n_ + 1) :: orow_compressed
+    INTEGER, DIMENSION(7*(nx*ny*nz)) :: orow_index
+    INTEGER, DIMENSION(7*(nx*ny*nz)) :: ocol_index
+    DOUBLE PRECISION, DIMENSION(7*(nx*ny*nz)) :: ovalues
+    INTEGER, DIMENSION(nx*ny*nz + 1) :: orow_compressed
+    idiags(1) = -(nx*ny)
+    idiags(2) = -nx
+    idiags(3) = -1
+    idiags(4) = 0
+    idiags(5) = 1
+    idiags(6) = nx
+    idiags(7) = nx*ny
     onnz = 0
     orow_compressed = 0
     DO i=1,7
       IF (idiags(i) .GT. 0) THEN
         start_row_imatrix = idiags(i) + 1
-        end_row_imatrix = n_
+        end_row_imatrix = nx*ny*nz
       ELSE IF (idiags(i) .LE. 0) THEN
         start_row_imatrix = 1
-        end_row_imatrix = n_ + idiags(i)
+        end_row_imatrix = nx*ny*nz + idiags(i)
       END IF
       CALL FIRSTELM(idiags(i), row, col)
       DO j=start_row_imatrix,end_row_imatrix
@@ -2192,40 +2094,47 @@ CONTAINS
 !
 ! Creates sparse diags matrix from rectangular matrix having the diagonals
 !
-  SUBROUTINE SPDIAGS_FVM_CSR_B(imatrix, imatrixb, onnz, orow_index, &
-&   orow_compressed, ocol_index, ovalues, ovaluesb)
+  SUBROUTINE SPDIAGS_FVM_CSR_B(nx, ny, nz, imatrix, imatrixb, onnz, &
+&   orow_index, orow_compressed, ocol_index, ovalues, ovaluesb)
     IMPLICIT NONE
+    INTEGER :: nx, ny, nz
     LOGICAL :: done
     DOUBLE PRECISION :: elm
     INTEGER :: i, j, rownnz
-    DOUBLE PRECISION, DIMENSION(n_, 7) :: imatrix
-    DOUBLE PRECISION, DIMENSION(n_, 7) :: imatrixb
-    INTEGER, DIMENSION(7), PARAMETER :: idiags=(/-(nx_*ny_), -nx_, -1, 0&
-&     , 1, nx_, nx_*ny_/)
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz, 7) :: imatrix
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz, 7) :: imatrixb
+    INTEGER, DIMENSION(7) :: idiags
     INTEGER, DIMENSION(7) :: start_row_imatrix, end_row_imatrix
 ! row, column along diagonal
     INTEGER, DIMENSION(7) :: row_diag, col_diag
     INTEGER :: onnz
-    INTEGER, DIMENSION(7*n_) :: orow_index
-    INTEGER, DIMENSION(7*n_) :: ocol_index
-    DOUBLE PRECISION, DIMENSION(7*n_) :: ovalues
-    DOUBLE PRECISION, DIMENSION(7*n_) :: ovaluesb
-    INTEGER, DIMENSION(n_ + 1) :: orow_compressed
+    INTEGER, DIMENSION(7*(nx*ny*nz)) :: orow_index
+    INTEGER, DIMENSION(7*(nx*ny*nz)) :: ocol_index
+    DOUBLE PRECISION, DIMENSION(7*(nx*ny*nz)) :: ovalues
+    DOUBLE PRECISION, DIMENSION(7*(nx*ny*nz)) :: ovaluesb
+    INTEGER, DIMENSION(nx*ny*nz + 1) :: orow_compressed
     INTEGER :: branch
+    idiags(1) = -(nx*ny)
+    idiags(2) = -nx
+    idiags(3) = -1
+    idiags(4) = 0
+    idiags(5) = 1
+    idiags(6) = nx
+    idiags(7) = nx*ny
     onnz = 0
 ! compressed row storage
     DO i=1,7
       IF (idiags(i) .GT. 0) THEN
         start_row_imatrix(i) = idiags(i) + 1
-        end_row_imatrix(i) = n_
+        end_row_imatrix(i) = nx*ny*nz
       ELSE IF (idiags(i) .LE. 0) THEN
         start_row_imatrix(i) = 1
-        end_row_imatrix(i) = n_ + idiags(i)
+        end_row_imatrix(i) = nx*ny*nz + idiags(i)
       END IF
       CALL FIRSTELM(idiags(i), row_diag(i), col_diag(i))
     END DO
 ! Do for each row in imatrix
-    DO i=1,n_
+    DO i=1,nx*ny*nz
 ! Do for each column in imatrix
       DO j=1,7
 ! Need to check if that column has any entry in this row
@@ -2233,8 +2142,9 @@ CONTAINS
         IF (row_diag(j) .LE. i .AND. start_row_imatrix(j) .LE. &
 &           end_row_imatrix(j)) THEN
 ! checks that you have not exhausted the diagonal
-          IF (imatrix(start_row_imatrix(j), j) .NE. 0.0d0) THEN
-! checks that the diagonal entry is non zero
+          IF (imatrix(start_row_imatrix(j), j) .NE. 0.0d0 .OR. idiags(j)&
+&             .EQ. 0) THEN
+! checks that the diagonal entry is non zero or is the main diagonal
             CALL PUSHINTEGER4(onnz)
             onnz = onnz + 1
             CALL PUSHCONTROL1B(0)
@@ -2250,7 +2160,7 @@ CONTAINS
       END DO
     END DO
     imatrixb = 0.D0
-    DO i=n_,1,-1
+    DO i=nx*ny*nz,1,-1
       DO j=7,1,-1
         CALL POPCONTROL1B(branch)
         IF (branch .NE. 0) THEN
@@ -2269,38 +2179,45 @@ CONTAINS
 !
 ! Creates sparse diags matrix from rectangular matrix having the diagonals
 !
-  SUBROUTINE SPDIAGS_FVM_CSR(imatrix, onnz, orow_index, orow_compressed&
-&   , ocol_index, ovalues)
+  SUBROUTINE SPDIAGS_FVM_CSR(nx, ny, nz, imatrix, onnz, orow_index, &
+&   orow_compressed, ocol_index, ovalues)
     IMPLICIT NONE
+    INTEGER :: nx, ny, nz
     LOGICAL :: done
     DOUBLE PRECISION :: elm
     INTEGER :: i, j, rownnz
-    DOUBLE PRECISION, DIMENSION(n_, 7) :: imatrix
-    INTEGER, DIMENSION(7), PARAMETER :: idiags=(/-(nx_*ny_), -nx_, -1, 0&
-&     , 1, nx_, nx_*ny_/)
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz, 7) :: imatrix
+    INTEGER, DIMENSION(7) :: idiags
     INTEGER, DIMENSION(7) :: start_row_imatrix, end_row_imatrix
 ! row, column along diagonal
     INTEGER, DIMENSION(7) :: row_diag, col_diag
     INTEGER :: onnz
-    INTEGER, DIMENSION(7*n_) :: orow_index
-    INTEGER, DIMENSION(7*n_) :: ocol_index
-    DOUBLE PRECISION, DIMENSION(7*n_) :: ovalues
-    INTEGER, DIMENSION(n_ + 1) :: orow_compressed
+    INTEGER, DIMENSION(7*(nx*ny*nz)) :: orow_index
+    INTEGER, DIMENSION(7*(nx*ny*nz)) :: ocol_index
+    DOUBLE PRECISION, DIMENSION(7*(nx*ny*nz)) :: ovalues
+    INTEGER, DIMENSION(nx*ny*nz + 1) :: orow_compressed
+    idiags(1) = -(nx*ny)
+    idiags(2) = -nx
+    idiags(3) = -1
+    idiags(4) = 0
+    idiags(5) = 1
+    idiags(6) = nx
+    idiags(7) = nx*ny
     onnz = 0
 ! compressed row storage
     orow_compressed(1) = 1
     DO i=1,7
       IF (idiags(i) .GT. 0) THEN
         start_row_imatrix(i) = idiags(i) + 1
-        end_row_imatrix(i) = n_
+        end_row_imatrix(i) = nx*ny*nz
       ELSE IF (idiags(i) .LE. 0) THEN
         start_row_imatrix(i) = 1
-        end_row_imatrix(i) = n_ + idiags(i)
+        end_row_imatrix(i) = nx*ny*nz + idiags(i)
       END IF
       CALL FIRSTELM(idiags(i), row_diag(i), col_diag(i))
     END DO
 ! Do for each row in imatrix
-    DO i=1,n_
+    DO i=1,nx*ny*nz
 ! count the number of nonzeros in row
       rownnz = 0
 ! Do for each column in imatrix
@@ -2310,8 +2227,9 @@ CONTAINS
         IF (row_diag(j) .LE. i .AND. start_row_imatrix(j) .LE. &
 &           end_row_imatrix(j)) THEN
 ! checks that you have not exhausted the diagonal
-          IF (imatrix(start_row_imatrix(j), j) .NE. 0.0d0) THEN
-! checks that the diagonal entry is non zero
+          IF (imatrix(start_row_imatrix(j), j) .NE. 0.0d0 .OR. idiags(j)&
+&             .EQ. 0) THEN
+! checks that the diagonal entry is non zero or is the main diagonal
             onnz = onnz + 1
             rownnz = rownnz + 1
             orow_index(onnz) = i
@@ -2334,83 +2252,36 @@ MODULE SIMULATION_B
   IMPLICIT NONE
 
 CONTAINS
-!
-! This routine opens the permeability and porosity used by
-! the MATLAB program and uses it for the simulation.
-!
-  SUBROUTINE READ_PERMEABILITY_AND_POROSITY(perm, por)
-    IMPLICIT NONE
-    INTEGER :: i, j, k, l, m
-! Porosities
-    DOUBLE PRECISION, DIMENSION(n_) :: por
-! Permeabilities
-    DOUBLE PRECISION, DIMENSION(3, nx_, ny_, nz_) :: perm
-    DOUBLE PRECISION, DIMENSION(nx_, ny_, nz_) :: p
-    DOUBLE PRECISION, DIMENSION(maxnx*maxny*maxnz) :: pur
-    DOUBLE PRECISION, DIMENSION(3*maxnx, maxny*maxnz) :: kur
-    DOUBLE PRECISION, DIMENSION(3*maxnx*maxny*maxnz) :: kurl
-    INTEGER, DIMENSION(nx_*ny_*nz_) :: pindices
-    INTEGER, DIMENSION(3*nx_*ny_*nz_) :: kindices
-! initialize porosity and permeability to zero
-    perm = 0.0d0
-    por = 0.0d0
-! read KUr
-    OPEN(1, file=permeability_file, status='old') 
-    READ(1, *) ((kur(i, j), j=1,maxny*maxnz), i=1,3*maxnx)
-    CLOSE(1) 
-! reshape 2 dimension to 1 dimension
-    CALL MYRESHAPE_2_1(kur, kurl)
-! select according to specified dimension
-    m = 0
-    DO l=1,nz_
-      DO k=1,ny_
-        DO j=1,nx_
-          DO i=1,3
-            m = m + 1
-            kindices(m) = (l-1)*(maxnx*maxny*3) + (k-1)*(maxnx*3) + 3*(j&
-&             -1) + i
-          END DO
-        END DO
-      END DO
-    END DO
-! then reshape 1 dimension to 4 dimension (hack for time being)
-    CALL MYRESHAPE_1_4(kurl(kindices), perm)
-! read KUr
-    OPEN(1, file=porosity_file, status='old') 
-    READ(1, *) (pur(i), i=1,maxnx*maxny*maxnz)
-    CLOSE(1) 
-    m = 0
-    DO k=1,nz_
-      DO j=1,ny_
-        DO i=1,nx_
-          m = m + 1
-          pindices(m) = (k-1)*(maxnx*maxny) + (j-1)*maxnx + i
-        END DO
-      END DO
-    END DO
-    CALL MYMAX_1_0_DOUBLE(pur(pindices), 1.0d-3, por)
-  END SUBROUTINE READ_PERMEABILITY_AND_POROSITY
 !  Differentiation of wrapper in reverse (adjoint) mode (with options noISIZE):
 !   gradient     of useful results: oil
 !   with respect to varying inputs: sigma oil mu
-!   RW status of diff variables: sigma:out oil:in-zero mu:out
-  SUBROUTINE WRAPPER_B(mu, mub, sigma, sigmab, q, s, p, v, tt, pc, oil, &
-&   oilb)
+!   RW status of diff variables: p:(loc) q:(loc) s:(loc) v:(loc)
+!                sigma:out oil:in-zero pc:(loc) mu:out
+  SUBROUTINE WRAPPER_B(nx, ny, nz, nd, pt, st, mu, mub, sigma, sigmab, q&
+&   , qb, s, sb, p, pb, v, vb, tt, pc, pcb, oil, oilb)
     IMPLICIT NONE
+    INTEGER :: nx, ny, nz
+    INTEGER :: nd, pt, st
     DOUBLE PRECISION :: mu, sigma
     DOUBLE PRECISION :: mub, sigmab
-    DOUBLE PRECISION, DIMENSION(n_) :: q
-    DOUBLE PRECISION, DIMENSION(n_) :: qb
-    DOUBLE PRECISION, DIMENSION(n_) :: s
-    DOUBLE PRECISION, DIMENSION(nx_, ny_, nz_) :: p
-    DOUBLE PRECISION, DIMENSION(3, nx_ + 1, ny_ + 1, nz_ + 1) :: v
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: q
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: qb
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: s
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: sb
+    DOUBLE PRECISION, DIMENSION(nx, ny, nz) :: p
+    DOUBLE PRECISION, DIMENSION(nx, ny, nz) :: pb
+    DOUBLE PRECISION, DIMENSION(3, nx + 1, ny + 1, nz + 1) :: v
+    DOUBLE PRECISION, DIMENSION(3, nx+1, ny+1, nz+1) :: vb
     DOUBLE PRECISION, DIMENSION(nd/st + 1) :: tt
     DOUBLE PRECISION, DIMENSION(2, nd/st + 1) :: pc
+    DOUBLE PRECISION, DIMENSION(2, nd/st+1) :: pcb
     DOUBLE PRECISION :: oil
     DOUBLE PRECISION :: oilb
-    CALL INIT_FLW_TRNC_NORM_XIN_PT_OUT(mu, sigma, q)
-    CALL SIMULATE_RESERVOIR_B(q, qb, s, p, v, tt, pc, oil, oilb)
-    CALL INIT_FLW_TRNC_NORM_XIN_PT_OUT_B(mu, mub, sigma, sigmab, q, qb)
+    CALL INIT_FLW_TRNC_NORM_XIN_PT_OUT(nx, ny, nz, mu, sigma, q)
+    CALL SIMULATE_RESERVOIR_B(nx, ny, nz, nd, pt, st, q, qb, s, sb, p, &
+&                       pb, v, vb, tt, pc, pcb, oil, oilb)
+    CALL INIT_FLW_TRNC_NORM_XIN_PT_OUT_B(nx, ny, nz, mu, mub, sigma, &
+&                                  sigmab, q, qb)
     oilb = 0.D0
   END SUBROUTINE WRAPPER_B
 !  Differentiation of init_flw_trnc_norm_xin_pt_out in reverse (adjoint) mode (with options noISIZE):
@@ -2419,24 +2290,25 @@ CONTAINS
 !
 ! Initialize inflow and outflow.
 !
-  SUBROUTINE INIT_FLW_TRNC_NORM_XIN_PT_OUT_B(mu, mub, sigma, sigmab, q, &
-&   qb)
+  SUBROUTINE INIT_FLW_TRNC_NORM_XIN_PT_OUT_B(nx, ny, nz, mu, mub, sigma&
+&   , sigmab, q, qb)
     IMPLICIT NONE
+    INTEGER :: nx, ny, nz
     DOUBLE PRECISION :: mu, sigma
     DOUBLE PRECISION :: mub, sigmab
-    DOUBLE PRECISION, DIMENSION(n_) :: q
-    DOUBLE PRECISION, DIMENSION(n_) :: qb
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: q
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: qb
     INTEGER :: i, j
     DOUBLE PRECISION :: x, pi, pdf, mass
     DOUBLE PRECISION :: pdfb, massb
-    DOUBLE PRECISION, DIMENSION(nx_) :: idx
-    DOUBLE PRECISION, DIMENSION(nx_) :: q_x
-    DOUBLE PRECISION, DIMENSION(nx_) :: q_xb
+    DOUBLE PRECISION, DIMENSION(nx) :: idx
+    DOUBLE PRECISION, DIMENSION(nx) :: q_x
+    DOUBLE PRECISION, DIMENSION(nx) :: q_xb
     INTRINSIC SQRT
     INTRINSIC EXP
     DOUBLE PRECISION :: temp1
     DOUBLE PRECISION :: temp0
-    DOUBLE PRECISION :: tempb1(nx_)
+    DOUBLE PRECISION :: tempb1(nx)
     DOUBLE PRECISION :: tempb0
     DOUBLE PRECISION :: tempb
     DOUBLE PRECISION :: temp
@@ -2447,10 +2319,10 @@ CONTAINS
     q_x = 0.0d0
 ! Note that the portion of the  Standard Normal distribution between
 ! -3sigma/2 to 3sigma/2 is assumed to fit the 1..Nx where sigma is 1
-    DO i=1,nx_
+    DO i=1,nx
 ! get the real x coordinate
-! Mapping x = [-1.5, 1.5] to Nx_ dimension
-      x = -1.5d0 + (i-1)*3.0d0/(nx_-1)
+! Mapping x = [-1.5, 1.5] to nx dimension
+      x = -1.5d0 + (i-1)*3.0d0/(nx-1)
 ! Now use mu and sigma to find the pdf value at x
       pdf = 1.0d0/(sigma*SQRT(2.0d0*pi))*EXP(-(((x-mu)/sigma)**2.0d0/&
 &       2.0d0))
@@ -2463,13 +2335,13 @@ CONTAINS
 ! now rescale all the entities
 ! Assign Q_x to Q
     j = 1
-    DO i=1,nx_*ny_,ny_
+    DO i=1,nx*ny,ny
       CALL PUSHINTEGER4(j)
       j = j + 1
     END DO
-    qb(n_) = 0.D0
+    qb(nx*ny*nz) = 0.D0
     q_xb = 0.D0
-    DO i=nx_*ny_-MOD(nx_*ny_-1, ny_),1,-ny_
+    DO i=nx*ny-MOD(nx*ny-1, ny),1,-ny
       CALL POPINTEGER4(j)
       q_xb(j) = q_xb(j) + qb(i)
       qb(i) = 0.D0
@@ -2479,10 +2351,10 @@ CONTAINS
     q_xb = tempb1
     sigmab = 0.D0
     mub = 0.D0
-    DO i=nx_,1,-1
+    DO i=nx,1,-1
       pdfb = q_xb(i) + massb
       q_xb(i) = 0.D0
-      x = -1.5d0 + (i-1)*3.0d0/(nx_-1)
+      x = -1.5d0 + (i-1)*3.0d0/(nx-1)
       temp1 = SQRT(2.0d0*pi)
       tempb = pdfb/(temp1*sigma)
       temp = (x-mu)/sigma
@@ -2499,17 +2371,20 @@ CONTAINS
 ! This subroutine simulates the reservoir
 ! model.
 !
-  SUBROUTINE SIMULATE_RESERVOIR_B(q, qb, s, p, v, tt, pc, oil, oilb)
+  SUBROUTINE SIMULATE_RESERVOIR_B(nx, ny, nz, nd, pt, st, q, qb, s, sb, &
+&   p, pb, v, vb, tt, pc, pcb, oil, oilb)
     USE PARAMETERS_B
     IMPLICIT NONE
-    DOUBLE PRECISION, DIMENSION(n_) :: q
-    DOUBLE PRECISION, DIMENSION(n_) :: qb
-    DOUBLE PRECISION, DIMENSION(n_) :: s
-    DOUBLE PRECISION, DIMENSION(n_) :: sb
-    DOUBLE PRECISION, DIMENSION(nx_, ny_, nz_) :: p
-    DOUBLE PRECISION, DIMENSION(nx_, ny_, nz_) :: pb
-    DOUBLE PRECISION, DIMENSION(3, nx_ + 1, ny_ + 1, nz_ + 1) :: v
-    DOUBLE PRECISION, DIMENSION(3, nx_+1, ny_+1, nz_+1) :: vb
+    INTEGER :: nx, ny, nz
+    INTEGER :: nd, pt, st
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: q
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: qb
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: s
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: sb
+    DOUBLE PRECISION, DIMENSION(nx, ny, nz) :: p
+    DOUBLE PRECISION, DIMENSION(nx, ny, nz) :: pb
+    DOUBLE PRECISION, DIMENSION(3, nx + 1, ny + 1, nz + 1) :: v
+    DOUBLE PRECISION, DIMENSION(3, nx+1, ny+1, nz+1) :: vb
     DOUBLE PRECISION, DIMENSION(nd/st + 1) :: tt
     DOUBLE PRECISION, DIMENSION(2, nd/st + 1) :: pc
     DOUBLE PRECISION, DIMENSION(2, nd/st+1) :: pcb
@@ -2529,20 +2404,30 @@ CONTAINS
         CALL PUSHINTEGER4(k)
         k = k + 1
         IF (j .EQ. 1) THEN
+          CALL PUSHBOOLEAN(verbose)
+          CALL PUSHINTEGER4(solver_outer)
+          CALL PUSHINTEGER4(solver_inner)
           CALL PUSHREAL8(mo)
           CALL PUSHREAL8(mw)
-          CALL PUSHREAL8ARRAY(v, 3**2*11**2)
-          CALL PUSHREAL8ARRAY(p, 10**2*2)
-          CALL PUSHREAL8ARRAY(s, 200)
-          CALL STEPFORWARD(1, q, s, p, v, mw, mo)
+          CALL PUSHREAL8ARRAY(v, 3*(nx+1)*(ny+1)*(nz+1))
+          CALL PUSHREAL8ARRAY(p, nx*ny*nz)
+          CALL PUSHREAL8ARRAY(s, nx*ny*nz)
+          CALL PUSHREAL8ARRAY(q, nx*ny*nz)
+          CALL STEPFORWARD(nx, ny, nz, nd, pt, st, 1, q, s, p, v, mw, mo&
+&                   )
           CALL PUSHCONTROL1B(0)
         ELSE
+          CALL PUSHBOOLEAN(verbose)
+          CALL PUSHINTEGER4(solver_outer)
+          CALL PUSHINTEGER4(solver_inner)
           CALL PUSHREAL8(mo)
           CALL PUSHREAL8(mw)
-          CALL PUSHREAL8ARRAY(v, 3**2*11**2)
-          CALL PUSHREAL8ARRAY(p, 10**2*2)
-          CALL PUSHREAL8ARRAY(s, 200)
-          CALL STEPFORWARD(0, q, s, p, v, mw, mo)
+          CALL PUSHREAL8ARRAY(v, 3*(nx+1)*(ny+1)*(nz+1))
+          CALL PUSHREAL8ARRAY(p, nx*ny*nz)
+          CALL PUSHREAL8ARRAY(s, nx*ny*nz)
+          CALL PUSHREAL8ARRAY(q, nx*ny*nz)
+          CALL STEPFORWARD(nx, ny, nz, nd, pt, st, 0, q, s, p, v, mw, mo&
+&                   )
           CALL PUSHCONTROL1B(1)
         END IF
 ! update quantites
@@ -2560,8 +2445,8 @@ CONTAINS
     DO i=nd/pt,1,-1
       DO j=pt/st,1,-1
         tempoil2b = tempoil2b + tempoil1b
-        CALL UPDATE_OIL_B(pc, pcb, k, st, tempoil1, tempoil1b, tempoil2&
-&                   , tempoil2b)
+        CALL UPDATE_OIL_B(nd, pt, st, pc, pcb, k, tempoil1, tempoil1b, &
+&                   tempoil2, tempoil2b)
         mob = pcb(2, k)/mt
         mtb = -(mo*pcb(2, k)/mt**2)
         pcb(2, k) = 0.D0
@@ -2572,21 +2457,29 @@ CONTAINS
         mob = mob + mtb
         CALL POPCONTROL1B(branch)
         IF (branch .EQ. 0) THEN
-          CALL POPREAL8ARRAY(s, 200)
-          CALL POPREAL8ARRAY(p, 10**2*2)
-          CALL POPREAL8ARRAY(v, 3**2*11**2)
+          CALL POPREAL8ARRAY(q, nx*ny*nz)
+          CALL POPREAL8ARRAY(s, nx*ny*nz)
+          CALL POPREAL8ARRAY(p, nx*ny*nz)
+          CALL POPREAL8ARRAY(v, 3*(nx+1)*(ny+1)*(nz+1))
           CALL POPREAL8(mw)
           CALL POPREAL8(mo)
-          CALL STEPFORWARD_B(1, q, qb, s, sb, p, pb, v, vb, mw, mwb, mo&
-&                      , mob)
+          CALL POPINTEGER4(solver_inner)
+          CALL POPINTEGER4(solver_outer)
+          CALL POPBOOLEAN(verbose)
+          CALL STEPFORWARD_B(nx, ny, nz, nd, pt, st, 1, q, qb, s, sb, p&
+&                      , pb, v, vb, mw, mwb, mo, mob)
         ELSE
-          CALL POPREAL8ARRAY(s, 200)
-          CALL POPREAL8ARRAY(p, 10**2*2)
-          CALL POPREAL8ARRAY(v, 3**2*11**2)
+          CALL POPREAL8ARRAY(q, nx*ny*nz)
+          CALL POPREAL8ARRAY(s, nx*ny*nz)
+          CALL POPREAL8ARRAY(p, nx*ny*nz)
+          CALL POPREAL8ARRAY(v, 3*(nx+1)*(ny+1)*(nz+1))
           CALL POPREAL8(mw)
           CALL POPREAL8(mo)
-          CALL STEPFORWARD_B(0, q, qb, s, sb, p, pb, v, vb, mw, mwb, mo&
-&                      , mob)
+          CALL POPINTEGER4(solver_inner)
+          CALL POPINTEGER4(solver_outer)
+          CALL POPBOOLEAN(verbose)
+          CALL STEPFORWARD_B(nx, ny, nz, nd, pt, st, 0, q, qb, s, sb, p&
+&                      , pb, v, vb, mw, mwb, mo, mob)
         END IF
         CALL POPINTEGER4(k)
         tempoil2b = 0.D0
@@ -2596,50 +2489,67 @@ CONTAINS
 !  Differentiation of stepforward in reverse (adjoint) mode (with options noISIZE):
 !   gradient     of useful results: p q s v mo mw
 !   with respect to varying inputs: p q s v
-  SUBROUTINE STEPFORWARD_B(pressure_step, q, qb, s, sb, p, pb, v, vb, mw&
-&   , mwb, mo, mob)
+  SUBROUTINE STEPFORWARD_B(nx, ny, nz, nd, pt, st, pressure_step, q, qb&
+&   , s, sb, p, pb, v, vb, mw, mwb, mo, mob)
     IMPLICIT NONE
 ! Mobilities in well-block
+    INTEGER :: nx, ny, nz
+    INTEGER :: nd, pt, st
     INTEGER :: pressure_step
-    DOUBLE PRECISION, DIMENSION(n_) :: q
-    DOUBLE PRECISION, DIMENSION(n_) :: qb
-    DOUBLE PRECISION, DIMENSION(n_) :: s
-    DOUBLE PRECISION, DIMENSION(n_) :: sb
-    DOUBLE PRECISION, DIMENSION(nx_, ny_, nz_) :: p
-    DOUBLE PRECISION, DIMENSION(nx_, ny_, nz_) :: pb
-    DOUBLE PRECISION, DIMENSION(3, nx_ + 1, ny_ + 1, nz_ + 1) :: v
-    DOUBLE PRECISION, DIMENSION(3, nx_+1, ny_+1, nz_+1) :: vb
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: q
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: qb
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: s
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: sb
+    DOUBLE PRECISION, DIMENSION(nx, ny, nz) :: p
+    DOUBLE PRECISION, DIMENSION(nx, ny, nz) :: pb
+    DOUBLE PRECISION, DIMENSION(3, nx + 1, ny + 1, nz + 1) :: v
+    DOUBLE PRECISION, DIMENSION(3, nx+1, ny+1, nz+1) :: vb
     DOUBLE PRECISION :: mw, mo
     DOUBLE PRECISION :: mwb, mob
     INTEGER :: branch
     IF (pressure_step .EQ. 1) THEN
 ! solve pressure
-      CALL PUSHREAL8ARRAY(p, 10**2*2)
-      CALL PRES(q, s, p, v)
+      CALL PUSHBOOLEAN(verbose)
+      CALL PUSHINTEGER4(solver_outer)
+      CALL PUSHINTEGER4(solver_inner)
+      CALL PUSHREAL8ARRAY(p, nx*ny*nz)
+      CALL PUSHREAL8ARRAY(q, nx*ny*nz)
+      CALL PRES(nx, ny, nz, q, s, p, v)
 ! Pressure solver
       CALL PUSHCONTROL1B(0)
     ELSE
       CALL PUSHCONTROL1B(1)
     END IF
-    CALL PUSHREAL8ARRAY(s, 200)
-    CALL NEWTRAPH(q, v, s)
+    CALL PUSHBOOLEAN(verbose)
+    CALL PUSHINTEGER4(solver_outer)
+    CALL PUSHINTEGER4(solver_inner)
+    CALL PUSHREAL8ARRAY(s, nx*ny*nz)
+    CALL NEWTRAPH(nx, ny, nz, nd, pt, st, q, v, s)
 ! Solve for saturation
-    CALL RELPERM_B(s(n_), sb(n_), mw, mwb, mo, mob)
-    CALL POPREAL8ARRAY(s, 200)
-    CALL NEWTRAPH_B(q, qb, v, vb, s, sb)
+    CALL RELPERM_B(s(nx*ny*nz), sb(nx*ny*nz), mw, mwb, mo, mob)
+    CALL POPREAL8ARRAY(s, nx*ny*nz)
+    CALL POPINTEGER4(solver_inner)
+    CALL POPINTEGER4(solver_outer)
+    CALL POPBOOLEAN(verbose)
+    CALL NEWTRAPH_B(nx, ny, nz, nd, pt, st, q, qb, v, vb, s, sb)
     CALL POPCONTROL1B(branch)
     IF (branch .EQ. 0) THEN
-      CALL POPREAL8ARRAY(p, 10**2*2)
-      CALL PRES_B(q, qb, s, sb, p, pb, v, vb)
+      CALL POPREAL8ARRAY(q, nx*ny*nz)
+      CALL POPREAL8ARRAY(p, nx*ny*nz)
+      CALL POPINTEGER4(solver_inner)
+      CALL POPINTEGER4(solver_outer)
+      CALL POPBOOLEAN(verbose)
+      CALL PRES_B(nx, ny, nz, q, qb, s, sb, p, pb, v, vb)
     END IF
   END SUBROUTINE STEPFORWARD_B
 !  Differentiation of update_oil in reverse (adjoint) mode (with options noISIZE):
 !   gradient     of useful results: oilout pc
 !   with respect to varying inputs: oilin pc
-  SUBROUTINE UPDATE_OIL_B(pc, pcb, k, st, oilin, oilinb, oilout, oiloutb&
-& )
+  SUBROUTINE UPDATE_OIL_B(nd, pt, st, pc, pcb, k, oilin, oilinb, oilout&
+&   , oiloutb)
     IMPLICIT NONE
-    INTEGER :: st, k
+    INTEGER :: k
+    INTEGER :: nd, pt, st
     DOUBLE PRECISION :: oilin
     DOUBLE PRECISION :: oilinb
     DOUBLE PRECISION :: oilout
@@ -2650,30 +2560,35 @@ CONTAINS
     oilinb = oiloutb
     pcb(2, k) = pcb(2, k) + st*oiloutb
   END SUBROUTINE UPDATE_OIL_B
-  SUBROUTINE WRAPPER(mu, sigma, q, s, p, v, tt, pc, oil)
+  SUBROUTINE WRAPPER(nx, ny, nz, nd, pt, st, mu, sigma, q, s, p, v, tt, &
+&   pc, oil)
     IMPLICIT NONE
+    INTEGER :: nx, ny, nz
+    INTEGER :: nd, pt, st
     DOUBLE PRECISION :: mu, sigma
-    DOUBLE PRECISION, DIMENSION(n_) :: q
-    DOUBLE PRECISION, DIMENSION(n_) :: s
-    DOUBLE PRECISION, DIMENSION(nx_, ny_, nz_) :: p
-    DOUBLE PRECISION, DIMENSION(3, nx_ + 1, ny_ + 1, nz_ + 1) :: v
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: q
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: s
+    DOUBLE PRECISION, DIMENSION(nx, ny, nz) :: p
+    DOUBLE PRECISION, DIMENSION(3, nx + 1, ny + 1, nz + 1) :: v
     DOUBLE PRECISION, DIMENSION(nd/st + 1) :: tt
     DOUBLE PRECISION, DIMENSION(2, nd/st + 1) :: pc
     DOUBLE PRECISION :: oil
-    CALL INIT_FLW_TRNC_NORM_XIN_PT_OUT(mu, sigma, q)
-    CALL SIMULATE_RESERVOIR(q, s, p, v, tt, pc, oil)
+    CALL INIT_FLW_TRNC_NORM_XIN_PT_OUT(nx, ny, nz, mu, sigma, q)
+    CALL SIMULATE_RESERVOIR(nx, ny, nz, nd, pt, st, q, s, p, v, tt, pc, &
+&                     oil)
   END SUBROUTINE WRAPPER
 !
 ! Initialize inflow and outflow.
 !
-  SUBROUTINE INIT_FLW_TRNC_NORM_XIN_PT_OUT(mu, sigma, q)
+  SUBROUTINE INIT_FLW_TRNC_NORM_XIN_PT_OUT(nx, ny, nz, mu, sigma, q)
     IMPLICIT NONE
+    INTEGER :: nx, ny, nz
     DOUBLE PRECISION :: mu, sigma
-    DOUBLE PRECISION, DIMENSION(n_) :: q
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: q
     INTEGER :: i, j
     DOUBLE PRECISION :: x, pi, pdf, mass
-    DOUBLE PRECISION, DIMENSION(nx_) :: idx
-    DOUBLE PRECISION, DIMENSION(nx_) :: q_x
+    DOUBLE PRECISION, DIMENSION(nx) :: idx
+    DOUBLE PRECISION, DIMENSION(nx) :: q_x
     INTRINSIC SQRT
     INTRINSIC EXP
 ! value of pi
@@ -2683,10 +2598,10 @@ CONTAINS
     q_x = 0.0d0
 ! Note that the portion of the  Standard Normal distribution between
 ! -3sigma/2 to 3sigma/2 is assumed to fit the 1..Nx where sigma is 1
-    DO i=1,nx_
+    DO i=1,nx
 ! get the real x coordinate
-! Mapping x = [-1.5, 1.5] to Nx_ dimension
-      x = -1.5d0 + (i-1)*3.0d0/(nx_-1)
+! Mapping x = [-1.5, 1.5] to nx dimension
+      x = -1.5d0 + (i-1)*3.0d0/(nx-1)
 ! Now use mu and sigma to find the pdf value at x
       pdf = 1.0d0/(sigma*SQRT(2.0d0*pi))*EXP(-(((x-mu)/sigma)**2.0d0/&
 &       2.0d0))
@@ -2702,24 +2617,27 @@ CONTAINS
     q_x = q_x/mass*ir
 ! Assign Q_x to Q
     j = 1
-    DO i=1,nx_*ny_,ny_
+    DO i=1,nx*ny,ny
       q(i) = q_x(j)
       j = j + 1
     END DO
 ! now set the output
-    q(n_) = -ir
+    q(nx*ny*nz) = -ir
   END SUBROUTINE INIT_FLW_TRNC_NORM_XIN_PT_OUT
 !
 ! This subroutine simulates the reservoir
 ! model.
 !
-  SUBROUTINE SIMULATE_RESERVOIR(q, s, p, v, tt, pc, oil)
+  SUBROUTINE SIMULATE_RESERVOIR(nx, ny, nz, nd, pt, st, q, s, p, v, tt, &
+&   pc, oil)
     USE PARAMETERS_B
     IMPLICIT NONE
-    DOUBLE PRECISION, DIMENSION(n_) :: q
-    DOUBLE PRECISION, DIMENSION(n_) :: s
-    DOUBLE PRECISION, DIMENSION(nx_, ny_, nz_) :: p
-    DOUBLE PRECISION, DIMENSION(3, nx_ + 1, ny_ + 1, nz_ + 1) :: v
+    INTEGER :: nx, ny, nz
+    INTEGER :: nd, pt, st
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: q
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: s
+    DOUBLE PRECISION, DIMENSION(nx, ny, nz) :: p
+    DOUBLE PRECISION, DIMENSION(3, nx + 1, ny + 1, nz + 1) :: v
     DOUBLE PRECISION, DIMENSION(nd/st + 1) :: tt
     DOUBLE PRECISION, DIMENSION(2, nd/st + 1) :: pc
     DOUBLE PRECISION :: oil
@@ -2740,40 +2658,46 @@ CONTAINS
       DO j=1,pt/st
         k = k + 1
         IF (j .EQ. 1) THEN
-          CALL STEPFORWARD(1, q, s, p, v, mw, mo)
+          CALL STEPFORWARD(nx, ny, nz, nd, pt, st, 1, q, s, p, v, mw, mo&
+&                   )
         ELSE
-          CALL STEPFORWARD(0, q, s, p, v, mw, mo)
+          CALL STEPFORWARD(nx, ny, nz, nd, pt, st, 0, q, s, p, v, mw, mo&
+&                   )
         END IF
 ! update quantites
         mt = mw + mo
         tt(k) = 1.0d0*k*st
         pc(1, k) = mw/mt
         pc(2, k) = mo/mt
-        CALL UPDATE_OIL(pc, k, st, tempoil1, tempoil2)
+        CALL UPDATE_OIL(nd, pt, st, pc, k, tempoil1, tempoil2)
         tempoil1 = tempoil2
       END DO
     END DO
     oil = tempoil2
   END SUBROUTINE SIMULATE_RESERVOIR
-  SUBROUTINE STEPFORWARD(pressure_step, q, s, p, v, mw, mo)
+  SUBROUTINE STEPFORWARD(nx, ny, nz, nd, pt, st, pressure_step, q, s, p&
+&   , v, mw, mo)
     IMPLICIT NONE
 ! Mobilities in well-block
+    INTEGER :: nx, ny, nz
+    INTEGER :: nd, pt, st
     INTEGER :: pressure_step
-    DOUBLE PRECISION, DIMENSION(n_) :: q
-    DOUBLE PRECISION, DIMENSION(n_) :: s
-    DOUBLE PRECISION, DIMENSION(nx_, ny_, nz_) :: p
-    DOUBLE PRECISION, DIMENSION(3, nx_ + 1, ny_ + 1, nz_ + 1) :: v
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: q
+    DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: s
+    DOUBLE PRECISION, DIMENSION(nx, ny, nz) :: p
+    DOUBLE PRECISION, DIMENSION(3, nx + 1, ny + 1, nz + 1) :: v
     DOUBLE PRECISION :: mw, mo
-    IF (pressure_step .EQ. 1) CALL PRES(q, s, p, v)
+    IF (pressure_step .EQ. 1) CALL PRES(nx, ny, nz, q, s, p, v)
 ! solve pressure
 ! Pressure solver
-    CALL NEWTRAPH(q, v, s)
+    CALL NEWTRAPH(nx, ny, nz, nd, pt, st, q, v, s)
 ! Solve for saturation
-    CALL RELPERM(s(n_), mw, mo)
+    CALL RELPERM(s(nx*ny*nz), mw, mo)
   END SUBROUTINE STEPFORWARD
-  SUBROUTINE UPDATE_OIL(pc, k, st, oilin, oilout)
+  SUBROUTINE UPDATE_OIL(nd, pt, st, pc, k, oilin, oilout)
     IMPLICIT NONE
-    INTEGER :: st, k
+    INTEGER :: k
+    INTEGER :: nd, pt, st
     DOUBLE PRECISION :: oilin
     DOUBLE PRECISION :: oilout
     DOUBLE PRECISION, DIMENSION(2, nd/st + 1) :: pc
