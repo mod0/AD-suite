@@ -48,8 +48,7 @@ program runspe10
 
   ! solver verbose parameter, inner and outer iterations are read from
   ! command file.
-  verbose = .false.              ! Verbose solver output
-  
+  verbose = .false.              ! Verbose solver output  
 
   call wrapper(nx, ny, nz, nd, pt, st, mu, sigma, Q, S, P, V, Tt, Pc, totaloil)
   call write_results(results_directory, nx, ny, nz, mu, sigma, Tt, Pc, totaloil)
@@ -402,8 +401,6 @@ contains
   !   ! initialize porosity and permeability to zero
   !   PERM = 0.0d0
   !   POR = 0.0d0
-
-
 
   !   ! read KUr
   !   open(1,file=trim(adjustl(data_directory))//"KUr.txt",status='old')

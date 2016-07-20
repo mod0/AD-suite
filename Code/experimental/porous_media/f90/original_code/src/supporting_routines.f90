@@ -2395,7 +2395,7 @@ subroutine ilu_cr ( n, nz_num, ia, ja, a, ua, l )
 
     do j = ia(i), ia(i+1) - 1                  ! ith row entries
       jrow = ja(j)                             ! column corresponding to each entry
-      if ( i <= jrow ) then                    ! exit when you col >= current row.
+      if ( i <= jrow ) then                    ! exit when col >= current row.
         exit
       end if
       tl = l(j) * l(ua(jrow))

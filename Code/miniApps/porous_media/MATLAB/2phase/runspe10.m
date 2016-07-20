@@ -1,5 +1,5 @@
-Grid.Nx=48;  Grid.hx=20*.3048;                        % Dimension in x-direction
-Grid.Ny=48; Grid.hy=10*.3048;                         % Dimension in y-direction
+Grid.Nx=24;  Grid.hx=20*.3048;                        % Dimension in x-direction
+Grid.Ny=24; Grid.hy=10*.3048;                         % Dimension in y-direction
 Grid.Nz=2;   Grid.hz=2*.3048;                        % Dimension in z-direction
 Grid.N=Grid.Nx*Grid.Ny*Grid.Nz;                      % Number of grid celles
 Grid.V=Grid.hx*Grid.hy*Grid.hz;                      % Volume of each cells

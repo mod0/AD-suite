@@ -13,9 +13,9 @@ variables:
 data:
   scenario_id = 1;
 
-  NX = 3;
+  NX = 24;
 
-  NY = 3;
+  NY = 24;
 
   NZ = 2;
 
@@ -43,7 +43,7 @@ data:
 
   ND = 2000;
 
-  solver_inner = 10;
+  solver_inner = 64;
 
   solver_outer = 100000;
 
