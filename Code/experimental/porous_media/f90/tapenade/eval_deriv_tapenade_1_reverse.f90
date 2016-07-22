@@ -1,9 +1,9 @@
 program runspe10
-  use parameters_d
+  use parameters_b
   use utils
-  use matrix_d
-  use finitevolume_d
-  use simulation_d
+  use matrix_b
+  use finitevolume_b
+  use simulation_b
   use netcdf
 
   implicit none
@@ -14,7 +14,7 @@ program runspe10
 
   ! input/intermediate variables
   double precision :: mu, sigma
-  double precision :: mud, sigmad
+  double precision :: mub, sigmab
   double precision, dimension(:), allocatable :: Q
   double precision, dimension(:), allocatable :: S
   double precision, dimension(:, :, :), allocatable :: P
@@ -22,18 +22,17 @@ program runspe10
 
   ! output variables
   double precision :: totaloil
-  double precision :: totaloil_mud
-  double precision :: totaloil_sigmad
+  double precision :: totaloilb
   double precision, dimension(:), allocatable :: Tt
   double precision, dimension(:, :), allocatable :: Pc
 
-  ! direction version of arrays Ttd is unused and is only present for convenience
-  double precision, dimension(:), allocatable :: Qd
-  double precision, dimension(:), allocatable :: Sd
-  double precision, dimension(:, :, :), allocatable :: Pd
-  double precision, dimension(:, :, :, :), allocatable :: Vd
-  double precision, dimension(:), allocatable :: Ttd
-  double precision, dimension(:, :), allocatable :: Pcd
+  ! direction version of arrays Ttb is unused and is only present for convenience
+  double precision, dimension(:), allocatable :: Qb
+  double precision, dimension(:), allocatable :: Sb
+  double precision, dimension(:, :, :), allocatable :: Pb
+  double precision, dimension(:, :, :, :), allocatable :: Vb
+  double precision, dimension(:), allocatable :: Ttb
+  double precision, dimension(:, :), allocatable :: Pcb
 
   ! read the command line argument for the location of the data files
   integer :: iargs
@@ -56,48 +55,67 @@ program runspe10
 
   ! allocate arrays
   call allocate_arrays(nx, ny, nz, st, pt, nd, Q, S, P, V, Tt, Pc)
-  call allocate_arrays(nx, ny, nz, st, pt, nd, Qd, Sd, Pd, Vd, Ttd, Pcd)
+  call allocate_arrays(nx, ny, nz, st, pt, nd, Qb, Sb, Pb, Vb, Ttb, Pcb)
+  call allocate_shared_arrays(nx, ny, nz, st, pt, nd)
 
   ! initialize arrays
   call initialize_arrays(Q, S, P, V, Tt, Pc)
-  call initialize_arrays(Qd, Sd, Pd, Vd, Ttd, Pcd)
+  call initialize_arrays(Qb, Sb, Pb, Vb, Ttb, Pcb)
+  call initialize_shared_arrays(data_directory, nx, ny, nz, st, pt, nd)  ! will not be reinitialized
 
   ! initialize scalar inputs and outputs
   mu = 0.0d0
   sigma = 1.0d0
-  totaloil = 0.0d0         
+  totaloil = 0.0d0
 
   ! initialize directions
-  mud = 1.0d0
-  sigmad = 0.0d0
-  totaloil_mud = 0.0d0
+  mub = 0.0d0
+  sigmab = 0.0d0
+  totaloilb = 1.0d0
 
   ! solver verbose parameter, inner and outer iterations are read from
   ! command file.
   verbose = .false.              ! Verbose solver output  
 
-  call wrapper_d(nx, ny, nz, nd, pt, st, mu, mud, sigma, sigmad, Q, &
-       Qd, S, Sd, P, Pd, V, Vd, Tt, Pc, Pcd, totaloil, totaloil_mud)
-  call write_results(results_directory, nx, ny, nz, mu, sigma, Tt, Pc, totaloil)
+  call wrapper_b(nx, ny, nz, nd, pt, st, mu, mub, sigma, sigmab, Q, &
+       Qb, S, Sb, P, Pb, V, Vb, Tt, Pc, Pcb, totaloil, totaloilb)
 
-  ! reinitialize arrays
+  !reinitialize arrays
   call initialize_arrays(Q, S, P, V, Tt, Pc)
-  call initialize_arrays(Qd, Sd, Pd, Vd, Ttd, Pcd)
 
-  ! reinitialize directions
-  mud = 0.0d0
-  sigmad = 1.0d0
-  totaloil_sigmad = 0.0d0
+  call wrapper(nx, ny, nz, nd, pt, st, mu, sigma, Q, S, P, V, Tt, Pc, totaloil)
 
-  call wrapper_d(nx, ny, nz, nd, pt, st, mu, mud, sigma, sigmad, Q, &
-       Qd, S, Sd, P, Pd, V, Vd, Tt, Pc, Pcd, totaloil, totaloil_sigmad)
-  call write_results(results_directory, nx, ny, nz, mu, sigma, Tt, Pc, totaloil)
+  ! write results from both experiments
+  call write_results(results_directory, nx, ny, nz, mu, sigma, Tt, Pc, totaloil, mub, sigmab)
 
   call deallocate_arrays(Q, S, P, V, Tt, Pc)
-  call deallocate_arrays(Qd, Sd, Pd, Vd, Ttd, Pcd)
-
+  call deallocate_arrays(Qb, Sb, Pb, Vb, Ttb, Pcb)
+  call deallocate_shared_arrays()
   return
 contains
+
+  subroutine allocate_shared_arrays(nx, ny, nz, st, pt, nd)
+    integer :: nx, ny, nz
+    integer :: st, pt, nd
+
+    ! Allocate space for constant permeability/porosity
+    allocate(POR(nx * ny * nz), PERM(3, nx, ny, nz))    
+  end subroutine allocate_shared_arrays
+
+  subroutine deallocate_shared_arrays()
+    ! also deallocate Porosity and Permeability
+    deallocate(POR, PERM)
+  end subroutine deallocate_shared_arrays
+
+  subroutine initialize_shared_arrays(data_directory, nx, ny, nz, st, pt, nd)
+    character(len = *) :: data_directory                             ! directory location of parameters 
+
+    integer :: nx, ny, nz
+    integer :: st, pt, nd
+
+    ! Now read the permeabilities and porosities which are global
+    call read_permeability_and_porosity(data_directory, nx, ny, nz, PERM, POR)
+  end subroutine initialize_shared_arrays
 
   subroutine allocate_arrays(nx, ny, nz, st, pt, nd, Q, S, P, V, Tt, Pc)
     implicit none
@@ -111,9 +129,6 @@ contains
     double precision, dimension(:, :, :, :), allocatable :: V
     double precision, dimension(:), allocatable          :: Tt
     double precision, dimension(:, :), allocatable       :: Pc
-
-    ! Allocate space for constant permeability/porosity
-    allocate(POR(nx * ny * nz), PERM(3, nx, ny, nz))
 
     ! Allocate space for Q, S, P, V
     allocate(Q(nx * ny * nz), &
@@ -139,9 +154,6 @@ contains
     ! deallocate variables
     deallocate(Q, S, P, V)
     deallocate(Tt, Pc)
-
-    ! also deallocate Porosity and Permeability
-    deallocate(POR, PERM)
   end subroutine deallocate_arrays
 
   subroutine initialize_arrays(Q, S, P, V, Tt, Pc)
@@ -165,9 +177,6 @@ contains
 
     Tt = 0.0d0               ! simulation time
     Pc = 0.0d0               ! production data
-
-    ! Now read the permeabilities and porosities which are global
-    call read_permeability_and_porosity(data_directory, nx, ny, nz, PERM, POR)
   end subroutine initialize_arrays
 
   subroutine initialize_scenario(data_directory, nx, ny, nz, st, pt, nd, solver_inner, solver_outer)
@@ -255,52 +264,55 @@ contains
     call iserror(nf90_close(ncid))
   end subroutine initialize_scenario
 
-
-  subroutine write_results(results_directory, nx, ny, nz, mu, sigma, Tt, Pc, totaloil)
+  subroutine write_results(results_directory, nx, ny, nz, mu, sigma, Tt, Pc, totaloil, totaloil_mud, totaloil_sigmad)
     implicit none
     character(len = *) :: results_directory
 
     integer :: nx, ny, nz
-    double precision :: mu, sigma, totaloil
+    double precision :: mu, sigma, totaloil, totaloil_mud, totaloil_sigmad
     double precision, dimension(:)             :: Tt
     double precision, dimension(:, :)          :: Pc
 
     ! netCDF variables
-    integer :: ncid                                                  ! file handle
-    integer :: var_scene_id                                          ! scene variable id
-    character(len = *), parameter :: var_scene_name = "Scenario"     ! scene variable name
-    integer :: var_nx_id                                             ! nx variable id
-    character(len = *), parameter :: var_nx_name = "NX"              ! nx variable name
-    integer :: var_ny_id                                             ! ny variable id
-    character(len = *), parameter :: var_ny_name = "NY"              ! ny variable name
-    integer :: var_nz_id                                             ! nz variable id
-    character(len = *), parameter :: var_nz_name = "NZ"              ! nz variable name
-    integer :: var_mu_id                                             ! mu variable id
-    character(len = *), parameter :: var_mu_name = "Mu"              ! mu variable name
-    integer :: var_sigma_id                                          ! sigma variable id
-    character(len = *), parameter :: var_sigma_name = "Sigma"        ! sigma variable name
+    integer :: ncid                                                     ! file handle
+    integer :: var_scene_id                                             ! scene variable id
+    character(len = *), parameter :: var_scene_name = "Scenario"        ! scene variable name
+    integer :: var_nx_id                                                ! nx variable id
+    character(len = *), parameter :: var_nx_name = "NX"                 ! nx variable name
+    integer :: var_ny_id                                                ! ny variable id
+    character(len = *), parameter :: var_ny_name = "NY"                 ! ny variable name
+    integer :: var_nz_id                                                ! nz variable id
+    character(len = *), parameter :: var_nz_name = "NZ"                 ! nz variable name
+    integer :: var_mu_id                                                ! mu variable id
+    character(len = *), parameter :: var_mu_name = "Mu"                 ! mu variable name
+    integer :: var_sigma_id                                             ! sigma variable id
+    character(len = *), parameter :: var_sigma_name = "Sigma"           ! sigma variable name
+                                                                        
+    integer :: dim_time_id                                              ! time dimension id
+    integer :: dim_time_len                                             ! time dimension length
+    character(len = *), parameter :: dim_time_name = "Time"             ! time dimension name
+                                                                        
+    integer :: var_time_id                                              ! time variable id
+    character(len = *), parameter :: var_time_name = "Time"             ! time variable name
+                                                                        
+    integer :: dim_mobility_id                                          ! mobility dimension id
+    integer :: dim_mobility_len                                         ! mobility dimension length
+    character(len = *), parameter :: dim_mobility_name = "Mobilities"   ! mobility dimension name
+                                                                        
+    integer :: var_mobility_id                                          ! mobility variable id
+    character(len = *), parameter :: var_mobility_name = "WaterOil"     ! mobility variable name
+    integer, dimension(2) :: var_mobility_dimids                        ! id of dimensions for mobilities
 
-    integer :: dim_time_id                                           ! time dimension id
-    integer :: dim_time_len                                          ! time dimension length
-    character(len = *), parameter :: dim_time_name = "Time"          ! time dimension name
-
-    integer :: var_time_id                                           ! time variable id
-    character(len = *), parameter :: var_time_name = "Time"          ! time variable name
-
-    integer :: dim_mobility_id                                       ! mobility dimension id
-    integer :: dim_mobility_len                                      ! mobility dimension length
-    character(len = *), parameter :: dim_mobility_name = "Mobilities"! mobility dimension name
-
-    integer :: var_mobility_id                                       ! mobility variable id
-    character(len = *), parameter :: var_mobility_name = "WaterOil"  ! mobility variable name
-    integer, dimension(2) :: var_mobility_dimids                     ! id of dimensions for mobilities
-
-    integer :: var_oil_id                                            ! oil variable id
-    character(len = *), parameter :: var_oil_name = "Oil"            ! oil variable name
+    integer :: var_oil_id                                               ! oil variable id
+    character(len = *), parameter :: var_oil_name = "Oil"               ! oil variable name
+    integer :: var_oil_mud_id                                           ! oil_mu variable id
+    character(len = *), parameter :: var_oil_mud_name = "Oil_mu"        ! oil_mu variable name
+    integer :: var_oil_sigmad_id                                        ! oil_sigma variable id
+    character(len = *), parameter :: var_oil_sigmad_name = "Oil_sigma"  ! oil_sigma variable name
 
     ! Start writing netCDF file having all the computed values
     ! Open file
-    call iserror(nf90_create(trim(adjustl(results_directory))//"results_eval_original_code.nc", &
+    call iserror(nf90_create(trim(adjustl(results_directory))//"results_eval_deriv_tapenade_1_reverse.nc", &
          nf90_clobber, ncid))
 
     ! setup the sizes of the dimensions
@@ -337,6 +349,10 @@ contains
 
     ! Define scalar oil output
     call iserror(nf90_def_var(ncid, var_oil_name, NF90_DOUBLE, var_oil_id))
+    ! Define scalar oil sensitivity in mu direction
+    call iserror(nf90_def_var(ncid, var_oil_mud_name, NF90_DOUBLE, var_oil_mud_id))
+    ! Define scalar oil sensitivity in sigma direction
+    call iserror(nf90_def_var(ncid, var_oil_sigmad_name, NF90_DOUBLE, var_oil_sigmad_id))
 
     ! End define mode.
     call iserror(nf90_enddef(ncid))
@@ -357,6 +373,8 @@ contains
     ! the netCDF variables we have defined.
     call iserror(nf90_put_var(ncid, var_mobility_id, Pc))
     call iserror(nf90_put_var(ncid, var_oil_id, totaloil))
+    call iserror(nf90_put_var(ncid, var_oil_mud_id, totaloil_mud))
+    call iserror(nf90_put_var(ncid, var_oil_sigmad_id, totaloil_sigmad))
 
     ! Close the file.
     call iserror(nf90_close(ncid))

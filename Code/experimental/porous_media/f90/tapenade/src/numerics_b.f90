@@ -949,10 +949,11 @@ CONTAINS
 !
   SUBROUTINE NEWTRAPH_B(nx, ny, nz, nd, pt, st, q, qb, v, vb, s, sb)
     IMPLICIT NONE
+    INTEGER :: debug
     INTEGER :: i, j, it
     LOGICAL :: converged
     DOUBLE PRECISION :: dt, dsn
-    INTEGER :: nx, ny, nz
+    INTEGER :: nx, ny, nz, n
     INTEGER :: nd, pt, st
     DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: s
     DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: sb
@@ -1004,7 +1005,6 @@ CONTAINS
     DOUBLE PRECISION, DIMENSION(7*(nx*ny*nz)) :: dgvalues
     DOUBLE PRECISION, DIMENSION(7*(nx*ny*nz)) :: dgvaluesb
     INTEGER, DIMENSION(nx*ny*nz + 1) :: dgrow_compressed
-    INTEGER :: arg1
     INTEGER :: ad_count
     INTEGER :: i0
     INTEGER :: ad_count0
@@ -1020,6 +1020,7 @@ CONTAINS
     DOUBLE PRECISION :: tempb(nx*ny*nz)
 ! not yet converged
     converged = .false.
+    n = nx*ny*nz
 ! Assemble system matrix
     CALL GENA(nx, ny, nz, v, q, annz, arow_index, arow_compressed, &
 &       acol_index, avalues)
@@ -1038,10 +1039,10 @@ CONTAINS
       CALL PUSHINTEGER4ARRAY(bcol_index, 7*nx*ny*nz)
       CALL PUSHINTEGER4ARRAY(brow_index, 7*nx*ny*nz)
       CALL PUSHINTEGER4(bnnz)
-      CALL SPMAT_MULTIPLY_DIAGONAL(arg1, annz, arow_index, &
-&                            arow_compressed, acol_index, avalues, dtx, &
-&                            bnnz, brow_index, brow_compressed, &
-&                            bcol_index, bvalues, 'POS')
+      CALL SPMAT_MULTIPLY_DIAGONAL(n, annz, arow_index, arow_compressed&
+&                            , acol_index, avalues, dtx, bnnz, &
+&                            brow_index, brow_compressed, bcol_index, &
+&                            bvalues, 'POS')
       i = 0
       ad_count0 = 0
       DO WHILE (i .LT. 2**it)
@@ -1058,20 +1059,19 @@ CONTAINS
           CALL RELPERM(nx, ny, nz, s, mw, mo, dmw, dmo)
           df = dmw/(mw+mo) - mw/(mw+mo)**2*(dmw+dmo)
 ! Matrix-diagonal matrix product
-          CALL SPMAT_MULTIPLY_DIAGONAL(arg1, bnnz, brow_index, &
+          CALL SPMAT_MULTIPLY_DIAGONAL(n, bnnz, brow_index, &
 &                                brow_compressed, bcol_index, bvalues, &
 &                                df, dgnnz, dgrow_index, &
 &                                dgrow_compressed, dgcol_index, dgvalues&
 &                                , 'PRE')
-          CALL ADDX_DIAGONAL(arg1, dgnnz, dgrow_index, dgrow_compressed&
-&                      , dgcol_index, dgvalues, -1.0d0, 0)
+          CALL ADDX_DIAGONAL(n, dgnnz, dgrow_index, dgrow_compressed, &
+&                      dgcol_index, dgvalues, -1.0d0, 0)
           fw = mw/(mw+mo)
 ! Matrix-vector matrix product
-          CALL SPMAT_MULTIPLY_VECTOR(arg1, bnnz, brow_index, &
+          CALL SPMAT_MULTIPLY_VECTOR(n, bnnz, brow_index, &
 &                              brow_compressed, bcol_index, bvalues, fw&
 &                              , bfw, 'PRE')
           g = s - s_iter_copy - bfw - fi
-          arg1 = nx*ny*nz
           CALL PUSHBOOLEAN(verbose)
           CALL PUSHINTEGER4(solver_outer)
           CALL PUSHINTEGER4(solver_inner)
@@ -1082,13 +1082,12 @@ CONTAINS
           CALL PUSHINTEGER4ARRAY(dgrow_compressed, nx*ny*nz + 1)
           CALL PUSHINTEGER4ARRAY(dgrow_index, 7*nx*ny*nz)
           CALL PUSHINTEGER4(dgnnz)
-          CALL PUSHINTEGER4(arg1)
-          CALL SOLVE(arg1, dgnnz, dgrow_index, dgrow_compressed, &
+          CALL PUSHINTEGER4(n)
+          CALL SOLVE(n, dgnnz, dgrow_index, dgrow_compressed, &
 &              dgcol_index, dgvalues, g, ds)
           CALL PUSHREAL8ARRAY(s, nx*ny*nz)
           s = s + ds
-          arg1 = nx*ny*nz
-          CALL DNRM2(ds, arg1, dsn)
+          CALL DNRM2(ds, n, dsn)
           j = j + 1
           ad_count = ad_count + 1
         END DO
@@ -1139,7 +1138,7 @@ CONTAINS
         DO i0=1,ad_count
           CALL POPREAL8ARRAY(s, nx*ny*nz)
           dsb = dsb + sb
-          CALL POPINTEGER4(arg1)
+          CALL POPINTEGER4(n)
           CALL POPINTEGER4(dgnnz)
           CALL POPINTEGER4ARRAY(dgrow_index, 7*nx*ny*nz)
           CALL POPINTEGER4ARRAY(dgrow_compressed, nx*ny*nz + 1)
@@ -1151,7 +1150,7 @@ CONTAINS
           CALL POPINTEGER4(solver_outer)
           CALL POPBOOLEAN(verbose)
           gb = 0.D0
-          CALL SOLVE_B(arg1, dgnnz, dgrow_index, dgrow_compressed, &
+          CALL SOLVE_B(n, dgnnz, dgrow_index, dgrow_compressed, &
 &                dgcol_index, dgvalues, dgvaluesb, g, gb, ds, dsb)
           bfwb = 0.D0
           sb = sb + gb
@@ -1159,18 +1158,17 @@ CONTAINS
           bfwb = -gb
           fib = fib - gb
           fw = mw/(mw+mo)
-          CALL SPMAT_MULTIPLY_VECTOR_B(arg1, bnnz, brow_index, &
+          CALL SPMAT_MULTIPLY_VECTOR_B(n, bnnz, brow_index, &
 &                                brow_compressed, bcol_index, bvalues, &
 &                                bvaluesb, fw, fwb, bfw, bfwb, 'PRE')
           mob = 0.D0
           mwb = 0.D0
           tempb = fwb/(mw+mo)
           tempb0 = -(mw*tempb/(mw+mo))
-          CALL ADDX_DIAGONAL_B(arg1, dgnnz, dgrow_index, &
-&                        dgrow_compressed, dgcol_index, dgvalues, &
-&                        dgvaluesb, -1.0d0, 0)
+          CALL ADDX_DIAGONAL_B(n, dgnnz, dgrow_index, dgrow_compressed, &
+&                        dgcol_index, dgvalues, dgvaluesb, -1.0d0, 0)
           df = dmw/(mw+mo) - mw/(mw+mo)**2*(dmw+dmo)
-          CALL SPMAT_MULTIPLY_DIAGONAL_B(arg1, bnnz, brow_index, &
+          CALL SPMAT_MULTIPLY_DIAGONAL_B(n, bnnz, brow_index, &
 &                                  brow_compressed, bcol_index, bvalues&
 &                                  , bvaluesb, df, dfb, dgnnz, &
 &                                  dgrow_index, dgrow_compressed, &
@@ -1199,7 +1197,7 @@ CONTAINS
       CALL POPINTEGER4ARRAY(brow_index, 7*nx*ny*nz)
       CALL POPINTEGER4ARRAY(bcol_index, 7*nx*ny*nz)
       CALL POPREAL8ARRAY(bvalues, 7*nx*ny*nz)
-      CALL SPMAT_MULTIPLY_DIAGONAL_B(arg1, annz, arow_index, &
+      CALL SPMAT_MULTIPLY_DIAGONAL_B(n, annz, arow_index, &
 &                              arow_compressed, acol_index, avalues, &
 &                              avaluesb, dtx, dtxb, bnnz, brow_index, &
 &                              brow_compressed, bcol_index, bvalues, &
@@ -1216,10 +1214,11 @@ CONTAINS
 !
   SUBROUTINE NEWTRAPH(nx, ny, nz, nd, pt, st, q, v, s)
     IMPLICIT NONE
+    INTEGER :: debug
     INTEGER :: i, j, it
     LOGICAL :: converged
     DOUBLE PRECISION :: dt, dsn
-    INTEGER :: nx, ny, nz
+    INTEGER :: nx, ny, nz, n
     INTEGER :: nd, pt, st
     DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: s
     DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: q
@@ -1252,9 +1251,10 @@ CONTAINS
     INTEGER, DIMENSION(7*(nx*ny*nz)) :: dgcol_index
     DOUBLE PRECISION, DIMENSION(7*(nx*ny*nz)) :: dgvalues
     INTEGER, DIMENSION(nx*ny*nz + 1) :: dgrow_compressed
-    INTEGER :: arg1
 ! not yet converged
     converged = .false.
+    n = nx*ny*nz
+    debug = 0
 ! Assemble system matrix
     CALL GENA(nx, ny, nz, v, q, annz, arow_index, arow_compressed, &
 &       acol_index, avalues)
@@ -1268,11 +1268,10 @@ CONTAINS
       CALL MYMAX_1_0_DOUBLE(q, 0.0d0, fi)
       fi = fi*dtx
 ! Matrix-diagonal matrix product
-      arg1 = nx*ny*nz
-      CALL SPMAT_MULTIPLY_DIAGONAL(arg1, annz, arow_index, &
-&                            arow_compressed, acol_index, avalues, dtx, &
-&                            bnnz, brow_index, brow_compressed, &
-&                            bcol_index, bvalues, 'POS')
+      CALL SPMAT_MULTIPLY_DIAGONAL(n, annz, arow_index, arow_compressed&
+&                            , acol_index, avalues, dtx, bnnz, &
+&                            brow_index, brow_compressed, bcol_index, &
+&                            bvalues, 'POS')
       i = 0
       DO WHILE (i .LT. 2**it)
         j = 0
@@ -1283,28 +1282,23 @@ CONTAINS
           CALL RELPERM(nx, ny, nz, s, mw, mo, dmw, dmo)
           df = dmw/(mw+mo) - mw/(mw+mo)**2*(dmw+dmo)
 ! Matrix-diagonal matrix product
-          arg1 = nx*ny*nz
-          CALL SPMAT_MULTIPLY_DIAGONAL(arg1, bnnz, brow_index, &
+          CALL SPMAT_MULTIPLY_DIAGONAL(n, bnnz, brow_index, &
 &                                brow_compressed, bcol_index, bvalues, &
 &                                df, dgnnz, dgrow_index, &
 &                                dgrow_compressed, dgcol_index, dgvalues&
 &                                , 'PRE')
-          arg1 = nx*ny*nz
-          CALL ADDX_DIAGONAL(arg1, dgnnz, dgrow_index, dgrow_compressed&
-&                      , dgcol_index, dgvalues, -1.0d0, 0)
+          CALL ADDX_DIAGONAL(n, dgnnz, dgrow_index, dgrow_compressed, &
+&                      dgcol_index, dgvalues, -1.0d0, 0)
           fw = mw/(mw+mo)
 ! Matrix-vector matrix product
-          arg1 = nx*ny*nz
-          CALL SPMAT_MULTIPLY_VECTOR(arg1, bnnz, brow_index, &
+          CALL SPMAT_MULTIPLY_VECTOR(n, bnnz, brow_index, &
 &                              brow_compressed, bcol_index, bvalues, fw&
 &                              , bfw, 'PRE')
           g = s - s_iter_copy - bfw - fi
-          arg1 = nx*ny*nz
-          CALL SOLVE(arg1, dgnnz, dgrow_index, dgrow_compressed, &
+          CALL SOLVE(n, dgnnz, dgrow_index, dgrow_compressed, &
 &              dgcol_index, dgvalues, g, ds)
           s = s + ds
-          arg1 = nx*ny*nz
-          CALL DNRM2(ds, arg1, dsn)
+          CALL DNRM2(ds, n, dsn)
           j = j + 1
         END DO
         IF (dsn .GT. 1.0d-3) THEN
@@ -1713,7 +1707,7 @@ CONTAINS
 !
   SUBROUTINE TPFA_B(nx, ny, nz, k, kb, q, qb, p, pb, v, vb)
     IMPLICIT NONE
-    INTEGER :: nx, ny, nz
+    INTEGER :: nx, ny, nz, n
     INTEGER :: i
     INTEGER, DIMENSION(7) :: idiags
 ! the matrix containing the diagonal entries
@@ -1751,7 +1745,6 @@ CONTAINS
     DOUBLE PRECISION, DIMENSION(7*(nx*ny*nz)) :: avaluesb
     INTEGER, DIMENSION(nx*ny*nz + 1) :: arow_compressed
     INTRINSIC MOD
-    INTEGER :: arg1
     INTEGER :: ad_to
     INTEGER :: branch
     DOUBLE PRECISION :: temp1(nx, ny, nz-1)
@@ -1763,6 +1756,7 @@ CONTAINS
     DOUBLE PRECISION :: tempb0(nx, ny-1, nz)
     DOUBLE PRECISION :: tempb(nx, ny, nz-1)
     DOUBLE PRECISION :: temp(nx-1, ny, nz)
+    n = nx*ny*nz
 ! get the point-wise inverse of the permeability matrix
     l = 1.0d0/k
     tx_ = 2.0d0*hy_*hz_/hx_
@@ -1825,7 +1819,6 @@ CONTAINS
     CALL PUSHINTEGER4(i - 1)
 ! solve the linear system
 ! Pass the rows_index, cols_index, values separately.
-    arg1 = nx*ny*nz
     CALL PUSHBOOLEAN(verbose)
     CALL PUSHINTEGER4(solver_outer)
     CALL PUSHINTEGER4(solver_inner)
@@ -1836,9 +1829,9 @@ CONTAINS
     CALL PUSHINTEGER4ARRAY(arow_compressed, nx*ny*nz + 1)
     CALL PUSHINTEGER4ARRAY(arow_index, 7*nx*ny*nz)
     CALL PUSHINTEGER4(annz)
-    CALL PUSHINTEGER4(arg1)
-    CALL SOLVE(arg1, annz, arow_index, arow_compressed, acol_index, &
-&        avalues, q, u)
+    CALL PUSHINTEGER4(n)
+    CALL SOLVE(n, annz, arow_index, arow_compressed, acol_index, avalues&
+&        , q, u)
 ! reshape the solution
     CALL PUSHREAL8ARRAY(p, nx*ny*nz)
     CALL MYRESHAPE_1_3(u, p)
@@ -1868,7 +1861,7 @@ CONTAINS
     vb(1, 2:nx, 1:ny, 1:nz) = 0.D0
     CALL POPREAL8ARRAY(p, nx*ny*nz)
     CALL MYRESHAPE_1_3_B(u, ub, p, pb)
-    CALL POPINTEGER4(arg1)
+    CALL POPINTEGER4(n)
     CALL POPINTEGER4(annz)
     CALL POPINTEGER4ARRAY(arow_index, 7*nx*ny*nz)
     CALL POPINTEGER4ARRAY(arow_compressed, nx*ny*nz + 1)
@@ -1880,7 +1873,7 @@ CONTAINS
     CALL POPINTEGER4(solver_outer)
     CALL POPBOOLEAN(verbose)
     avaluesb = 0.D0
-    CALL SOLVE_B(arg1, annz, arow_index, arow_compressed, acol_index, &
+    CALL SOLVE_B(n, annz, arow_index, arow_compressed, acol_index, &
 &          avalues, avaluesb, q, qb, u, ub)
     CALL POPINTEGER4(ad_to)
     DO i=ad_to,1,-1
@@ -1940,7 +1933,7 @@ CONTAINS
 !
   SUBROUTINE TPFA(nx, ny, nz, k, q, p, v)
     IMPLICIT NONE
-    INTEGER :: nx, ny, nz
+    INTEGER :: nx, ny, nz, n
     INTEGER :: i
     INTEGER, DIMENSION(7) :: idiags
 ! the matrix containing the diagonal entries
@@ -1966,7 +1959,7 @@ CONTAINS
     DOUBLE PRECISION, DIMENSION(7*(nx*ny*nz)) :: avalues
     INTEGER, DIMENSION(nx*ny*nz + 1) :: arow_compressed
     INTRINSIC MOD
-    INTEGER :: arg1
+    n = nx*ny*nz
 ! get the point-wise inverse of the permeability matrix
     l = 1.0d0/k
     tx_ = 2.0d0*hy_*hz_/hx_
@@ -2024,9 +2017,8 @@ CONTAINS
     END DO
 ! solve the linear system
 ! Pass the rows_index, cols_index, values separately.
-    arg1 = nx*ny*nz
-    CALL SOLVE(arg1, annz, arow_index, arow_compressed, acol_index, &
-&        avalues, q, u)
+    CALL SOLVE(n, annz, arow_index, arow_compressed, acol_index, avalues&
+&        , q, u)
 ! reshape the solution
     CALL MYRESHAPE_1_3(u, p)
 ! V.x
