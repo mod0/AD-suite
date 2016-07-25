@@ -631,7 +631,6 @@ contains
   !
   subroutine NewtRaph(nx, ny, nz, nd, pt, st, Q, V, S)
     implicit none
-    integer :: debug
 
     integer :: i, j, it
     logical :: converged
@@ -677,7 +676,6 @@ contains
     ! not yet converged
     converged = .false.
     n = nx * ny * nz
-    debug = 0
 
     ! Assemble system matrix
     call GenA(nx, ny, nz, V, Q,  annz, arow_index, arow_compressed, acol_index, avalues)

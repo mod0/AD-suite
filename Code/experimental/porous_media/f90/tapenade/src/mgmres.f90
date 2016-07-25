@@ -1402,21 +1402,12 @@ subroutine rearrange_cr ( n, nz_num, ia, ja, a )
 
   real ( kind = 8 ) a(nz_num)
   integer ( kind = 4 ) i
-  integer ( kind = 4 ) debug
   integer ( kind = 4 ) ia(n+1)
   integer ( kind = 4 ) i4temp
   integer ( kind = 4 ) ja(nz_num)
   integer ( kind = 4 ) k
   integer ( kind = 4 ) l
   real ( kind = 8 ) r8temp
-
-  debug = 0
-
-  if(debug /= 0) then
-   write(*,*) ia
-   write(*,*) ja
-   write(*,*) a
-  endif
 
   do i = 1, n
      

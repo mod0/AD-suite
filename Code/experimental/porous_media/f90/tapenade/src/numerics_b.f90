@@ -949,7 +949,6 @@ CONTAINS
 !
   SUBROUTINE NEWTRAPH_B(nx, ny, nz, nd, pt, st, q, qb, v, vb, s, sb)
     IMPLICIT NONE
-    INTEGER :: debug
     INTEGER :: i, j, it
     LOGICAL :: converged
     DOUBLE PRECISION :: dt, dsn
@@ -1214,7 +1213,6 @@ CONTAINS
 !
   SUBROUTINE NEWTRAPH(nx, ny, nz, nd, pt, st, q, v, s)
     IMPLICIT NONE
-    INTEGER :: debug
     INTEGER :: i, j, it
     LOGICAL :: converged
     DOUBLE PRECISION :: dt, dsn
@@ -1254,7 +1252,6 @@ CONTAINS
 ! not yet converged
     converged = .false.
     n = nx*ny*nz
-    debug = 0
 ! Assemble system matrix
     CALL GENA(nx, ny, nz, v, q, annz, arow_index, arow_compressed, &
 &       acol_index, avalues)
