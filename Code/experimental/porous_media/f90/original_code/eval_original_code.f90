@@ -42,20 +42,56 @@ program runspe10
 
 
   ! Not passing shared constants present in the parameters file.
-  call initialize_scenario(data_directory, nx, ny, nz, st, pt, nd, &
-  mu, sigma, Q, S, P, V, Tt, Pc, totaloil, solver_inner, solver_outer)
+  call initialize_scenario(data_directory, nx, ny, nz, st, pt, nd, solver_inner, solver_outer)
+
+  ! allocate arrays
+  call allocate_arrays(nx, ny, nz, st, pt, nd, Q, S, P, V, Tt, Pc)
+  call allocate_shared_arrays(nx, ny, nz, st, pt, nd)
+
+  ! initialize arrays
+  call initialize_arrays(Q, S, P, V, Tt, Pc)
+  call initialize_shared_arrays(data_directory, nx, ny, nz, st, pt, nd)  ! will not be reinitialized
   
+  ! initialize scalar inputs and outputs
+  mu = 0.0d0
+  sigma = 1.0d0
 
   ! solver verbose parameter, inner and outer iterations are read from
   ! command file.
   verbose = .false.              ! Verbose solver output  
 
   call wrapper(nx, ny, nz, nd, pt, st, mu, sigma, Q, S, P, V, Tt, Pc, totaloil)
+  
+  ! write results
   call write_results(results_directory, nx, ny, nz, mu, sigma, Tt, Pc, totaloil)
-  call deallocate_arrays(Q, S, P, V, Tt, Pc)
 
+  call deallocate_arrays(Q, S, P, V, Tt, Pc)
+  call deallocate_shared_arrays()
   return
 contains
+
+  subroutine allocate_shared_arrays(nx, ny, nz, st, pt, nd)
+    integer :: nx, ny, nz
+    integer :: st, pt, nd
+
+    ! Allocate space for constant permeability/porosity
+    allocate(POR(nx * ny * nz), PERM(3, nx, ny, nz))    
+  end subroutine allocate_shared_arrays
+
+  subroutine deallocate_shared_arrays()
+    ! also deallocate Porosity and Permeability
+    deallocate(POR, PERM)
+  end subroutine deallocate_shared_arrays
+
+  subroutine initialize_shared_arrays(data_directory, nx, ny, nz, st, pt, nd)
+    character(len = *) :: data_directory                             ! directory location of parameters 
+
+    integer :: nx, ny, nz
+    integer :: st, pt, nd
+
+    ! Now read the permeabilities and porosities which are global
+    call read_permeability_and_porosity(data_directory, nx, ny, nz, PERM, POR)
+  end subroutine initialize_shared_arrays
 
   subroutine allocate_arrays(nx, ny, nz, st, pt, nd, Q, S, P, V, Tt, Pc)
     implicit none
@@ -69,9 +105,6 @@ contains
     double precision, dimension(:, :, :, :), allocatable :: V
     double precision, dimension(:), allocatable          :: Tt
     double precision, dimension(:, :), allocatable       :: Pc
-
-    ! Allocate space for constant permeability/porosity
-    allocate(POR(nx * ny * nz), PERM(3, nx, ny, nz))
 
     ! Allocate space for Q, S, P, V
     allocate(Q(nx * ny * nz), &
@@ -97,14 +130,32 @@ contains
     ! deallocate variables
     deallocate(Q, S, P, V)
     deallocate(Tt, Pc)
-
-    ! also deallocate Porosity and Permeability
-    deallocate(POR, PERM)
   end subroutine deallocate_arrays
 
+  subroutine initialize_arrays(Q, S, P, V, Tt, Pc)
+    double precision, dimension(:)          :: Q
+    double precision, dimension(:)          :: S
+    double precision, dimension(:, :, :)    :: P
+    double precision, dimension(:, :, :, :) :: V
+    double precision, dimension(:)          :: Tt
+    double precision, dimension(:, :)       :: Pc
 
-  subroutine initialize_scenario(data_directory, nx, ny, nz, st, pt, nd, mu, &
-    sigma, Q, S, P, V, Tt, Pc, totaloil, solver_inner, solver_outer)
+    ! initialize memory for inflow and saturation
+    Q = 0.0d0
+    S = 0.0d0
+
+    ! initialize memory for P and V
+    P = 0.0d0
+
+    ! note that V vector has an additional
+    ! length in each dimension x,y,z
+    V = 0.0d0
+
+    Tt = 0.0d0               ! simulation time
+    Pc = 0.0d0               ! production data
+  end subroutine initialize_arrays
+
+  subroutine initialize_scenario(data_directory, nx, ny, nz, st, pt, nd, solver_inner, solver_outer)
     implicit none
     
     integer :: ncid                                                  ! netcdf file handle
@@ -115,15 +166,7 @@ contains
 
     integer :: nx, ny, nz
     integer :: st, pt, nd
-    double precision :: mu, sigma, totaloil
-    integer :: solver_inner, solver_outer
-   
-    double precision, dimension(:), allocatable          :: Q
-    double precision, dimension(:), allocatable          :: S
-    double precision, dimension(:, :, :), allocatable    :: P
-    double precision, dimension(:, :, :, :), allocatable :: V
-    double precision, dimension(:), allocatable          :: Tt
-    double precision, dimension(:, :), allocatable       :: Pc
+    integer :: solver_inner, solver_outer  
 
     ! Open parameters file
     nc_chunksize = 4096
@@ -195,76 +238,49 @@ contains
 
     ! Close parameters file
     call iserror(nf90_close(ncid))
-
-    ! initialize mu
-    mu = 0.0d0
-    sigma = 1.0d0
-
-    ! allocate arrays
-    call allocate_arrays(nx, ny, nz, st, pt, nd, Q, S, P, V, Tt, Pc)
-
-    ! initialize memory for inflow and saturation
-    Q = 0.0d0
-    S = 0.0d0
-
-    ! initialize memory for P and V
-    P = 0.0d0
-
-    ! note that V vector has an additional
-    ! length in each dimension x,y,z
-    V = 0.0d0
-
-    ! Now read the permeabilities and porosities which are global
-    call read_permeability_and_porosity(data_directory, nx, ny, nz, PERM, POR)
-
-    ! initialize simulation output
-    Tt = 0.0d0               ! simulation time
-    Pc = 0.0d0               ! production data
-    totaloil = 0.0d0         ! total oil
   end subroutine initialize_scenario
-
 
   subroutine write_results(results_directory, nx, ny, nz, mu, sigma, Tt, Pc, totaloil)
     implicit none
     character(len = *) :: results_directory
 
     integer :: nx, ny, nz
-    double precision :: mu, sigma, totaloil
+    double precision :: mu, sigma, totaloil, totaloil_mud, totaloil_sigmad
     double precision, dimension(:)             :: Tt
     double precision, dimension(:, :)          :: Pc
 
     ! netCDF variables
-    integer :: ncid                                                  ! file handle
-    integer :: var_scene_id                                          ! scene variable id
-    character(len = *), parameter :: var_scene_name = "Scenario"     ! scene variable name
-    integer :: var_nx_id                                             ! nx variable id
-    character(len = *), parameter :: var_nx_name = "NX"              ! nx variable name
-    integer :: var_ny_id                                             ! ny variable id
-    character(len = *), parameter :: var_ny_name = "NY"              ! ny variable name
-    integer :: var_nz_id                                             ! nz variable id
-    character(len = *), parameter :: var_nz_name = "NZ"              ! nz variable name
-    integer :: var_mu_id                                             ! mu variable id
-    character(len = *), parameter :: var_mu_name = "Mu"              ! mu variable name
-    integer :: var_sigma_id                                          ! sigma variable id
-    character(len = *), parameter :: var_sigma_name = "Sigma"        ! sigma variable name
+    integer :: ncid                                                     ! file handle
+    integer :: var_scene_id                                             ! scene variable id
+    character(len = *), parameter :: var_scene_name = "Scenario"        ! scene variable name
+    integer :: var_nx_id                                                ! nx variable id
+    character(len = *), parameter :: var_nx_name = "NX"                 ! nx variable name
+    integer :: var_ny_id                                                ! ny variable id
+    character(len = *), parameter :: var_ny_name = "NY"                 ! ny variable name
+    integer :: var_nz_id                                                ! nz variable id
+    character(len = *), parameter :: var_nz_name = "NZ"                 ! nz variable name
+    integer :: var_mu_id                                                ! mu variable id
+    character(len = *), parameter :: var_mu_name = "Mu"                 ! mu variable name
+    integer :: var_sigma_id                                             ! sigma variable id
+    character(len = *), parameter :: var_sigma_name = "Sigma"           ! sigma variable name
+                                                                        
+    integer :: dim_time_id                                              ! time dimension id
+    integer :: dim_time_len                                             ! time dimension length
+    character(len = *), parameter :: dim_time_name = "Time"             ! time dimension name
+                                                                        
+    integer :: var_time_id                                              ! time variable id
+    character(len = *), parameter :: var_time_name = "Time"             ! time variable name
+                                                                        
+    integer :: dim_mobility_id                                          ! mobility dimension id
+    integer :: dim_mobility_len                                         ! mobility dimension length
+    character(len = *), parameter :: dim_mobility_name = "Mobilities"   ! mobility dimension name
+                                                                        
+    integer :: var_mobility_id                                          ! mobility variable id
+    character(len = *), parameter :: var_mobility_name = "WaterOil"     ! mobility variable name
+    integer, dimension(2) :: var_mobility_dimids                        ! id of dimensions for mobilities
 
-    integer :: dim_time_id                                           ! time dimension id
-    integer :: dim_time_len                                          ! time dimension length
-    character(len = *), parameter :: dim_time_name = "Time"          ! time dimension name
-
-    integer :: var_time_id                                           ! time variable id
-    character(len = *), parameter :: var_time_name = "Time"          ! time variable name
-
-    integer :: dim_mobility_id                                       ! mobility dimension id
-    integer :: dim_mobility_len                                      ! mobility dimension length
-    character(len = *), parameter :: dim_mobility_name = "Mobilities"! mobility dimension name
-
-    integer :: var_mobility_id                                       ! mobility variable id
-    character(len = *), parameter :: var_mobility_name = "WaterOil"  ! mobility variable name
-    integer, dimension(2) :: var_mobility_dimids                     ! id of dimensions for mobilities
-
-    integer :: var_oil_id                                            ! oil variable id
-    character(len = *), parameter :: var_oil_name = "Oil"            ! oil variable name
+    integer :: var_oil_id                                               ! oil variable id
+    character(len = *), parameter :: var_oil_name = "Oil"               ! oil variable name
 
     ! Start writing netCDF file having all the computed values
     ! Open file
