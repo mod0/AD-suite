@@ -1,515 +1,621 @@
 module finitevolume
-use parameters
-use mathutil
-use matrix
-use linsolve
-implicit none
+  use parameters
+  use mathutil
+  use matrix
+  use linsolve
+  implicit none
 
-interface RelPerm
-    module procedure RelPerm_scalar
-    module procedure RelPerm_vector
-end interface RelPerm
+  interface RelPerm
+     module procedure RelPerm_scalar
+     module procedure RelPerm_vector
+  end interface RelPerm
 
 contains
 
-!
-! Performs Newton Raphson to solve for saturations
-!
-subroutine NewtRaph(Q, V, S)
-  implicit none
-  
-  integer :: i, j, it
-  logical :: converged
-  double precision :: dt, dsn
+  !
+  ! Performs Newton Raphson to solve for saturations
+  !
+  subroutine NewtRaph(nx, ny, nz, nd, pt, st, Q, V, S)
+    implicit none
 
-  double precision, dimension(N_) :: S
-  double precision, dimension(N_) :: Q
-  double precision, dimension(N_) :: S_copy
-  double precision, dimension(N_) :: S_iter_copy
-  double precision, dimension(N_) :: dtx
-  double precision, dimension(N_) :: fi
-  double precision, dimension(N_) :: fw
-  double precision, dimension(N_) :: Mw
-  double precision, dimension(N_) :: Mo
-  double precision, dimension(N_) :: dMw
-  double precision, dimension(N_) :: dMo
-  double precision, dimension(N_) :: dF
-  double precision, dimension(N_) :: G
-  double precision, dimension(N_) :: dS
-  double precision, dimension(N_) :: bfw
+    integer :: i, j, it
+    logical :: converged
+    double precision :: dt, dsn
+    integer :: nx, ny, nz, n
+    integer :: nd, pt, st
+    double precision, dimension((nx * ny * nz)) :: S
+    double precision, dimension((nx * ny * nz)) :: Q
+    double precision, dimension((nx * ny * nz)) :: S_copy
+    double precision, dimension((nx * ny * nz)) :: S_iter_copy
+    double precision, dimension((nx * ny * nz)) :: dtx
+    double precision, dimension((nx * ny * nz)) :: fi
+    double precision, dimension((nx * ny * nz)) :: fw
+    double precision, dimension((nx * ny * nz)) :: Mw
+    double precision, dimension((nx * ny * nz)) :: Mo
+    double precision, dimension((nx * ny * nz)) :: dMw
+    double precision, dimension((nx * ny * nz)) :: dMo
+    double precision, dimension((nx * ny * nz)) :: dF
+    double precision, dimension((nx * ny * nz)) :: G
+    double precision, dimension((nx * ny * nz)) :: dS
+    double precision, dimension((nx * ny * nz)) :: bfw
 
-  double precision, dimension(3, Nx_ + 1, Ny_ + 1, Nz_ + 1) :: V
-  
-  integer ::  annz
-  integer, dimension(7 * N_) :: arow_index
-  integer, dimension(7 * N_) :: acol_index
-  double precision, dimension(7 * N_) :: avalues
-  integer, dimension(N_ + 1) :: arow_compressed
+    double precision, dimension(3, nx + 1, ny + 1, nz + 1) :: V
 
-  integer ::  bnnz
-  integer, dimension(7 * N_) :: brow_index
-  integer, dimension(7 * N_) :: bcol_index
-  double precision, dimension(7 * N_) :: bvalues
-  integer, dimension(N_ + 1) :: brow_compressed
+    integer ::  annz
+    integer, dimension(7 * (nx * ny * nz)) :: arow_index
+    integer, dimension(7 * (nx * ny * nz)) :: acol_index
+    double precision, dimension(7 * (nx * ny * nz)) :: avalues
+    integer, dimension((nx * ny * nz) + 1) :: arow_compressed
 
-  integer ::  dgnnz
-  integer, dimension(7 * N_) :: dgrow_index
-  integer, dimension(7 * N_) :: dgcol_index
-  double precision, dimension(7 * N_) :: dgvalues
-  integer, dimension(N_ + 1) :: dgrow_compressed
+    integer ::  bnnz
+    integer, dimension(7 * (nx * ny * nz)) :: brow_index
+    integer, dimension(7 * (nx * ny * nz)) :: bcol_index
+    double precision, dimension(7 * (nx * ny * nz)) :: bvalues
+    integer, dimension((nx * ny * nz) + 1) :: brow_compressed
 
-  ! not yet converged
-  converged = .false.
+    integer ::  dgnnz
+    integer, dimension(7 * (nx * ny * nz)) :: dgrow_index
+    integer, dimension(7 * (nx * ny * nz)) :: dgcol_index
+    double precision, dimension(7 * (nx * ny * nz)) :: dgvalues
+    integer, dimension((nx * ny * nz) + 1) :: dgrow_compressed
 
-  ! Assemble system matrix
-  call GenA(V, Q,  annz, arow_index, arow_compressed, acol_index, avalues)
+    ! not yet converged
+    converged = .false.
+    n = nx * ny * nz
 
-  ! copy S over
-  S_copy = S
+    ! Assemble system matrix
+    call GenA(nx, ny, nz, V, Q,  annz, arow_index, arow_compressed, acol_index, avalues)
 
-  ! set scaling factor
-  it = 0
+    ! copy S over
+    S_copy = S
 
-  do while(.not. converged)
-    dt = (1.0d0 * St)/(2**it)
-    dtx = dt/(V_ * POR)
+    ! set scaling factor
+    it = 0
 
-    call mymax_1_0_double(Q, 0.0d0, fi)
-    fi = fi * dtx
+    do while(.not. converged)
+       dt = (1.0d0 * st)/(2**it)
+       dtx = dt/(Vol * POR)
 
-    ! Matrix-diagonal matrix product
-    call spmat_multiply_diagonal( annz, arow_index, arow_compressed,&
-                                  acol_index, avalues, dtx, &
-                                    bnnz, brow_index, brow_compressed,&
-                                  bcol_index, bvalues, "POS")
-    i = 0
-    
-    do while (i < 2**it)
-      j = 0
-      i = i + 1
-      dsn = 1.0d0
-      S_iter_copy = S
+       call mymax_1_0_double(Q, 0.0d0, fi)
+       fi = fi * dtx
 
-      do while (dsn > 1.0d-3 .and. j < 10)
-        call RelPerm(S, Mw, Mo, dMw, dMo)
+       ! Matrix-diagonal matrix product
+       call spmat_multiply_diagonal(n, annz, arow_index, arow_compressed,&
+            acol_index, avalues, dtx, &
+            bnnz, brow_index, brow_compressed,&
+            bcol_index, bvalues, "POS")
+       i = 0
 
-        dF = dMw/(Mw + Mo) - (Mw/((Mw + Mo)**2) * (dMw + dMo))
+       do while (i < 2**it)
+          j = 0
+          i = i + 1
+          dsn = 1.0d0
+          S_iter_copy = S
 
-        ! Matrix-diagonal matrix product
-        call spmat_multiply_diagonal( bnnz, brow_index, brow_compressed, &
-                                      bcol_index, bvalues, dF, &
-                                        dgnnz, dgrow_index, dgrow_compressed, &
-                                      dgcol_index, dgvalues, "PRE")
+          do while (dsn > 1.0d-3 .and. j < 10)
+             call RelPerm(nx, ny, nz, S, Mw, Mo, dMw, dMo)
 
-        call addx_diagonal( dgnnz, dgrow_index, dgrow_compressed, &
-                            dgcol_index, dgvalues, -1.0d0, 0)
+             dF = dMw/(Mw + Mo) - (Mw/((Mw + Mo)**2) * (dMw + dMo))
 
-        fw = Mw / (Mw + Mo)
+             ! Matrix-diagonal matrix product
+             call spmat_multiply_diagonal(n, bnnz, brow_index, brow_compressed, &
+                  bcol_index, bvalues, dF, &
+                  dgnnz, dgrow_index, dgrow_compressed, &
+                  dgcol_index, dgvalues, "PRE")
 
-        ! Matrix-vector matrix product
-        call spmat_multiply_vector( bnnz, brow_index, brow_compressed, &
-                                    bcol_index, bvalues, fw, bfw, "PRE")
+             call addx_diagonal(n, dgnnz, dgrow_index, dgrow_compressed, &
+                  dgcol_index, dgvalues, -1.0d0, 0)
 
-        G = S - S_iter_copy - bfw - fi
+             fw = Mw / (Mw + Mo)
 
-        call solve( dgnnz, dgrow_index, dgrow_compressed, &
-                    dgcol_index, dgvalues, G, dS)
+             ! Matrix-vector matrix product
+             call spmat_multiply_vector(n, bnnz, brow_index, brow_compressed, &
+                  bcol_index, bvalues, fw, bfw, "PRE")
 
-        S = S + dS
+             G = S - S_iter_copy - bfw - fi
 
-        call dnrm2(dS, N_, dsn)
+             call solve(n,  dgnnz, dgrow_index, dgrow_compressed, &
+                  dgcol_index, dgvalues, G, dS)
 
-        j = j + 1
-      end do
+             S = S + dS
 
-      if (dsn > 1.0d-3) then
-          i = 2**it               ! Breaks out of while loop.
-          S = S_copy
-      end if
+             call dnrm2(dS, n, dsn)
+
+             j = j + 1
+          end do
+
+          if (dsn > 1.0d-3) then
+             i = 2**it               ! Breaks out of while loop.
+             S = S_copy
+          end if
+       end do
+
+       if (dsn < 1.0d-3) then
+          converged = .true.
+       else
+          it = it + 1
+       end if
+    end do
+  end subroutine NewtRaph
+
+
+  !
+  ! Pressure Solver
+  !
+  subroutine Pres(nx, ny, nz, Q, S, P, V)
+    use parameters
+    integer :: h,i,j,n
+    integer :: nx, ny, nz
+    double precision, dimension((nx * ny * nz)) :: S
+    double precision, dimension((nx * ny * nz)) :: Q
+    double precision, dimension(3 * (nx * ny * nz)) :: M
+    double precision, dimension(nx, ny, nz) :: P
+    double precision, dimension(3, nx, ny, nz) :: KM
+    double precision, dimension(3, nx + 1, ny + 1, nz + 1) :: V
+
+    double precision, dimension((nx * ny * nz)) :: Mw
+    double precision, dimension((nx * ny * nz)) :: Mo
+
+    call RelPerm(nx, ny, nz, S, Mw, Mo)
+
+    do i = 1,(nx * ny * nz)
+       M(1 + (i - 1) * 3) = Mw(i) + Mo(i)
+       M(2 + (i - 1) * 3) = M(1 + (i - 1) * 3)
+       M(3 + (i - 1) * 3) = M(1 + (i - 1) * 3)
     end do
 
-    if (dsn < 1.0d-3) then
-        converged = .true.
-    else
-        it = it + 1
-    end if
-  end do
-end subroutine NewtRaph
+    call myreshape_1_4(M, KM)
+
+    ! point-wise multiply
+    do h = 1,3
+       do i = 1,nx
+          do j = 1,ny
+             do n = 1,nz
+                KM(h,i,j,n) = KM(h,i,j,n) * PERM(h,i,j,n)
+             end do
+          end do
+       end do
+    end do
+
+    call TPFA(nx, ny, nz, KM, Q, P, V)
+  end subroutine Pres
 
 
-!
-! Pressure Solver
-!
-subroutine Pres(Q, S, P, V)
-  integer i
-
-  double precision, dimension(N_) :: S
-  double precision, dimension(N_) :: Q
-  double precision, dimension(3 * N_) :: M
-  double precision, dimension(Nx_, Ny_, Nz_) :: P
-  double precision, dimension(3, Nx_, Ny_, Nz_) :: KM
-  double precision, dimension(3, Nx_ + 1, Ny_ + 1, Nz_ + 1) :: V
-
-  double precision, dimension(N_) :: Mw
-  double precision, dimension(N_) :: Mo
-
-  call RelPerm(S, Mw, Mo)
-
-  do i = 1,N_
-    M(1 + (i - 1) * 3) = Mw(i) + Mo(i)
-    M(2 + (i - 1) * 3) = M(1 + (i - 1) * 3)
-    M(3 + (i - 1) * 3) = M(1 + (i - 1) * 3)
-  end do
-
-  call myreshape_1_4(M, KM)
-
-  ! point-wise multiply
-  KM = KM * PERM
-
-  call TPFA(KM, Q, P, V)
-end subroutine Pres
-
-
-!
-! Relative Permeabilities
-!
-subroutine RelPerm_vector(S, Mw, Mo, dMw, dMo)
+  !
+  ! Relative Permeabilities
+  !
+  subroutine RelPerm_vector(nx, ny, nz, S, Mw, Mo, dMw, dMo)
     implicit none
-    double precision, dimension(N_) :: S
-    double precision, dimension(N_) :: Mw
-    double precision, dimension(N_) :: Mo
-    double precision, dimension(N_) :: S_temp
-    double precision, dimension(N_), optional :: dMw
-    double precision, dimension(N_), optional :: dMo
+    integer :: nx, ny, nz
+    double precision, dimension((nx * ny * nz)) :: S
+    double precision, dimension((nx * ny * nz)) :: Mw
+    double precision, dimension((nx * ny * nz)) :: Mo
+    double precision, dimension((nx * ny * nz)) :: S_temp
+    double precision, dimension((nx * ny * nz)), optional :: dMw
+    double precision, dimension((nx * ny * nz)), optional :: dMo
 
-    S_temp = (S - swc_)/(1.0d0 - swc_ - sor_)   ! rescale saturation
-    Mw = S_temp**2/vw_
-    Mo = (1 - S_temp)**2/vo_
+    S_temp = (S - swc)/(1.0d0 - swc - sor)   ! rescale saturation
+    Mw = S_temp**2/vw
+    Mo = (1 - S_temp)**2/vo
 
     if (present(dMo) .and. present(dMw)) then
-        dMw = 2 * S_temp/vw_/(1 - swc_ - sor_)
-        dMo = -2 * (1 - S_temp)/vo_/(1 - swc_ - sor_)
+       dMw = 2 * S_temp/vw/(1 - swc - sor)
+       dMo = -2 * (1 - S_temp)/vo/(1 - swc - sor)
     endif
-end subroutine RelPerm_vector
+  end subroutine RelPerm_vector
 
-!
-! Relative Permeabilities
-!
-subroutine RelPerm_scalar(S, Mw, Mo, dMw, dMo)
+  !
+  ! Relative Permeabilities
+  !
+  subroutine RelPerm_scalar(S, Mw, Mo, dMw, dMo)
     implicit none
     double precision :: S, Mw, Mo, S_temp
     double precision, optional :: dMw, dMo
 
-    S_temp = (S - swc_)/(1.0d0 - swc_ - sor_)   ! rescale saturation
-    Mw = S_temp**2/vw_
-    Mo = (1 - S_temp)**2/vo_
+    S_temp = (S - swc)/(1.0d0 - swc - sor)   ! rescale saturation
+    Mw = S_temp**2/vw
+    Mo = (1 - S_temp)**2/vo
 
     if (present(dMo) .and. present(dMw)) then
-        dMw = 2 * S_temp/vw_/(1 - swc_ - sor_)
-        dMo = -2 * (1 - S_temp)/vo_/(1 - swc_ - sor_)
+       dMw = 2 * S_temp/vw/(1 - swc - sor)
+       dMo = -2 * (1 - S_temp)/vo/(1 - swc - sor)
     endif
-end subroutine RelPerm_scalar
+  end subroutine RelPerm_scalar
 
-!
-! Generate A matrix
-!
-subroutine GenA(V, Q,  annz, arow_index, arow_compressed, acol_index, avalues)
-  implicit none
+  !
+  ! Generate A matrix
+  !
+  subroutine GenA(nx, ny, nz, V, Q,  annz, arow_index, arow_compressed, acol_index, avalues)
+    implicit none
+    integer :: nx, ny, nz
+    integer, dimension(7) :: idiags
+    double precision, dimension((nx * ny * nz)) :: Q
+    double precision, dimension((nx * ny * nz), 7) :: diags ! the matrix containing the diagonal entries
+    double precision, dimension((nx * ny * nz)) :: diag_tmp
+    double precision, dimension(3, nx + 1, ny + 1, nz + 1) :: V  ! V has an extra length
+    ! across each x, y, z
+    double precision, dimension(nx, ny, nz) :: VXYZ
 
-  integer, dimension(7) :: idiags
-  double precision, dimension(N_) :: Q
-  double precision, dimension(N_, 7) :: diags ! the matrix containing the diagonal entries
-  double precision, dimension(N_) :: diag_tmp
-  double precision, dimension(3, Nx_ + 1, Ny_ + 1, Nz_ + 1) :: V  ! V has an extra length
-                                                                  ! across each x, y, z
-  double precision, dimension(Nx_, Ny_, Nz_) :: VXYZ
+    integer ::  annz
+    integer, dimension(7 * (nx * ny * nz)) :: arow_index
+    integer, dimension(7 * (nx * ny * nz)) :: acol_index
+    double precision, dimension(7 * (nx * ny * nz)) :: avalues
+    integer, dimension((nx * ny * nz) + 1) :: arow_compressed
 
-  integer ::  annz
-  integer, dimension(7 * N_) :: arow_index
-  integer, dimension(7 * N_) :: acol_index
-  double precision, dimension(7 * N_) :: avalues
-  integer, dimension(N_ + 1) :: arow_compressed
-
-  ! initialize diags
-  diags = 0.0d0
-
-
-  ! reshape arrays first
-  VXYZ = V(3,1:Nx_, 1:Ny_, 2:Nz_ + 1)
-  call myreshape_3_1(VXYZ, diags(:, 1)) ! z2
-  VXYZ = V(2,1:Nx_, 2:Ny_ + 1, 1:Nz_)
-  call myreshape_3_1(VXYZ, diags(:, 2)) ! y2
-  VXYZ = V(1,2:Nx_ + 1, 1:Ny_, 1:Nz_)
-  call myreshape_3_1(VXYZ, diags(:, 3)) ! x2
-  VXYZ = V(1,1:Nx_, 1:Ny_, 1:Nz_)
-  call myreshape_3_1(VXYZ, diags(:, 5)) ! x1
-  VXYZ = V(2,1:Nx_, 1:Ny_, 1:Nz_)
-  call myreshape_3_1(VXYZ, diags(:, 6)) ! y1
-  VXYZ = V(3,1:Nx_, 1:Ny_, 1:Nz_)
-  call myreshape_3_1(VXYZ, diags(:, 7)) ! z1
+    ! initialize diags
+    diags = 0.0d0
 
 
-  diag_tmp = 0.0d0
-  call mymax_1_0_double(diags(:,1), 0.0d0, diag_tmp)
-  diags(:, 1) = diag_tmp
-
-  diag_tmp = 0.0d0
-  call mymax_1_0_double(diags(:,2), 0.0d0, diag_tmp)
-  diags(:, 2) = diag_tmp
-
-  diag_tmp = 0.0d0
-  call mymax_1_0_double(diags(:,3), 0.0d0, diag_tmp)
-  diags(:, 3) = diag_tmp
-
-  diag_tmp = 0.0d0
-  call mymin_1_0_double(diags(:,5), 0.0d0, diag_tmp)
-  diags(:, 5) = -diag_tmp
-
-  diag_tmp = 0.0d0
-  call mymin_1_0_double(diags(:,6), 0.0d0, diag_tmp)
-  diags(:, 6) = -diag_tmp
-
-  diag_tmp = 0.0d0
-  call mymin_1_0_double(diags(:,7), 0.0d0, diag_tmp)
-  diags(:, 7) = -diag_tmp
-
-  diag_tmp = 0.0d0
-  call mymin_1_0_double(Q, 0.0d0, diag_tmp)
-  diags(:, 4) = diag_tmp - diags(:, 5) - diags(:, 3) &
-                          - diags(:, 6) - diags(:, 2) &
-                          - diags(:, 7) - diags(:, 1)
-  
-  call spdiags_fvm_csr(diags, annz, arow_index, arow_compressed,&
-                       acol_index, avalues)
-end subroutine GenA
-
-!
-! Two point flux approximation.
-!
-subroutine TPFA(K, Q, P, V)
-  implicit none
-  
-  integer :: i
-  integer, dimension(7) :: idiags
-  double precision, dimension(N_, 7) :: diags ! the matrix containing the diagonal entries
-
-  double precision, dimension(N_) :: Q
-  double precision, dimension(Nx_, Ny_, Nz_) :: P
-  double precision, dimension(3, Nx_, Ny_, Nz_) :: K
-  double precision, dimension(3, Nx_ + 1, Ny_ + 1, Nz_ + 1) :: V
-
-  ! local variables
-  double precision :: tx_, ty_, tz_
-  double precision, dimension(Nx_ + 1, Ny_, Nz_) :: TX
-  double precision, dimension(Nx_, Ny_ + 1, Nz_) :: TY
-  double precision, dimension(Nx_, Ny_, Nz_ + 1) :: TZ
-  double precision, dimension(Nx_, Ny_, Nz_) :: TXYZ
-
-  ! solution to the linear system
-  double precision, dimension(N_) :: u
-
-  ! point-wise inverse of permeability
-  double precision, dimension(3, Nx_, Ny_, Nz_) :: L
-
-  ! sparse matrix
-  integer :: annz
-  integer, dimension(7 * N_) :: arow_index
-  integer, dimension(7 * N_) :: acol_index
-  double precision, dimension(7 * N_) :: avalues
-  integer, dimension(N_ + 1) :: arow_compressed
+    ! reshape arrays first
+    VXYZ = V(3,1:nx, 1:ny, 2:nz + 1)
+    call myreshape_3_1(VXYZ, diags(:, 1)) ! z2
+    VXYZ = V(2,1:nx, 2:ny + 1, 1:nz)
+    call myreshape_3_1(VXYZ, diags(:, 2)) ! y2
+    VXYZ = V(1,2:nx + 1, 1:ny, 1:nz)
+    call myreshape_3_1(VXYZ, diags(:, 3)) ! x2
+    VXYZ = V(1,1:nx, 1:ny, 1:nz)
+    call myreshape_3_1(VXYZ, diags(:, 5)) ! x1
+    VXYZ = V(2,1:nx, 1:ny, 1:nz)
+    call myreshape_3_1(VXYZ, diags(:, 6)) ! y1
+    VXYZ = V(3,1:nx, 1:ny, 1:nz)
+    call myreshape_3_1(VXYZ, diags(:, 7)) ! z1
 
 
-  ! get the point-wise inverse of the permeability matrix
-  L = 1.0d0/K
+    diag_tmp = 0.0d0
+    call mymax_1_0_double(diags(:,1), 0.0d0, diag_tmp)
+    diags(:, 1) = diag_tmp
 
-  tx_ = 2.0d0 * hy_ * hz_ / hx_
-  ty_ = 2.0d0 * hx_ * hz_ / hy_
-  tz_ = 2.0d0 * hy_ * hx_ / hz_
+    diag_tmp = 0.0d0
+    call mymax_1_0_double(diags(:,2), 0.0d0, diag_tmp)
+    diags(:, 2) = diag_tmp
 
-  TX = 0.0d0
-  TY = 0.0d0
-  TZ = 0.0d0
+    diag_tmp = 0.0d0
+    call mymax_1_0_double(diags(:,3), 0.0d0, diag_tmp)
+    diags(:, 3) = diag_tmp
 
-  ! Compute transmissibilities by averaging harmonically
-  TX(2:Nx_,1:Ny_,1:Nz_) = tx_/(L(1, 1:Nx_ - 1, 1:Ny_, 1:Nz_) + L(1, 2:Nx_, 1:Ny_, 1:Nz_))
-  TY(1:Nx_,2:Ny_,1:Nz_) = ty_/(L(2, 1:Nx_, 1:Ny_ - 1, 1:Nz_) + L(2, 1:Nx_, 2:Ny_, 1:Nz_))
-  TZ(1:Nx_,1:Ny_,2:Nz_) = tz_/(L(3, 1:Nx_, 1:Ny_, 1:Nz_ - 1) + L(3, 1:Nx_, 1:Ny_, 2:Nz_))
+    diag_tmp = 0.0d0
+    call mymin_1_0_double(diags(:,5), 0.0d0, diag_tmp)
+    diags(:, 5) = -diag_tmp
 
-  ! initialize diags
-  diags = 0.0d0
+    diag_tmp = 0.0d0
+    call mymin_1_0_double(diags(:,6), 0.0d0, diag_tmp)
+    diags(:, 6) = -diag_tmp
 
-  TXYZ = -TX(1:Nx_,1:Ny_,1:Nz_)
-  call myreshape_3_1(TXYZ, diags(:, 5))          ! -x1
-  TXYZ = -TY(1:Nx_,1:Ny_,1:Nz_)
-  call myreshape_3_1(TXYZ, diags(:, 6))          ! -y1
-  TXYZ = -TZ(1:Nx_,1:Ny_,1:Nz_)
-  call myreshape_3_1(TXYZ, diags(:, 7))          ! -z1
-  TXYZ = -TX(2:Nx_ + 1,1:Ny_,1:Nz_)
-  call myreshape_3_1(TXYZ, diags(:, 3))      ! -x2
-  TXYZ = -TY(1:Nx_,2:Ny_ + 1,1:Nz_)
-  call myreshape_3_1(TXYZ, diags(:, 2))      ! -y2
-  TXYZ = -TZ(1:Nx_,1:Ny_,2:Nz_ + 1)
-  call myreshape_3_1(TXYZ, diags(:, 1))      ! -z2
+    diag_tmp = 0.0d0
+    call mymin_1_0_double(diags(:,7), 0.0d0, diag_tmp)
+    diags(:, 7) = -diag_tmp
 
-  ! Assemble discretization matrix
-  diags(:, 4) = -(diags(:,1) + diags(:,2) + diags(:,3) &
-                  + diags(:,5) + diags(:,6) + diags(:,7))
+    diag_tmp = 0.0d0
+    call mymin_1_0_double(Q, 0.0d0, diag_tmp)
+    diags(:, 4) = diag_tmp - diags(:, 5) - diags(:, 3) &
+         - diags(:, 6) - diags(:, 2) &
+         - diags(:, 7) - diags(:, 1)
 
-  call spdiags_fvm_csr(diags, annz, arow_index, arow_compressed, &
-                    acol_index, avalues)
+    call spdiags_fvm_csr(nx, ny, nz, diags, annz, arow_index, arow_compressed,&
+         acol_index, avalues)
+  end subroutine GenA
+
+  !
+  ! Two point flux approximation.
+  !
+  subroutine TPFA(nx, ny, nz, K, Q, P, V)
+    implicit none
+    integer :: nx, ny, nz, n
+    integer :: h,i,j,m
+    integer, dimension(7) :: idiags
+    double precision, dimension((nx * ny * nz), 7) :: diags ! the matrix containing the diagonal entries
+
+    double precision, dimension((nx * ny * nz)) :: Q
+    double precision, dimension(nx, ny, nz) :: P
+    double precision, dimension(3, nx, ny, nz) :: K
+    double precision, dimension(3, nx + 1, ny + 1, nz + 1) :: V
+
+    ! local variables
+    double precision :: tx_, ty_, tz_
+    double precision, dimension(nx + 1, ny, nz) :: TX
+    double precision, dimension(nx, ny + 1, nz) :: TY
+    double precision, dimension(nx, ny, nz + 1) :: TZ
+    double precision, dimension(nx, ny, nz) :: TXYZ
+
+    ! solution to the linear system
+    double precision, dimension((nx * ny * nz)) :: u
+
+    ! point-wise inverse of permeability
+    double precision, dimension(3, nx, ny, nz) :: L
+
+    ! sparse matrix
+    integer :: annz
+    integer, dimension(7 * (nx * ny * nz)) :: arow_index
+    integer, dimension(7 * (nx * ny * nz)) :: acol_index
+    double precision, dimension(7 * (nx * ny * nz)) :: avalues
+    integer, dimension((nx * ny * nz) + 1) :: arow_compressed
+
+    n = nx * ny * nz
+
+    ! get the point-wise inverse of the permeability matrix
+    do h=1,3
+       do i=1,nx
+          do j=1,ny
+             do m=1,nz
+                L(h,i,j,m) = 1.0d0/K(h,i,j,m)
+             end do
+          end do
+       end do
+    end do
+
+    tx_ = 2.0d0 * hy * hz / hx
+    ty_ = 2.0d0 * hx * hz / hy
+    tz_ = 2.0d0 * hy * hx / hz
+
+    TX = 0.0d0
+    TY = 0.0d0
+    TZ = 0.0d0
+
+    ! Compute transmissibilities by averaging harmonically
+    do i = 2,nx
+       do j = 1,ny
+          do m = 1,nz
+             TX(i,j,m) = tx_/(L(1, i - 1, j, m) + L(1, i, j, m))
+          end do
+       end do
+    end do
+
+    do i = 1,nx
+       do j = 2,ny
+          do m = 1,nz
+             TY(i,j,m) = ty_/(L(2, i, j - 1, m) + L(2, i, j, m))
+          end do
+       end do
+    end do
+
+    do i = 1,nx
+       do j = 1,ny
+          do m = 2,nz
+             TZ(i,j,m) = tz_/(L(3, i, j, m - 1) + L(3, i, j, m))
+          end do
+       end do
+    end do
+
+    ! initialize diags
+    diags = 0.0d0
+
+    do i = 1,nx
+       do j = 1,ny
+          do m = 1,nz
+             TXYZ(i,j,m) = -TX(i,j,m)
+          end do
+       end do
+    end do
+    call myreshape_3_1(TXYZ, diags(:, 5))          ! -x1
 
 
-  ! ! Increment the 1,1 element of A
-!     call addx_elem(annz, arow_index, arow_compressed,&
-!                     acol_index, avalues, &
-!                     PERM(1,1,1,1) + PERM(2,1,1,1) + PERM(3,1,1,1), 1, 1)
+    do i = 1,nx
+       do j = 1,ny
+          do m = 1,nz
+             TXYZ(i,j,m) = -TY(i,j,m)
+          end do
+       end do
+    end do
+    call myreshape_3_1(TXYZ, diags(:, 6))          ! -y1
 
-  ! Fix the pressure at the inlets
-  do i = 1,annz
-    if(arow_index(i) < Nx_ * Ny_ .and. mod(arow_index(i), Ny_) == 1) then
-        if(arow_index(i) == acol_index(i)) then
-          avalues(i) = 1
-        else
-          avalues(i) = 0
-        endif
-    endif
-  enddo
+    do i = 1,nx
+       do j = 1,ny
+          do m = 1,nz
+             TXYZ(i,j,m) = -TZ(i,j,m)
+          end do
+       end do
+    end do
+    call myreshape_3_1(TXYZ, diags(:, 7))          ! -z1
 
-  ! solve the linear system
-  ! Pass the rows_index, cols_index, values separately.
-  call solve(annz, arow_index, arow_compressed, &
-              acol_index, avalues, Q, u)
+    do i = 2,nx+1
+       do j = 1,ny
+          do m = 1,nz
+             TXYZ(i,j,m) = -TX(i,j,m)
+          end do
+       end do
+    end do
+    call myreshape_3_1(TXYZ, diags(:, 3))      ! -x2
 
-  ! reshape the solution
-  call myreshape_1_3(u, P)
+    do i = 1,nx
+       do j = 2,ny+1
+          do m = 1,nz
+             TXYZ(i,j,m) = -TY(i,j,m)
+          end do
+       end do
+    end do
+    call myreshape_3_1(TXYZ, diags(:, 2))      ! -y2
 
-  ! V.x
-  V(1, 2:Nx_, 1:Ny_, 1:Nz_) = (P(1:Nx_ - 1, :, :) - P(2:Nx_, :, :)) * TX(2:Nx_,:,:)
-  ! V.y
-  V(2, 1:Nx_, 2:Ny_, 1:Nz_) = (P(:, 1:Ny_ - 1, :) - P(:, 2:Ny_, :)) * TY(:,2:Ny_,:)
-  ! V.z
-  V(3, 1:Nx_, 1:Ny_, 2:Nz_) = (P(:, :, 1:Nz_ - 1) - P(:, :, 2:Nz_)) * TZ(:,:,2:Nz_)
-end subroutine TPFA
 
-!
-! Creates sparse diags matrix from rectangular matrix having the diagonals
-! orow_compressed is not populated.
-subroutine spdiags_fvm(imatrix, onnz, orow_index, &
-                       orow_compressed, ocol_index, ovalues)
-  implicit none
-  logical :: done
-  double precision :: elm
-  integer :: i, j, start_row_imatrix, end_row_imatrix, row, col
+    do i = 1,nx
+       do j = 1,ny
+          do m = 2,nz+1
+             TXYZ(i,j,m) = -TZ(i,j,m)
+          end do
+       end do
+    end do
+    call myreshape_3_1(TXYZ, diags(:, 1))      ! -z2
 
-  double precision, dimension(N_, 7) :: imatrix
-  integer, dimension(7) :: idiags 
-  integer :: onnz
-  integer, dimension(7 * N_) :: orow_index
-  integer, dimension(7 * N_) :: ocol_index
-  double precision, dimension(7 * N_) :: ovalues
-  integer, dimension(N_ + 1) :: orow_compressed
+    ! Assemble discretization matrix
+    diags(:, 4) = -(diags(:,1) + diags(:,2) + diags(:,3) &
+         + diags(:,5) + diags(:,6) + diags(:,7))
 
-  idiags(1) = -Nx_ * Ny_
-  idiags(2) =  -Nx_
-  idiags(3) = -1
-  idiags(4) = 0
-  idiags(5) = 1
-  idiags(6) = Nx_
-  idiags(7) = Nx_ * Ny_
-    
-  onnz = 0
-  orow_compressed = 0
-  
-  do i = 1, 7
-    if (idiags(i) > 0) then
-      start_row_imatrix = idiags(i) + 1
-      end_row_imatrix = N_
-    else if (idiags(i) <= 0) then
-      start_row_imatrix = 1
-      end_row_imatrix = N_ + idiags(i)
-    end if
+    call spdiags_fvm_csr(nx, ny, nz, diags, annz, arow_index, arow_compressed, &
+         acol_index, avalues)
 
-    call firstelm(idiags(i), row, col)
 
-    do j = start_row_imatrix,end_row_imatrix
-      if (row == col .or. imatrix(j, i) /= 0) then
-        onnz = onnz + 1
-        orow_index(onnz) = row
-        ocol_index(onnz) = col
-        ovalues(onnz) = imatrix(j, i)
-      end if
-      row = row + 1
-      col = col + 1
+    ! ! Increment the 1,1 element of A
+    !     call addx_elem(annz, arow_index, arow_compressed,&
+    !                     acol_index, avalues, &
+    !                     PERM(1,1,1,1) + PERM(2,1,1,1) + PERM(3,1,1,1), 1, 1)
+
+    ! Fix the pressure at the inlets
+    do i = 1,annz
+       if(arow_index(i) < nx * ny .and. mod(arow_index(i), ny) == 1) then
+          if(arow_index(i) == acol_index(i)) then
+             avalues(i) = 1
+          else
+             avalues(i) = 0
+          endif
+       endif
     enddo
-  enddo
-end subroutine spdiags_fvm
 
-!
-! Creates sparse diags matrix from rectangular matrix having the diagonals
-!
-subroutine spdiags_fvm_csr(imatrix, onnz, orow_index,&
-                           orow_compressed, ocol_index, ovalues)
-  implicit none
-  logical :: done
-  double precision :: elm
-  integer :: i, j, rownnz
+    ! solve the linear system
+    ! Pass the rows_index, cols_index, values separately.
+    call solve(n, annz, arow_index, arow_compressed, &
+         acol_index, avalues, Q, u)
 
-  double precision, dimension(N_, 7) :: imatrix
-  integer, dimension(7) :: idiags
-  integer, dimension(7) :: start_row_imatrix, end_row_imatrix
-  integer, dimension(7) :: row_diag, col_diag      ! row, column along diagonal
+    ! reshape the solution
+    call myreshape_1_3(u, P)
 
+    ! V.x
+    do i = 2,nx
+       do j = 1,ny
+          do m = 1,nz
+             V(1, i, j, m) = (P(i - 1, j, m) - P(i, j, m)) * TX(i,j,m)
+          end do
+       end do
+    end do
 
+    ! V.y
+    do i = 1,nx
+       do j = 2,ny
+          do m = 1,nz
+             V(2, i, j, m) = (P(i, j - 1, m) - P(i, j, m)) * TY(i,j,m)
+          end do
+       end do
+    end do
 
-  integer :: onnz
-  integer, dimension(7 * N_) :: orow_index
-  integer, dimension(7 * N_) :: ocol_index
-  double precision, dimension(7 * N_) :: ovalues
-  integer, dimension(N_ + 1) :: orow_compressed
+    ! V.z
+    do i = 1,nx
+       do j = 1,ny
+          do m = 2,nz
+             V(3, i, j, m) = (P(i, j, m - 1) - P(i, j, m)) * TZ(i,j,m)
+          end do
+       end do
+    end do
+  end subroutine TPFA
 
-    idiags(1) = -Nx_ * Ny_
-    idiags(2) =  -Nx_
+  !
+  ! Creates sparse diags matrix from rectangular matrix having the diagonals
+  ! orow_compressed is not populated.
+  subroutine spdiags_fvm(nx, ny, nz, imatrix, onnz, orow_index, &
+       orow_compressed, ocol_index, ovalues)
+    implicit none
+    logical :: done
+    integer :: nx, ny, nz
+    double precision :: elm
+    integer :: i, j, start_row_imatrix, end_row_imatrix, row, col
+
+    double precision, dimension((nx * ny * nz), 7) :: imatrix
+    integer, dimension(7) :: idiags 
+    integer :: onnz
+    integer, dimension(7 * (nx * ny * nz)) :: orow_index
+    integer, dimension(7 * (nx * ny * nz)) :: ocol_index
+    double precision, dimension(7 * (nx * ny * nz)) :: ovalues
+    integer, dimension((nx * ny * nz) + 1) :: orow_compressed
+
+    idiags(1) = -nx * ny
+    idiags(2) = -nx
     idiags(3) = -1
-    idiags(4) = 0
-    idiags(5) = 1
-    idiags(6) = Nx_
-    idiags(7) = Nx_ * Ny_
+    idiags(4) =  0
+    idiags(5) =  1
+    idiags(6) =  nx
+    idiags(7) =  nx * ny
 
-  onnz = 0
-  orow_compressed(1) = 1                      ! compressed row storage
-  
-  do i = 1, 7
-    if (idiags(i) > 0) then
-      start_row_imatrix(i) = idiags(i) + 1
-      end_row_imatrix(i) = N_  
-    else if (idiags(i) <= 0) then
-      start_row_imatrix(i) = 1
-      end_row_imatrix(i) = N_ + idiags(i)
-    end if
-    
-    call firstelm(idiags(i), row_diag(i), col_diag(i))
-  enddo 
-  
-  ! Do for each row in imatrix
-  do i = 1, N_
-    rownnz = 0                        ! count the number of nonzeros in row
-    ! Do for each column in imatrix
-    do j = 1, 7
-    ! Need to check if that column has any entry in this row
-      if(row_diag(j) <= i .and.  &    ! checks that you are past the beginning of diagonal, remains fixed
-        start_row_imatrix(j) <= end_row_imatrix(j)) then ! checks that you have not exhausted the diagonal
-        if(imatrix(start_row_imatrix(j), j) /= 0.0d0) then ! checks that the diagonal entry is non zero
-          onnz = onnz + 1
-          rownnz = rownnz + 1
-          orow_index(onnz) = i
-          ocol_index(onnz) = col_diag(j)
-          ovalues(onnz) = imatrix(start_row_imatrix(j), j)
-        endif
-        start_row_imatrix(j) = start_row_imatrix(j) + 1
-        col_diag(j) = col_diag(j) + 1
-      endif
+    onnz = 0
+    orow_compressed = 0
+
+    do i = 1, 7
+       if (idiags(i) > 0) then
+          start_row_imatrix = idiags(i) + 1
+          end_row_imatrix = (nx * ny * nz)
+       else if (idiags(i) <= 0) then
+          start_row_imatrix = 1
+          end_row_imatrix = (nx * ny * nz) + idiags(i)
+       end if
+
+       call firstelm(idiags(i), row, col)
+
+       do j = start_row_imatrix,end_row_imatrix
+          if (row == col .or. imatrix(j, i) /= 0) then
+             onnz = onnz + 1
+             orow_index(onnz) = row
+             ocol_index(onnz) = col
+             ovalues(onnz) = imatrix(j, i)
+          end if
+          row = row + 1
+          col = col + 1
+       enddo
     enddo
-    orow_compressed(i + 1) = orow_compressed(i) + rownnz
-  enddo
-end subroutine spdiags_fvm_csr
+  end subroutine spdiags_fvm
+
+  !
+  ! Creates sparse diags matrix from rectangular matrix having the diagonals
+  !
+  subroutine spdiags_fvm_csr(nx, ny, nz, imatrix, onnz, orow_index,&
+       orow_compressed, ocol_index, ovalues)
+    implicit none
+    integer :: nx, ny, nz
+    logical :: done
+    double precision :: elm
+    integer :: i, j, rownnz
+
+    double precision, dimension((nx * ny * nz), 7) :: imatrix
+    integer, dimension(7) :: idiags 
+    integer, dimension(7) :: start_row_imatrix, end_row_imatrix
+    integer, dimension(7) :: row_diag, col_diag      ! row, column along diagonal
+
+
+    integer :: onnz
+    integer, dimension(7 * (nx * ny * nz)) :: orow_index
+    integer, dimension(7 * (nx * ny * nz)) :: ocol_index
+    double precision, dimension(7 * (nx * ny * nz)) :: ovalues
+    integer, dimension((nx * ny * nz) + 1) :: orow_compressed
+
+    idiags(1) = -nx * ny
+    idiags(2) = -nx
+    idiags(3) = -1
+    idiags(4) =  0
+    idiags(5) =  1
+    idiags(6) =  nx
+    idiags(7) =  nx * ny
+
+    onnz = 0
+    orow_compressed(1) = 1                      ! compressed row storage
+
+    do i = 1, 7
+       if (idiags(i) > 0) then
+          start_row_imatrix(i) = idiags(i) + 1
+          end_row_imatrix(i) = (nx * ny * nz)  
+       else if (idiags(i) <= 0) then
+          start_row_imatrix(i) = 1
+          end_row_imatrix(i) = (nx * ny * nz) + idiags(i)
+       end if
+
+       call firstelm(idiags(i), row_diag(i), col_diag(i))
+    enddo
+
+    ! Do for each row in imatrix
+    do i = 1, (nx * ny * nz)
+       rownnz = 0                        ! count the number of nonzeros in row
+       ! Do for each column in imatrix
+       do j = 1, 7
+          ! Need to check if that column has any entry in this row
+          if(row_diag(j) <= i .and.  &    ! checks that you are past the beginning of diagonal, remains fixed
+               start_row_imatrix(j) <= end_row_imatrix(j)) then ! checks that you have not exhausted the diagonal
+             if(imatrix(start_row_imatrix(j), j) /= 0.0d0 .or. &
+                  idiags(j) == 0) then ! checks that the diagonal entry is non zero or is the main diagonal
+                onnz = onnz + 1
+                rownnz = rownnz + 1
+                orow_index(onnz) = i
+                ocol_index(onnz) = col_diag(j)
+                ovalues(onnz) = imatrix(start_row_imatrix(j), j)
+             endif
+             start_row_imatrix(j) = start_row_imatrix(j) + 1
+             col_diag(j) = col_diag(j) + 1
+          endif
+       enddo
+       orow_compressed(i + 1) = orow_compressed(i) + rownnz
+    enddo
+  end subroutine spdiags_fvm_csr
 end module finitevolume

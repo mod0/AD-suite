@@ -19,22 +19,20 @@ contains
 !
 ! Calls a specific solver - here the jacobi method
 !
-subroutine sparse_solve(annz, arow_index, arow_compressed, &
+subroutine sparse_solve(n, annz, arow_index, arow_compressed, &
                         acol_index, avalues, b, x)
   implicit none
  
-  integer :: annz
-  integer, parameter :: matdim = N_
-  integer, parameter :: maxlen = 7 * matdim
-  integer, dimension(7 * N_) :: arow_index
-  integer, dimension(7 * N_) :: acol_index
-  double precision, dimension(7 * N_) :: avalues
-  integer, dimension(N_ + 1) :: arow_compressed
+  integer :: n, annz
+  integer, dimension(7 * n) :: arow_index
+  integer, dimension(7 * n) :: acol_index
+  double precision, dimension(7 * n) :: avalues
+  integer, dimension(n + 1) :: arow_compressed
 
-  double precision, dimension(N_) :: b
-  double precision, dimension(N_) :: x
+  double precision, dimension(n) :: b
+  double precision, dimension(n) :: x
 
-  call sparse_dummy_method(matdim, annz, maxlen, arow_index, arow_compressed,&
+  call sparse_dummy_method(n, annz, 7*n, arow_index, arow_compressed,&
                            acol_index, avalues, b, x, solver_inner, solver_outer, verbose)
 end subroutine sparse_solve
 
@@ -52,7 +50,7 @@ subroutine sparse_dummy_method(n, annz, alen, arow_index, arow_compressed, &
   double precision, dimension(n) :: b
   double precision, dimension(n) :: x
 
-  call spmat_multiply_vector2(annz, arow_index, arow_compressed, &
+  call spmat_multiply_vector(n, annz, arow_index, arow_compressed, &
                               acol_index, avalues, b, x, "PRE")
 end subroutine sparse_dummy_method
 end module linsolve
