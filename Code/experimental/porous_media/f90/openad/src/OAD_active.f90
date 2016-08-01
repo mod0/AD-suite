@@ -156,6 +156,7 @@
           module procedure allocateMatching_a3_a3
           module procedure allocateMatching_a4_a4
           module procedure allocateMatching_d4_a4
+          module procedure allocateMatching_a4_d4
           module procedure allocateMatching_d5_d5
           module procedure allocateMatching_a5_d5
           module procedure allocateMatching_d5_a5
@@ -187,8 +188,10 @@
           module procedure shapeTest_d2_a2
           module procedure shapeTest_a3_a3
           module procedure shapeTest_d3_a3
+          module procedure shapeTest_a3_d3
           module procedure shapeTest_a4_a4
           module procedure shapeTest_d4_a4
+          module procedure shapeTest_a4_d4
           module procedure shapeTest_a5_a5
           module procedure shapeTest_d5_a5
           module procedure shapeTest_a5_d5
@@ -973,6 +976,16 @@
                size(allocateMatching,3),&
                size(allocateMatching,4)))
         end subroutine
+        subroutine allocateMatching_a4_d4(toBeAllocated,allocateMatching)
+          implicit none
+          type(active), dimension(:,:,:,:), allocatable :: toBeAllocated
+          real(w2f__8), dimension(:,:,:,:) :: allocateMatching
+          if (allocated(toBeAllocated)) deallocate(toBeAllocated)
+          allocate(toBeAllocated(size(allocateMatching,1), &
+               size(allocateMatching,2),&
+               size(allocateMatching,3),&
+               size(allocateMatching,4)))
+        end subroutine
         subroutine allocateMatching_d5_d5(toBeAllocated,allocateMatching)
           implicit none
           real(w2f__8), dimension(:,:,:,:,:), allocatable :: toBeAllocated
@@ -1184,6 +1197,12 @@
           type(active), dimension(:,:,:) :: origVar
           if (.not. all(shape(allocatedVar)==shape(origVar))) call runTimeErrorStop(shapeChange)
         end subroutine
+        subroutine shapeTest_a3_d3(allocatedVar,origVar)
+          implicit none
+          type(active), dimension(:,:,:), allocatable :: allocatedVar
+          real(w2f__8), dimension(:,:,:) :: origVar
+          if (.not. all(shape(allocatedVar)==shape(origVar))) call runTimeErrorStop(shapeChange)
+        end subroutine
         subroutine shapeTest_a4_a4(allocatedVar,origVar)
           implicit none
           type(active), dimension(:,:,:,:), allocatable :: allocatedVar
@@ -1194,6 +1213,12 @@
           implicit none
           real(w2f__8), dimension(:,:,:,:), allocatable :: allocatedVar
           type(active), dimension(:,:,:,:) :: origVar
+          if (.not. all(shape(allocatedVar)==shape(origVar))) call runTimeErrorStop(shapeChange)
+        end subroutine
+        subroutine shapeTest_a4_d4(allocatedVar,origVar)
+          implicit none
+          type(active), dimension(:,:,:,:), allocatable :: allocatedVar
+          real(w2f__8), dimension(:,:,:,:) :: origVar
           if (.not. all(shape(allocatedVar)==shape(origVar))) call runTimeErrorStop(shapeChange)
         end subroutine
         subroutine shapeTest_a5_a5(allocatedVar,origVar)

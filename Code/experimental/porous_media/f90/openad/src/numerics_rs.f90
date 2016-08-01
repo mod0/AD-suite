@@ -58,7 +58,6 @@ CONTAINS
   SUBROUTINE SCALAR_MAX(SCALARIN1, SCALARIN2, SCALAROUT)
     use OAD_tape
     use OAD_rev
-    use OAD_cp
 
 ! original arguments get inserted before version
 !         ! and declared here together with all local variables
@@ -83,69 +82,21 @@ CONTAINS
   REAL(w2f__8) SCALAROUT
 
 
-! checkpointing stacks and offsets
-    integer :: cp_loop_variable_1,cp_loop_variable_2,cp_loop_variable_3,cp_loop_&
-     &variable_4,cp_loop_variable_5,cp_loop_variable_6
-
-
-! floats 'F'
-    double precision, dimension(:), allocatable, save :: theArgFStack
-    integer, save :: theArgFStackoffset=0, theArgFStackSize=0
-! integers 'I'
-    integer, dimension(:), allocatable, save :: theArgIStack
-    integer, save :: theArgIStackoffset=0, theArgIStackSize=0
-! booleans 'B'
-    logical, dimension(:), allocatable, save :: theArgBStack
-    integer, save :: theArgBStackoffset=0, theArgBStackSize=0
-! strings 'S'
-    character*(80), dimension(:), allocatable, save :: theArgSStack
-    integer, save :: theArgSStackoffset=0, theArgSStackSize=0
-
-    type(modeType) :: our_orig_mode
-
-! external C function used in inlined code
     integer iaddr
     external iaddr
 !
 !       **** Statements ****
 !
 
-    if (our_rev_mode%arg_store) then
-! store arguments
-  call cp_store_real_scalar(SCALARIN1,theArgFStack,theArgFStackoffset,theArgFSta&
-     &ckSize)
-
-  call cp_store_real_scalar(SCALARIN2,theArgFStack,theArgFStackoffset,theArgFSta&
-     &ckSize)
-
-    end if
-    if (our_rev_mode%arg_restore) then
-! restore arguments
-  SCALARIN2 = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  SCALARIN1 = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-    end if
-    if (our_rev_mode%plain) then
-      our_orig_mode=our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
+   if (our_rev_mode%plain) then
 ! original function
   IF(SCALARIN1 .GE. SCALARIN2) THEN
     SCALAROUT = SCALARIN1
   ELSE
     SCALAROUT = SCALARIN2
   ENDIF
-
-! original function end
-      our_rev_mode=our_orig_mode
     end if
     if (our_rev_mode%tape) then
-!            print*, " tape       ", our_rev_mode
-      our_rev_mode%arg_store=.TRUE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.TRUE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.FALSE.
 ! taping
   IF(SCALARIN1 .GE. SCALARIN2) THEN
     SCALAROUT = SCALARIN1
@@ -158,33 +109,13 @@ CONTAINS
     integer_tape(integer_tape_pointer) = OpenAD_Symbol_2
     integer_tape_pointer = integer_tape_pointer+1
   ENDIF
-
-! taping end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.TRUE.
     end if
     if (our_rev_mode%adjoint) then
-!            print*, " adjoint    ", our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
 ! adjoint
   integer_tape_pointer = integer_tape_pointer-1
   OpenAD_Symbol_0 = integer_tape(integer_tape_pointer)
   IF(OpenAD_Symbol_0 .ne. 0) THEN
   ENDIF
-
-! adjoint end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
     end if
   end subroutine SCALAR_MAX
 !#########################################################
@@ -196,7 +127,6 @@ CONTAINS
   SUBROUTINE DNRM2(V, LEN_V, N)
     use OAD_tape
     use OAD_rev
-    use OAD_cp
 
 ! original arguments get inserted before version
 !         ! and declared here together with all local variables
@@ -240,57 +170,13 @@ CONTAINS
   REAL(w2f__8) SCALEOUT
 
 
-! checkpointing stacks and offsets
-    integer :: cp_loop_variable_1,cp_loop_variable_2,cp_loop_variable_3,cp_loop_&
-     &variable_4,cp_loop_variable_5,cp_loop_variable_6
-
-
-! floats 'F'
-    double precision, dimension(:), allocatable, save :: theArgFStack
-    integer, save :: theArgFStackoffset=0, theArgFStackSize=0
-! integers 'I'
-    integer, dimension(:), allocatable, save :: theArgIStack
-    integer, save :: theArgIStackoffset=0, theArgIStackSize=0
-! booleans 'B'
-    logical, dimension(:), allocatable, save :: theArgBStack
-    integer, save :: theArgBStackoffset=0, theArgBStackSize=0
-! strings 'S'
-    character*(80), dimension(:), allocatable, save :: theArgSStack
-    integer, save :: theArgSStackoffset=0, theArgSStackSize=0
-
-    type(modeType) :: our_orig_mode
-
-! external C function used in inlined code
     integer iaddr
     external iaddr
 !
 !       **** Statements ****
 !
 
-    if (our_rev_mode%arg_store) then
-! store arguments
-  call cp_store_int_scalar(LEN_V,theArgIStack,theArgIStackoffset,theArgIStackSiz&
-     &e)
-
-  call cp_store_real_scalar(N,theArgFStack,theArgFStackoffset,theArgFStackSize)
-  call cp_store_p_real_vector(V,size(V),theArgFStack,theArgFStackoffset,theArgFS&
-     &tackSize)
-
-    end if
-    if (our_rev_mode%arg_restore) then
-! restore arguments
-  do cp_loop_variable_1 = ubound(V,1),lbound(V,1),-1
-  V(cp_loop_variable_1) = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  end do
-  N = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  LEN_V = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-    end if
-    if (our_rev_mode%plain) then
-      our_orig_mode=our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
+   if (our_rev_mode%plain) then
 ! original function
   N = 0.0D00
   SCALEIN = 0.0D00
@@ -308,17 +194,8 @@ CONTAINS
     END DO
     N = (SCALEOUT * SQRT(N))
   ENDIF
-
-! original function end
-      our_rev_mode=our_orig_mode
     end if
     if (our_rev_mode%tape) then
-!            print*, " tape       ", our_rev_mode
-      our_rev_mode%arg_store=.TRUE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.TRUE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.FALSE.
 ! taping
   N = 0.0D00
   SCALEIN = 0.0D00
@@ -350,21 +227,8 @@ CONTAINS
     integer_tape(integer_tape_pointer) = OpenAD_Symbol_14
     integer_tape_pointer = integer_tape_pointer+1
   ENDIF
-
-! taping end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.TRUE.
     end if
     if (our_rev_mode%adjoint) then
-!            print*, " adjoint    ", our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
 ! adjoint
   integer_tape_pointer = integer_tape_pointer-1
   OpenAD_Symbol_6 = integer_tape(integer_tape_pointer)
@@ -384,13 +248,6 @@ CONTAINS
     CALL SCALAR_MAX(SCALEIN,OAD_CTMP0,SCALEOUT)
     OpenAD_Symbol_10 = INT(OpenAD_Symbol_10) + 1
   END DO
-
-! adjoint end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
     end if
   end subroutine DNRM2
 END
@@ -448,7 +305,6 @@ CONTAINS
 
     use OAD_tape
     use OAD_rev
-    use OAD_cp
 
 ! original arguments get inserted before version
 !         ! and declared here together with all local variables
@@ -489,42 +345,13 @@ CONTAINS
   INTEGER(w2f__i8) OpenAD_Symbol_35
 
 
-! checkpointing stacks and offsets
-    integer :: cp_loop_variable_1,cp_loop_variable_2,cp_loop_variable_3,cp_loop_&
-     &variable_4,cp_loop_variable_5,cp_loop_variable_6
-
-
-! floats 'F'
-    double precision, dimension(:), allocatable, save :: theArgFStack
-    integer, save :: theArgFStackoffset=0, theArgFStackSize=0
-! integers 'I'
-    integer, dimension(:), allocatable, save :: theArgIStack
-    integer, save :: theArgIStackoffset=0, theArgIStackSize=0
-! booleans 'B'
-    logical, dimension(:), allocatable, save :: theArgBStack
-    integer, save :: theArgBStackoffset=0, theArgBStackSize=0
-! strings 'S'
-    character*(80), dimension(:), allocatable, save :: theArgSStack
-    integer, save :: theArgSStackoffset=0, theArgSStackSize=0
-
-    type(modeType) :: our_orig_mode
-
-! external C function used in inlined code
     integer iaddr
     external iaddr
 !
 !       **** Statements ****
 !
 
-    if (our_rev_mode%arg_store) then
-! store arguments
-    end if
-    if (our_rev_mode%arg_restore) then
-! restore arguments
-    end if
-    if (our_rev_mode%plain) then
-      our_orig_mode=our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
+   if (our_rev_mode%plain) then
 ! original function
  2      CONTINUE
   GO TO 3
@@ -561,17 +388,8 @@ CONTAINS
  12     CONTINUE
   GO TO 1
  1      CONTINUE
-
-! original function end
-      our_rev_mode=our_orig_mode
     end if
     if (our_rev_mode%tape) then
-!            print*, " tape       ", our_rev_mode
-      our_rev_mode%arg_store=.TRUE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.TRUE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.FALSE.
 ! taping
  15     CONTINUE
   GO TO 16
@@ -633,21 +451,8 @@ CONTAINS
  30     CONTINUE
   GO TO 14
  14     CONTINUE
-
-! taping end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.TRUE.
     end if
     if (our_rev_mode%adjoint) then
-!            print*, " adjoint    ", our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
 ! adjoint
   integer_tape_pointer = integer_tape_pointer-1
   OpenAD_Symbol_29 = integer_tape(integer_tape_pointer)
@@ -668,13 +473,6 @@ CONTAINS
     integer_tape_pointer = integer_tape_pointer-1
     OpenAD_Symbol_29 = integer_tape(integer_tape_pointer)
   END DO
-
-! adjoint end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
     end if
   end subroutine ADDX_ELEM
 !#########################################################
@@ -688,7 +486,6 @@ CONTAINS
 
     use OAD_tape
     use OAD_rev
-    use OAD_cp
 
 ! original arguments get inserted before version
 !         ! and declared here together with all local variables
@@ -730,96 +527,21 @@ CONTAINS
   type(active) :: OpenAD_prp_0
 
 
-! checkpointing stacks and offsets
-    integer :: cp_loop_variable_1,cp_loop_variable_2,cp_loop_variable_3,cp_loop_&
-     &variable_4,cp_loop_variable_5,cp_loop_variable_6
-
-
-! floats 'F'
-    double precision, dimension(:), allocatable, save :: theArgFStack
-    integer, save :: theArgFStackoffset=0, theArgFStackSize=0
-! integers 'I'
-    integer, dimension(:), allocatable, save :: theArgIStack
-    integer, save :: theArgIStackoffset=0, theArgIStackSize=0
-! booleans 'B'
-    logical, dimension(:), allocatable, save :: theArgBStack
-    integer, save :: theArgBStackoffset=0, theArgBStackSize=0
-! strings 'S'
-    character*(80), dimension(:), allocatable, save :: theArgSStack
-    integer, save :: theArgSStackoffset=0, theArgSStackSize=0
-
-    type(modeType) :: our_orig_mode
-
-! external C function used in inlined code
     integer iaddr
     external iaddr
 !
 !       **** Statements ****
 !
 
-    if (our_rev_mode%arg_store) then
-! store arguments
-  call cp_store_int_scalar(N,theArgIStack,theArgIStackoffset,theArgIStackSize)
-  call cp_store_int_scalar(INNZ,theArgIStack,theArgIStackoffset,theArgIStackSize&
-     &)
-
-  call cp_store_real_scalar(X,theArgFStack,theArgFStackoffset,theArgFStackSize)
-  call cp_store_int_scalar(DIAG,theArgIStack,theArgIStackoffset,theArgIStackSize&
-     &)
-
-  call cp_store_int_vector(IROW_INDEX,size(IROW_INDEX),theArgIStack,theArgIStack&
-     &offset,theArgIStackSize)
-
-  call cp_store_int_vector(ICOL_INDEX,size(ICOL_INDEX),theArgIStack,theArgIStack&
-     &offset,theArgIStackSize)
-
-  call cp_store_real_vector(IVALUES,size(IVALUES),theArgFStack,theArgFStackoffse&
-     &t,theArgFStackSize)
-
-    end if
-    if (our_rev_mode%arg_restore) then
-! restore arguments
-  do cp_loop_variable_1 = ubound(IVALUES,1),lbound(IVALUES,1),-1
-  IVALUES(cp_loop_variable_1)%v = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  end do
-  do cp_loop_variable_1 = ubound(ICOL_INDEX,1),lbound(ICOL_INDEX,1),-1
-  ICOL_INDEX(cp_loop_variable_1) = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  end do
-  do cp_loop_variable_1 = ubound(IROW_INDEX,1),lbound(IROW_INDEX,1),-1
-  IROW_INDEX(cp_loop_variable_1) = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  end do
-  DIAG = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  X = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  INNZ = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  N = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-    end if
-    if (our_rev_mode%plain) then
-      our_orig_mode=our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
+   if (our_rev_mode%plain) then
 ! original function
   DO I = 1, INNZ, 1
     IF(DIAG .eq.(ICOL_INDEX(I) - IROW_INDEX(I))) THEN
       IVALUES(INT(I))%v = (IVALUES(I)%v+X)
     ENDIF
   END DO
-
-! original function end
-      our_rev_mode=our_orig_mode
     end if
     if (our_rev_mode%tape) then
-!            print*, " tape       ", our_rev_mode
-      our_rev_mode%arg_store=.TRUE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.TRUE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.FALSE.
 ! taping
   OpenAD_Symbol_39 = 0_w2f__i8
   DO I = 1,INNZ,1
@@ -839,21 +561,8 @@ CONTAINS
   END DO
   integer_tape(integer_tape_pointer) = OpenAD_Symbol_39
   integer_tape_pointer = integer_tape_pointer+1
-
-! taping end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.TRUE.
     end if
     if (our_rev_mode%adjoint) then
-!            print*, " adjoint    ", our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
 ! adjoint
   integer_tape_pointer = integer_tape_pointer-1
   OpenAD_Symbol_36 = integer_tape(integer_tape_pointer)
@@ -871,13 +580,6 @@ CONTAINS
     ENDIF
     OpenAD_Symbol_37 = INT(OpenAD_Symbol_37)+1
   END DO
-
-! adjoint end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
     end if
   end subroutine ADDX_DIAGONAL
 !#########################################################
@@ -889,7 +591,6 @@ CONTAINS
   SUBROUTINE GETDIAG(ROW, COL, DIAG)
     use OAD_tape
     use OAD_rev
-    use OAD_cp
 
 ! original arguments get inserted before version
 !         ! and declared here together with all local variables
@@ -905,80 +606,22 @@ CONTAINS
   INTEGER(w2f__i4) DIAG
 
 
-! checkpointing stacks and offsets
-    integer :: cp_loop_variable_1,cp_loop_variable_2,cp_loop_variable_3,cp_loop_&
-     &variable_4,cp_loop_variable_5,cp_loop_variable_6
-
-
-! floats 'F'
-    double precision, dimension(:), allocatable, save :: theArgFStack
-    integer, save :: theArgFStackoffset=0, theArgFStackSize=0
-! integers 'I'
-    integer, dimension(:), allocatable, save :: theArgIStack
-    integer, save :: theArgIStackoffset=0, theArgIStackSize=0
-! booleans 'B'
-    logical, dimension(:), allocatable, save :: theArgBStack
-    integer, save :: theArgBStackoffset=0, theArgBStackSize=0
-! strings 'S'
-    character*(80), dimension(:), allocatable, save :: theArgSStack
-    integer, save :: theArgSStackoffset=0, theArgSStackSize=0
-
-    type(modeType) :: our_orig_mode
-
-! external C function used in inlined code
     integer iaddr
     external iaddr
 !
 !       **** Statements ****
 !
 
-    if (our_rev_mode%arg_store) then
-! store arguments
-    end if
-    if (our_rev_mode%arg_restore) then
-! restore arguments
-    end if
-    if (our_rev_mode%plain) then
-      our_orig_mode=our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
+   if (our_rev_mode%plain) then
 ! original function
   DIAG = (COL - ROW)
-
-! original function end
-      our_rev_mode=our_orig_mode
     end if
     if (our_rev_mode%tape) then
-!            print*, " tape       ", our_rev_mode
-      our_rev_mode%arg_store=.TRUE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.TRUE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.FALSE.
 ! taping
   DIAG = (COL - ROW)
-
-! taping end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.TRUE.
     end if
     if (our_rev_mode%adjoint) then
-!            print*, " adjoint    ", our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
 ! adjoint
-
-! adjoint end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
     end if
   end subroutine GETDIAG
 !#########################################################
@@ -990,7 +633,6 @@ CONTAINS
   SUBROUTINE FIRSTELM(DIAG, ROW, COL)
     use OAD_tape
     use OAD_rev
-    use OAD_cp
 
 ! original arguments get inserted before version
 !         ! and declared here together with all local variables
@@ -1021,47 +663,13 @@ CONTAINS
   INTEGER(w2f__i4) COL
 
 
-! checkpointing stacks and offsets
-    integer :: cp_loop_variable_1,cp_loop_variable_2,cp_loop_variable_3,cp_loop_&
-     &variable_4,cp_loop_variable_5,cp_loop_variable_6
-
-
-! floats 'F'
-    double precision, dimension(:), allocatable, save :: theArgFStack
-    integer, save :: theArgFStackoffset=0, theArgFStackSize=0
-! integers 'I'
-    integer, dimension(:), allocatable, save :: theArgIStack
-    integer, save :: theArgIStackoffset=0, theArgIStackSize=0
-! booleans 'B'
-    logical, dimension(:), allocatable, save :: theArgBStack
-    integer, save :: theArgBStackoffset=0, theArgBStackSize=0
-! strings 'S'
-    character*(80), dimension(:), allocatable, save :: theArgSStack
-    integer, save :: theArgSStackoffset=0, theArgSStackSize=0
-
-    type(modeType) :: our_orig_mode
-
-! external C function used in inlined code
     integer iaddr
     external iaddr
 !
 !       **** Statements ****
 !
 
-    if (our_rev_mode%arg_store) then
-! store arguments
-  call cp_store_int_scalar(DIAG,theArgIStack,theArgIStackoffset,theArgIStackSize&
-     &)
-
-    end if
-    if (our_rev_mode%arg_restore) then
-! restore arguments
-  DIAG = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-    end if
-    if (our_rev_mode%plain) then
-      our_orig_mode=our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
+   if (our_rev_mode%plain) then
 ! original function
   IF(DIAG .LT. 0) THEN
     ROW = (1 - DIAG)
@@ -1075,17 +683,8 @@ CONTAINS
       COL = (DIAG + 1)
     ENDIF
   ENDIF
-
-! original function end
-      our_rev_mode=our_orig_mode
     end if
     if (our_rev_mode%tape) then
-!            print*, " tape       ", our_rev_mode
-      our_rev_mode%arg_store=.TRUE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.TRUE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.FALSE.
 ! taping
   IF(DIAG .LT. 0) THEN
     ROW = (1 - DIAG)
@@ -1111,21 +710,8 @@ CONTAINS
     integer_tape(integer_tape_pointer) = OpenAD_Symbol_53
     integer_tape_pointer = integer_tape_pointer+1
   ENDIF
-
-! taping end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.TRUE.
     end if
     if (our_rev_mode%adjoint) then
-!            print*, " adjoint    ", our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
 ! adjoint
   integer_tape_pointer = integer_tape_pointer-1
   OpenAD_Symbol_48 = integer_tape(integer_tape_pointer)
@@ -1136,13 +722,6 @@ CONTAINS
     IF(OpenAD_Symbol_49 .ne. 0) THEN
     ENDIF
   ENDIF
-
-! adjoint end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
     end if
   end subroutine FIRSTELM
 !#########################################################
@@ -1154,7 +733,6 @@ CONTAINS
   SUBROUTINE NOELEMS(DIAG, OROWS, OCOLS, N)
     use OAD_tape
     use OAD_rev
-    use OAD_cp
 
 ! original arguments get inserted before version
 !         ! and declared here together with all local variables
@@ -1191,42 +769,13 @@ CONTAINS
   INTEGER(w2f__i4) ROW
 
 
-! checkpointing stacks and offsets
-    integer :: cp_loop_variable_1,cp_loop_variable_2,cp_loop_variable_3,cp_loop_&
-     &variable_4,cp_loop_variable_5,cp_loop_variable_6
-
-
-! floats 'F'
-    double precision, dimension(:), allocatable, save :: theArgFStack
-    integer, save :: theArgFStackoffset=0, theArgFStackSize=0
-! integers 'I'
-    integer, dimension(:), allocatable, save :: theArgIStack
-    integer, save :: theArgIStackoffset=0, theArgIStackSize=0
-! booleans 'B'
-    logical, dimension(:), allocatable, save :: theArgBStack
-    integer, save :: theArgBStackoffset=0, theArgBStackSize=0
-! strings 'S'
-    character*(80), dimension(:), allocatable, save :: theArgSStack
-    integer, save :: theArgSStackoffset=0, theArgSStackSize=0
-
-    type(modeType) :: our_orig_mode
-
-! external C function used in inlined code
     integer iaddr
     external iaddr
 !
 !       **** Statements ****
 !
 
-    if (our_rev_mode%arg_store) then
-! store arguments
-    end if
-    if (our_rev_mode%arg_restore) then
-! restore arguments
-    end if
-    if (our_rev_mode%plain) then
-      our_orig_mode=our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
+   if (our_rev_mode%plain) then
 ! original function
   CALL FIRSTELM(DIAG,ROW,COL)
   IF(DIAG .LT. 0) THEN
@@ -1238,17 +787,8 @@ CONTAINS
       N = (OCOLS - COL + 1)
     ENDIF
   ENDIF
-
-! original function end
-      our_rev_mode=our_orig_mode
     end if
     if (our_rev_mode%tape) then
-!            print*, " tape       ", our_rev_mode
-      our_rev_mode%arg_store=.TRUE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.TRUE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.FALSE.
 ! taping
   CALL FIRSTELM(DIAG,ROW,COL)
   IF(DIAG .LT. 0) THEN
@@ -1272,21 +812,8 @@ CONTAINS
     integer_tape(integer_tape_pointer) = OpenAD_Symbol_65
     integer_tape_pointer = integer_tape_pointer+1
   ENDIF
-
-! taping end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.TRUE.
     end if
     if (our_rev_mode%adjoint) then
-!            print*, " adjoint    ", our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
 ! adjoint
   integer_tape_pointer = integer_tape_pointer-1
   OpenAD_Symbol_60 = integer_tape(integer_tape_pointer)
@@ -1298,13 +825,6 @@ CONTAINS
     ENDIF
   ENDIF
   CALL FIRSTELM(DIAG,ROW,COL)
-
-! adjoint end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
     end if
   end subroutine NOELEMS
 !#########################################################
@@ -1316,7 +836,6 @@ CONTAINS
   SUBROUTINE MYRESHAPE_2_1(AMATRIX, BMATRIX)
     use OAD_tape
     use OAD_rev
-    use OAD_cp
 
 ! original arguments get inserted before version
 !         ! and declared here together with all local variables
@@ -1352,42 +871,13 @@ CONTAINS
   INTEGER(w2f__i4) K
 
 
-! checkpointing stacks and offsets
-    integer :: cp_loop_variable_1,cp_loop_variable_2,cp_loop_variable_3,cp_loop_&
-     &variable_4,cp_loop_variable_5,cp_loop_variable_6
-
-
-! floats 'F'
-    double precision, dimension(:), allocatable, save :: theArgFStack
-    integer, save :: theArgFStackoffset=0, theArgFStackSize=0
-! integers 'I'
-    integer, dimension(:), allocatable, save :: theArgIStack
-    integer, save :: theArgIStackoffset=0, theArgIStackSize=0
-! booleans 'B'
-    logical, dimension(:), allocatable, save :: theArgBStack
-    integer, save :: theArgBStackoffset=0, theArgBStackSize=0
-! strings 'S'
-    character*(80), dimension(:), allocatable, save :: theArgSStack
-    integer, save :: theArgSStackoffset=0, theArgSStackSize=0
-
-    type(modeType) :: our_orig_mode
-
-! external C function used in inlined code
     integer iaddr
     external iaddr
 !
 !       **** Statements ****
 !
 
-    if (our_rev_mode%arg_store) then
-! store arguments
-    end if
-    if (our_rev_mode%arg_restore) then
-! restore arguments
-    end if
-    if (our_rev_mode%plain) then
-      our_orig_mode=our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
+   if (our_rev_mode%plain) then
 ! original function
   K = 0
   DO J = 1, SIZE(AMATRIX, 2), 1
@@ -1396,17 +886,8 @@ CONTAINS
       BMATRIX(INT(K)) = AMATRIX(I, J)
     END DO
   END DO
-
-! original function end
-      our_rev_mode=our_orig_mode
     end if
     if (our_rev_mode%tape) then
-!            print*, " tape       ", our_rev_mode
-      our_rev_mode%arg_store=.TRUE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.TRUE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.FALSE.
 ! taping
   K = 0
   OpenAD_Symbol_76 = 0_w2f__i8
@@ -1423,21 +904,8 @@ CONTAINS
   END DO
   integer_tape(integer_tape_pointer) = OpenAD_Symbol_76
   integer_tape_pointer = integer_tape_pointer+1
-
-! taping end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.TRUE.
     end if
     if (our_rev_mode%adjoint) then
-!            print*, " adjoint    ", our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
 ! adjoint
   integer_tape_pointer = integer_tape_pointer-1
   OpenAD_Symbol_72 = integer_tape(integer_tape_pointer)
@@ -1451,13 +919,6 @@ CONTAINS
     END DO
     OpenAD_Symbol_73 = INT(OpenAD_Symbol_73) + 1
   END DO
-
-! adjoint end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
     end if
   end subroutine MYRESHAPE_2_1
 !#########################################################
@@ -1469,7 +930,6 @@ CONTAINS
   SUBROUTINE MYRESHAPE_1_2(AMATRIX, BMATRIX)
     use OAD_tape
     use OAD_rev
-    use OAD_cp
 
 ! original arguments get inserted before version
 !         ! and declared here together with all local variables
@@ -1505,42 +965,13 @@ CONTAINS
   INTEGER(w2f__i4) K
 
 
-! checkpointing stacks and offsets
-    integer :: cp_loop_variable_1,cp_loop_variable_2,cp_loop_variable_3,cp_loop_&
-     &variable_4,cp_loop_variable_5,cp_loop_variable_6
-
-
-! floats 'F'
-    double precision, dimension(:), allocatable, save :: theArgFStack
-    integer, save :: theArgFStackoffset=0, theArgFStackSize=0
-! integers 'I'
-    integer, dimension(:), allocatable, save :: theArgIStack
-    integer, save :: theArgIStackoffset=0, theArgIStackSize=0
-! booleans 'B'
-    logical, dimension(:), allocatable, save :: theArgBStack
-    integer, save :: theArgBStackoffset=0, theArgBStackSize=0
-! strings 'S'
-    character*(80), dimension(:), allocatable, save :: theArgSStack
-    integer, save :: theArgSStackoffset=0, theArgSStackSize=0
-
-    type(modeType) :: our_orig_mode
-
-! external C function used in inlined code
     integer iaddr
     external iaddr
 !
 !       **** Statements ****
 !
 
-    if (our_rev_mode%arg_store) then
-! store arguments
-    end if
-    if (our_rev_mode%arg_restore) then
-! restore arguments
-    end if
-    if (our_rev_mode%plain) then
-      our_orig_mode=our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
+   if (our_rev_mode%plain) then
 ! original function
   K = 0
   DO J = 1, SIZE(BMATRIX, 2), 1
@@ -1549,17 +980,8 @@ CONTAINS
       BMATRIX(INT(I), INT(J)) = AMATRIX(K)
     END DO
   END DO
-
-! original function end
-      our_rev_mode=our_orig_mode
     end if
     if (our_rev_mode%tape) then
-!            print*, " tape       ", our_rev_mode
-      our_rev_mode%arg_store=.TRUE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.TRUE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.FALSE.
 ! taping
   K = 0
   OpenAD_Symbol_88 = 0_w2f__i8
@@ -1576,21 +998,8 @@ CONTAINS
   END DO
   integer_tape(integer_tape_pointer) = OpenAD_Symbol_88
   integer_tape_pointer = integer_tape_pointer+1
-
-! taping end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.TRUE.
     end if
     if (our_rev_mode%adjoint) then
-!            print*, " adjoint    ", our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
 ! adjoint
   integer_tape_pointer = integer_tape_pointer-1
   OpenAD_Symbol_84 = integer_tape(integer_tape_pointer)
@@ -1604,13 +1013,6 @@ CONTAINS
     END DO
     OpenAD_Symbol_85 = INT(OpenAD_Symbol_85) + 1
   END DO
-
-! adjoint end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
     end if
   end subroutine MYRESHAPE_1_2
 !#########################################################
@@ -1622,7 +1024,6 @@ CONTAINS
   SUBROUTINE MYRESHAPE_3_1(AMATRIX, BMATRIX)
     use OAD_tape
     use OAD_rev
-    use OAD_cp
 
 ! original arguments get inserted before version
 !         ! and declared here together with all local variables
@@ -1669,60 +1070,13 @@ CONTAINS
   INTEGER(w2f__i4) OpenAD_Symbol_901
 
 
-! checkpointing stacks and offsets
-    integer :: cp_loop_variable_1,cp_loop_variable_2,cp_loop_variable_3,cp_loop_&
-     &variable_4,cp_loop_variable_5,cp_loop_variable_6
-
-
-! floats 'F'
-    double precision, dimension(:), allocatable, save :: theArgFStack
-    integer, save :: theArgFStackoffset=0, theArgFStackSize=0
-! integers 'I'
-    integer, dimension(:), allocatable, save :: theArgIStack
-    integer, save :: theArgIStackoffset=0, theArgIStackSize=0
-! booleans 'B'
-    logical, dimension(:), allocatable, save :: theArgBStack
-    integer, save :: theArgBStackoffset=0, theArgBStackSize=0
-! strings 'S'
-    character*(80), dimension(:), allocatable, save :: theArgSStack
-    integer, save :: theArgSStackoffset=0, theArgSStackSize=0
-
-    type(modeType) :: our_orig_mode
-
-! external C function used in inlined code
     integer iaddr
     external iaddr
 !
 !       **** Statements ****
 !
 
-    if (our_rev_mode%arg_store) then
-! store arguments
-  do cp_loop_variable_3 = lbound(AMATRIX,3),ubound(AMATRIX,3)
-  do cp_loop_variable_2 = lbound(AMATRIX,2),ubound(AMATRIX,2)
-  call cp_store_real_vector(AMATRIX(:,cp_loop_variable_2,cp_loop_variable_3),siz&
-     &e(AMATRIX(:,cp_loop_variable_2,cp_loop_variable_3)),theArgFStack,theArgFSt&
-     &ackoffset,theArgFStackSize)
-
-  end do
-  end do
-    end if
-    if (our_rev_mode%arg_restore) then
-! restore arguments
-  do cp_loop_variable_3 = ubound(AMATRIX,3),lbound(AMATRIX,3),-1
-  do cp_loop_variable_2 = ubound(AMATRIX,2),lbound(AMATRIX,2),-1
-  do cp_loop_variable_1 = ubound(AMATRIX,1),lbound(AMATRIX,1),-1
-  AMATRIX(cp_loop_variable_1,cp_loop_variable_2,cp_loop_variable_3)%v = theArgFS&
-     &tack(theArgFStackoffset)
-
-  theArgFStackoffset = theArgFStackoffset-1
-  end do
-  end do
-  end do
-    end if
-    if (our_rev_mode%plain) then
-      our_orig_mode=our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
+   if (our_rev_mode%plain) then
 ! original function
   L = 0
   DO K = 1, SIZE(AMATRIX, 3), 1
@@ -1733,17 +1087,8 @@ CONTAINS
       END DO
     END DO
   END DO
-
-! original function end
-      our_rev_mode=our_orig_mode
     end if
     if (our_rev_mode%tape) then
-!            print*, " tape       ", our_rev_mode
-      our_rev_mode%arg_store=.TRUE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.TRUE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.FALSE.
 ! taping
   L = 0
   OpenAD_Symbol_102 = 0_w2f__i8
@@ -1774,21 +1119,8 @@ CONTAINS
   END DO
   integer_tape(integer_tape_pointer) = OpenAD_Symbol_102
   integer_tape_pointer = integer_tape_pointer+1
-
-! taping end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.TRUE.
     end if
     if (our_rev_mode%adjoint) then
-!            print*, " adjoint    ", our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
 ! adjoint
   integer_tape_pointer = integer_tape_pointer-1
   OpenAD_Symbol_96 = integer_tape(integer_tape_pointer)
@@ -1821,13 +1153,6 @@ CONTAINS
     END DO
     OpenAD_Symbol_97 = INT(OpenAD_Symbol_97)+1
   END DO
-
-! adjoint end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
     end if
   end subroutine MYRESHAPE_3_1
 !#########################################################
@@ -1839,7 +1164,6 @@ CONTAINS
   SUBROUTINE MYRESHAPE_1_3(AMATRIX, BMATRIX)
     use OAD_tape
     use OAD_rev
-    use OAD_cp
 
 ! original arguments get inserted before version
 !         ! and declared here together with all local variables
@@ -1886,67 +1210,13 @@ CONTAINS
   INTEGER(w2f__i4) OpenAD_Symbol_905
 
 
-! checkpointing stacks and offsets
-    integer :: cp_loop_variable_1,cp_loop_variable_2,cp_loop_variable_3,cp_loop_&
-     &variable_4,cp_loop_variable_5,cp_loop_variable_6
-
-
-! floats 'F'
-    double precision, dimension(:), allocatable, save :: theArgFStack
-    integer, save :: theArgFStackoffset=0, theArgFStackSize=0
-! integers 'I'
-    integer, dimension(:), allocatable, save :: theArgIStack
-    integer, save :: theArgIStackoffset=0, theArgIStackSize=0
-! booleans 'B'
-    logical, dimension(:), allocatable, save :: theArgBStack
-    integer, save :: theArgBStackoffset=0, theArgBStackSize=0
-! strings 'S'
-    character*(80), dimension(:), allocatable, save :: theArgSStack
-    integer, save :: theArgSStackoffset=0, theArgSStackSize=0
-
-    type(modeType) :: our_orig_mode
-
-! external C function used in inlined code
     integer iaddr
     external iaddr
 !
 !       **** Statements ****
 !
 
-    if (our_rev_mode%arg_store) then
-! store arguments
-  do cp_loop_variable_3 = lbound(BMATRIX,3),ubound(BMATRIX,3)
-  do cp_loop_variable_2 = lbound(BMATRIX,2),ubound(BMATRIX,2)
-  call cp_store_real_vector(BMATRIX(:,cp_loop_variable_2,cp_loop_variable_3),siz&
-     &e(BMATRIX(:,cp_loop_variable_2,cp_loop_variable_3)),theArgFStack,theArgFSt&
-     &ackoffset,theArgFStackSize)
-
-  end do
-  end do
-  call cp_store_real_vector(AMATRIX,size(AMATRIX),theArgFStack,theArgFStackoffse&
-     &t,theArgFStackSize)
-
-    end if
-    if (our_rev_mode%arg_restore) then
-! restore arguments
-  do cp_loop_variable_1 = ubound(AMATRIX,1),lbound(AMATRIX,1),-1
-  AMATRIX(cp_loop_variable_1)%v = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  end do
-  do cp_loop_variable_3 = ubound(BMATRIX,3),lbound(BMATRIX,3),-1
-  do cp_loop_variable_2 = ubound(BMATRIX,2),lbound(BMATRIX,2),-1
-  do cp_loop_variable_1 = ubound(BMATRIX,1),lbound(BMATRIX,1),-1
-  BMATRIX(cp_loop_variable_1,cp_loop_variable_2,cp_loop_variable_3)%v = theArgFS&
-     &tack(theArgFStackoffset)
-
-  theArgFStackoffset = theArgFStackoffset-1
-  end do
-  end do
-  end do
-    end if
-    if (our_rev_mode%plain) then
-      our_orig_mode=our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
+   if (our_rev_mode%plain) then
 ! original function
   L = 0
   DO K = 1, SIZE(BMATRIX, 3), 1
@@ -1957,17 +1227,8 @@ CONTAINS
       END DO
     END DO
   END DO
-
-! original function end
-      our_rev_mode=our_orig_mode
     end if
     if (our_rev_mode%tape) then
-!            print*, " tape       ", our_rev_mode
-      our_rev_mode%arg_store=.TRUE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.TRUE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.FALSE.
 ! taping
   L = 0
   OpenAD_Symbol_120 = 0_w2f__i8
@@ -1998,21 +1259,8 @@ CONTAINS
   END DO
   integer_tape(integer_tape_pointer) = OpenAD_Symbol_120
   integer_tape_pointer = integer_tape_pointer+1
-
-! taping end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.TRUE.
     end if
     if (our_rev_mode%adjoint) then
-!            print*, " adjoint    ", our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
 ! adjoint
   integer_tape_pointer = integer_tape_pointer-1
   OpenAD_Symbol_114 = integer_tape(integer_tape_pointer)
@@ -2044,13 +1292,6 @@ CONTAINS
     END DO
     OpenAD_Symbol_115 = INT(OpenAD_Symbol_115)+1
   END DO
-
-! adjoint end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
     end if
   end subroutine MYRESHAPE_1_3
 !#########################################################
@@ -2062,7 +1303,6 @@ CONTAINS
   SUBROUTINE MYRESHAPE_4_1(AMATRIX, BMATRIX)
     use OAD_tape
     use OAD_rev
-    use OAD_cp
 
 ! original arguments get inserted before version
 !         ! and declared here together with all local variables
@@ -2112,42 +1352,13 @@ CONTAINS
   INTEGER(w2f__i4) M
 
 
-! checkpointing stacks and offsets
-    integer :: cp_loop_variable_1,cp_loop_variable_2,cp_loop_variable_3,cp_loop_&
-     &variable_4,cp_loop_variable_5,cp_loop_variable_6
-
-
-! floats 'F'
-    double precision, dimension(:), allocatable, save :: theArgFStack
-    integer, save :: theArgFStackoffset=0, theArgFStackSize=0
-! integers 'I'
-    integer, dimension(:), allocatable, save :: theArgIStack
-    integer, save :: theArgIStackoffset=0, theArgIStackSize=0
-! booleans 'B'
-    logical, dimension(:), allocatable, save :: theArgBStack
-    integer, save :: theArgBStackoffset=0, theArgBStackSize=0
-! strings 'S'
-    character*(80), dimension(:), allocatable, save :: theArgSStack
-    integer, save :: theArgSStackoffset=0, theArgSStackSize=0
-
-    type(modeType) :: our_orig_mode
-
-! external C function used in inlined code
     integer iaddr
     external iaddr
 !
 !       **** Statements ****
 !
 
-    if (our_rev_mode%arg_store) then
-! store arguments
-    end if
-    if (our_rev_mode%arg_restore) then
-! restore arguments
-    end if
-    if (our_rev_mode%plain) then
-      our_orig_mode=our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
+   if (our_rev_mode%plain) then
 ! original function
   M = 0
   DO L = 1, SIZE(AMATRIX, 4), 1
@@ -2160,17 +1371,8 @@ CONTAINS
       END DO
     END DO
   END DO
-
-! original function end
-      our_rev_mode=our_orig_mode
     end if
     if (our_rev_mode%tape) then
-!            print*, " tape       ", our_rev_mode
-      our_rev_mode%arg_store=.TRUE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.TRUE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.FALSE.
 ! taping
   M = 0
   OpenAD_Symbol_140 = 0_w2f__i8
@@ -2199,21 +1401,8 @@ CONTAINS
   END DO
   integer_tape(integer_tape_pointer) = OpenAD_Symbol_140
   integer_tape_pointer = integer_tape_pointer+1
-
-! taping end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.TRUE.
     end if
     if (our_rev_mode%adjoint) then
-!            print*, " adjoint    ", our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
 ! adjoint
   integer_tape_pointer = integer_tape_pointer-1
   OpenAD_Symbol_132 = integer_tape(integer_tape_pointer)
@@ -2239,13 +1428,6 @@ CONTAINS
     END DO
     OpenAD_Symbol_133 = INT(OpenAD_Symbol_133) + 1
   END DO
-
-! adjoint end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
     end if
   end subroutine MYRESHAPE_4_1
 !#########################################################
@@ -2257,7 +1439,6 @@ CONTAINS
   SUBROUTINE MYRESHAPE_1_4(AMATRIX, BMATRIX)
     use OAD_tape
     use OAD_rev
-    use OAD_cp
 
 ! original arguments get inserted before version
 !         ! and declared here together with all local variables
@@ -2312,71 +1493,13 @@ CONTAINS
   INTEGER(w2f__i4) OpenAD_Symbol_910
 
 
-! checkpointing stacks and offsets
-    integer :: cp_loop_variable_1,cp_loop_variable_2,cp_loop_variable_3,cp_loop_&
-     &variable_4,cp_loop_variable_5,cp_loop_variable_6
-
-
-! floats 'F'
-    double precision, dimension(:), allocatable, save :: theArgFStack
-    integer, save :: theArgFStackoffset=0, theArgFStackSize=0
-! integers 'I'
-    integer, dimension(:), allocatable, save :: theArgIStack
-    integer, save :: theArgIStackoffset=0, theArgIStackSize=0
-! booleans 'B'
-    logical, dimension(:), allocatable, save :: theArgBStack
-    integer, save :: theArgBStackoffset=0, theArgBStackSize=0
-! strings 'S'
-    character*(80), dimension(:), allocatable, save :: theArgSStack
-    integer, save :: theArgSStackoffset=0, theArgSStackSize=0
-
-    type(modeType) :: our_orig_mode
-
-! external C function used in inlined code
     integer iaddr
     external iaddr
 !
 !       **** Statements ****
 !
 
-    if (our_rev_mode%arg_store) then
-! store arguments
-  do cp_loop_variable_4 = lbound(BMATRIX,4),ubound(BMATRIX,4)
-  do cp_loop_variable_3 = lbound(BMATRIX,3),ubound(BMATRIX,3)
-  do cp_loop_variable_2 = lbound(BMATRIX,2),ubound(BMATRIX,2)
-  call cp_store_real_vector(BMATRIX(:,cp_loop_variable_2,cp_loop_variable_3,cp_l&
-     &oop_variable_4),size(BMATRIX(:,cp_loop_variable_2,cp_loop_variable_3,cp_lo&
-     &op_variable_4)),theArgFStack,theArgFStackoffset,theArgFStackSize)
-
-  end do
-  end do
-  end do
-  call cp_store_real_vector(AMATRIX,size(AMATRIX),theArgFStack,theArgFStackoffse&
-     &t,theArgFStackSize)
-
-    end if
-    if (our_rev_mode%arg_restore) then
-! restore arguments
-  do cp_loop_variable_1 = ubound(AMATRIX,1),lbound(AMATRIX,1),-1
-  AMATRIX(cp_loop_variable_1)%v = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  end do
-  do cp_loop_variable_4 = ubound(BMATRIX,4),lbound(BMATRIX,4),-1
-  do cp_loop_variable_3 = ubound(BMATRIX,3),lbound(BMATRIX,3),-1
-  do cp_loop_variable_2 = ubound(BMATRIX,2),lbound(BMATRIX,2),-1
-  do cp_loop_variable_1 = ubound(BMATRIX,1),lbound(BMATRIX,1),-1
-  BMATRIX(cp_loop_variable_1,cp_loop_variable_2,cp_loop_variable_3,cp_loop_varia&
-     &ble_4)%v = theArgFStack(theArgFStackoffset)
-
-  theArgFStackoffset = theArgFStackoffset-1
-  end do
-  end do
-  end do
-  end do
-    end if
-    if (our_rev_mode%plain) then
-      our_orig_mode=our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
+   if (our_rev_mode%plain) then
 ! original function
   M = 0
   DO L = 1, SIZE(BMATRIX, 4), 1
@@ -2389,17 +1512,8 @@ CONTAINS
       END DO
     END DO
   END DO
-
-! original function end
-      our_rev_mode=our_orig_mode
     end if
     if (our_rev_mode%tape) then
-!            print*, " tape       ", our_rev_mode
-      our_rev_mode%arg_store=.TRUE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.TRUE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.FALSE.
 ! taping
   M = 0
   OpenAD_Symbol_164 = 0_w2f__i8
@@ -2438,21 +1552,8 @@ CONTAINS
   END DO
   integer_tape(integer_tape_pointer) = OpenAD_Symbol_164
   integer_tape_pointer = integer_tape_pointer+1
-
-! taping end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.TRUE.
     end if
     if (our_rev_mode%adjoint) then
-!            print*, " adjoint    ", our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
 ! adjoint
   integer_tape_pointer = integer_tape_pointer-1
   OpenAD_Symbol_156 = integer_tape(integer_tape_pointer)
@@ -2494,13 +1595,6 @@ CONTAINS
     END DO
     OpenAD_Symbol_157 = INT(OpenAD_Symbol_157)+1
   END DO
-
-! adjoint end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
     end if
   end subroutine MYRESHAPE_1_4
 !#########################################################
@@ -2515,7 +1609,6 @@ CONTAINS
 
     use OAD_tape
     use OAD_rev
-    use OAD_cp
 
 ! original arguments get inserted before version
 !         ! and declared here together with all local variables
@@ -2586,118 +1679,13 @@ CONTAINS
   type(active) :: OpenAD_prp_2
 
 
-! checkpointing stacks and offsets
-    integer :: cp_loop_variable_1,cp_loop_variable_2,cp_loop_variable_3,cp_loop_&
-     &variable_4,cp_loop_variable_5,cp_loop_variable_6
-
-
-! floats 'F'
-    double precision, dimension(:), allocatable, save :: theArgFStack
-    integer, save :: theArgFStackoffset=0, theArgFStackSize=0
-! integers 'I'
-    integer, dimension(:), allocatable, save :: theArgIStack
-    integer, save :: theArgIStackoffset=0, theArgIStackSize=0
-! booleans 'B'
-    logical, dimension(:), allocatable, save :: theArgBStack
-    integer, save :: theArgBStackoffset=0, theArgBStackSize=0
-! strings 'S'
-    character*(80), dimension(:), allocatable, save :: theArgSStack
-    integer, save :: theArgSStackoffset=0, theArgSStackSize=0
-
-    type(modeType) :: our_orig_mode
-
-! external C function used in inlined code
     integer iaddr
     external iaddr
 !
 !       **** Statements ****
 !
 
-    if (our_rev_mode%arg_store) then
-! store arguments
-  call cp_store_int_scalar(N,theArgIStack,theArgIStackoffset,theArgIStackSize)
-  call cp_store_int_scalar(ANNZ,theArgIStack,theArgIStackoffset,theArgIStackSize&
-     &)
-
-  call cp_store_int_scalar(RNNZ,theArgIStack,theArgIStackoffset,theArgIStackSize&
-     &)
-
-  call cp_store_int_vector(AROW_INDEX,size(AROW_INDEX),theArgIStack,theArgIStack&
-     &offset,theArgIStackSize)
-
-  call cp_store_int_vector(AROW_COMPRESSED,size(AROW_COMPRESSED),theArgIStack,th&
-     &eArgIStackoffset,theArgIStackSize)
-
-  call cp_store_int_vector(ACOL_INDEX,size(ACOL_INDEX),theArgIStack,theArgIStack&
-     &offset,theArgIStackSize)
-
-  call cp_store_real_vector(AVALUES,size(AVALUES),theArgFStack,theArgFStackoffse&
-     &t,theArgFStackSize)
-
-  call cp_store_real_vector(DMATRIX,size(DMATRIX),theArgFStack,theArgFStackoffse&
-     &t,theArgFStackSize)
-
-  call cp_store_int_vector(RROW_INDEX,size(RROW_INDEX),theArgIStack,theArgIStack&
-     &offset,theArgIStackSize)
-
-  call cp_store_int_vector(RROW_COMPRESSED,size(RROW_COMPRESSED),theArgIStack,th&
-     &eArgIStackoffset,theArgIStackSize)
-
-  call cp_store_int_vector(RCOL_INDEX,size(RCOL_INDEX),theArgIStack,theArgIStack&
-     &offset,theArgIStackSize)
-
-  call cp_store_real_vector(RVALUES,size(RVALUES),theArgFStack,theArgFStackoffse&
-     &t,theArgFStackSize)
-
-    end if
-    if (our_rev_mode%arg_restore) then
-! restore arguments
-  do cp_loop_variable_1 = ubound(RVALUES,1),lbound(RVALUES,1),-1
-  RVALUES(cp_loop_variable_1)%v = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  end do
-  do cp_loop_variable_1 = ubound(RCOL_INDEX,1),lbound(RCOL_INDEX,1),-1
-  RCOL_INDEX(cp_loop_variable_1) = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  end do
-  do cp_loop_variable_1 = ubound(RROW_COMPRESSED,1),lbound(RROW_COMPRESSED,1),-1
-  RROW_COMPRESSED(cp_loop_variable_1) = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  end do
-  do cp_loop_variable_1 = ubound(RROW_INDEX,1),lbound(RROW_INDEX,1),-1
-  RROW_INDEX(cp_loop_variable_1) = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  end do
-  do cp_loop_variable_1 = ubound(DMATRIX,1),lbound(DMATRIX,1),-1
-  DMATRIX(cp_loop_variable_1)%v = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  end do
-  do cp_loop_variable_1 = ubound(AVALUES,1),lbound(AVALUES,1),-1
-  AVALUES(cp_loop_variable_1)%v = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  end do
-  do cp_loop_variable_1 = ubound(ACOL_INDEX,1),lbound(ACOL_INDEX,1),-1
-  ACOL_INDEX(cp_loop_variable_1) = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  end do
-  do cp_loop_variable_1 = ubound(AROW_COMPRESSED,1),lbound(AROW_COMPRESSED,1),-1
-  AROW_COMPRESSED(cp_loop_variable_1) = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  end do
-  do cp_loop_variable_1 = ubound(AROW_INDEX,1),lbound(AROW_INDEX,1),-1
-  AROW_INDEX(cp_loop_variable_1) = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  end do
-  RNNZ = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  ANNZ = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  N = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-    end if
-    if (our_rev_mode%plain) then
-      our_orig_mode=our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
+   if (our_rev_mode%plain) then
 ! original function
   RNNZ = ANNZ
   RROW_COMPRESSED(1 : INT(N + 1)) = AROW_COMPRESSED(1 : INT(N + 1 ))
@@ -2716,17 +1704,8 @@ CONTAINS
       END DO
     ENDIF
   ENDIF
-
-! original function end
-      our_rev_mode=our_orig_mode
     end if
     if (our_rev_mode%tape) then
-!            print*, " tape       ", our_rev_mode
-      our_rev_mode%arg_store=.TRUE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.TRUE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.FALSE.
 ! taping
   RNNZ = ANNZ
   RROW_COMPRESSED(1:INT(N+1)) = AROW_COMPRESSED(1:INT(N+1))
@@ -2786,21 +1765,8 @@ CONTAINS
     integer_tape(integer_tape_pointer) = OpenAD_Symbol_191
     integer_tape_pointer = integer_tape_pointer+1
   ENDIF
-
-! taping end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.TRUE.
     end if
     if (our_rev_mode%adjoint) then
-!            print*, " adjoint    ", our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
 ! adjoint
   integer_tape_pointer = integer_tape_pointer-1
   OpenAD_Symbol_180 = integer_tape(integer_tape_pointer)
@@ -2859,13 +1825,6 @@ CONTAINS
       END DO
     ENDIF
   ENDIF
-
-! adjoint end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
     end if
   end subroutine SPMAT_MULTIPLY_DIAGONAL
 !#########################################################
@@ -2879,7 +1838,6 @@ CONTAINS
 
     use OAD_tape
     use OAD_rev
-    use OAD_cp
 
 ! original arguments get inserted before version
 !         ! and declared here together with all local variables
@@ -2958,82 +1916,10 @@ CONTAINS
 !
 
 
-! checkpointing stacks and offsets
-    integer :: cp_loop_variable_1,cp_loop_variable_2,cp_loop_variable_3,cp_loop_&
-     &variable_4,cp_loop_variable_5,cp_loop_variable_6
-
-
-! floats 'F'
-    double precision, dimension(:), allocatable, save :: theArgFStack
-    integer, save :: theArgFStackoffset=0, theArgFStackSize=0
-! integers 'I'
-    integer, dimension(:), allocatable, save :: theArgIStack
-    integer, save :: theArgIStackoffset=0, theArgIStackSize=0
-! booleans 'B'
-    logical, dimension(:), allocatable, save :: theArgBStack
-    integer, save :: theArgBStackoffset=0, theArgBStackSize=0
-! strings 'S'
-    character*(80), dimension(:), allocatable, save :: theArgSStack
-    integer, save :: theArgSStackoffset=0, theArgSStackSize=0
-
-    type(modeType) :: our_orig_mode
-
-! external C function used in inlined code
     integer iaddr
     external iaddr
 
-    if (our_rev_mode%arg_store) then
-! store arguments
-  call cp_store_int_scalar(N,theArgIStack,theArgIStackoffset,theArgIStackSize)
-  call cp_store_int_scalar(ANNZ,theArgIStack,theArgIStackoffset,theArgIStackSize&
-     &)
-
-  call cp_store_int_vector(AROW_INDEX,size(AROW_INDEX),theArgIStack,theArgIStack&
-     &offset,theArgIStackSize)
-
-  call cp_store_int_vector(ACOL_INDEX,size(ACOL_INDEX),theArgIStack,theArgIStack&
-     &offset,theArgIStackSize)
-
-  call cp_store_real_vector(AVALUES,size(AVALUES),theArgFStack,theArgFStackoffse&
-     &t,theArgFStackSize)
-
-  call cp_store_real_vector(BVECTOR,size(BVECTOR),theArgFStack,theArgFStackoffse&
-     &t,theArgFStackSize)
-
-  call cp_store_real_vector(CVECTOR,size(CVECTOR),theArgFStack,theArgFStackoffse&
-     &t,theArgFStackSize)
-
-    end if
-    if (our_rev_mode%arg_restore) then
-! restore arguments
-  do cp_loop_variable_1 = ubound(CVECTOR,1),lbound(CVECTOR,1),-1
-  CVECTOR(cp_loop_variable_1)%v = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  end do
-  do cp_loop_variable_1 = ubound(BVECTOR,1),lbound(BVECTOR,1),-1
-  BVECTOR(cp_loop_variable_1)%v = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  end do
-  do cp_loop_variable_1 = ubound(AVALUES,1),lbound(AVALUES,1),-1
-  AVALUES(cp_loop_variable_1)%v = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  end do
-  do cp_loop_variable_1 = ubound(ACOL_INDEX,1),lbound(ACOL_INDEX,1),-1
-  ACOL_INDEX(cp_loop_variable_1) = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  end do
-  do cp_loop_variable_1 = ubound(AROW_INDEX,1),lbound(AROW_INDEX,1),-1
-  AROW_INDEX(cp_loop_variable_1) = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  end do
-  ANNZ = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  N = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-    end if
-    if (our_rev_mode%plain) then
-      our_orig_mode=our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
+   if (our_rev_mode%plain) then
 ! original function
   CVECTOR(1:INT(N))%v = 0.0D00
   IF (ORDER.EQ.'PRE') THEN
@@ -3051,17 +1937,8 @@ CONTAINS
       END DO
     ENDIF
   ENDIF
-
-! original function end
-      our_rev_mode=our_orig_mode
     end if
     if (our_rev_mode%tape) then
-!            print*, " tape       ", our_rev_mode
-      our_rev_mode%arg_store=.TRUE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.TRUE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.FALSE.
 ! taping
   CVECTOR(1:INT(N))%v = 0.0D00
   integer_tape(integer_tape_pointer) = N
@@ -3138,21 +2015,8 @@ CONTAINS
     integer_tape(integer_tape_pointer) = OpenAD_Symbol_215
     integer_tape_pointer = integer_tape_pointer+1
   ENDIF
-
-! taping end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.TRUE.
     end if
     if (our_rev_mode%adjoint) then
-!            print*, " adjoint    ", our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
 ! adjoint
   integer_tape_pointer = integer_tape_pointer-1
   OpenAD_Symbol_204 = integer_tape(integer_tape_pointer)
@@ -3232,13 +2096,6 @@ CONTAINS
   integer_tape_pointer = integer_tape_pointer-1
   OpenAD_Symbol_919 = integer_tape(integer_tape_pointer)
   CVECTOR(1:OpenAD_Symbol_919)%d = 0.0d0
-
-! adjoint end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
     end if
   end subroutine SPMAT_MULTIPLY_VECTOR
 !#########################################################
@@ -3253,7 +2110,6 @@ CONTAINS
 
     use OAD_tape
     use OAD_rev
-    use OAD_cp
 
 ! original arguments get inserted before version
 !         ! and declared here together with all local variables
@@ -3291,42 +2147,13 @@ CONTAINS
   INTEGER(w2f__i4) I
 
 
-! checkpointing stacks and offsets
-    integer :: cp_loop_variable_1,cp_loop_variable_2,cp_loop_variable_3,cp_loop_&
-     &variable_4,cp_loop_variable_5,cp_loop_variable_6
-
-
-! floats 'F'
-    double precision, dimension(:), allocatable, save :: theArgFStack
-    integer, save :: theArgFStackoffset=0, theArgFStackSize=0
-! integers 'I'
-    integer, dimension(:), allocatable, save :: theArgIStack
-    integer, save :: theArgIStackoffset=0, theArgIStackSize=0
-! booleans 'B'
-    logical, dimension(:), allocatable, save :: theArgBStack
-    integer, save :: theArgBStackoffset=0, theArgBStackSize=0
-! strings 'S'
-    character*(80), dimension(:), allocatable, save :: theArgSStack
-    integer, save :: theArgSStackoffset=0, theArgSStackSize=0
-
-    type(modeType) :: our_orig_mode
-
-! external C function used in inlined code
     integer iaddr
     external iaddr
 !
 !       **** Statements ****
 !
 
-    if (our_rev_mode%arg_store) then
-! store arguments
-    end if
-    if (our_rev_mode%arg_restore) then
-! restore arguments
-    end if
-    if (our_rev_mode%plain) then
-      our_orig_mode=our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
+   if (our_rev_mode%plain) then
 ! original function
   RNNZ = ANNZ
   RROW_COMPRESSED(1 : INT(N + 1)) = AROW_COMPRESSED(1 : INT(N + 1 ))
@@ -3335,17 +2162,8 @@ CONTAINS
     RCOL_INDEX(I) = ACOL_INDEX(I)
     RVALUES(INT(I)) = (AVALUES(I) * SCALAR)
   END DO
-
-! original function end
-      our_rev_mode=our_orig_mode
     end if
     if (our_rev_mode%tape) then
-!            print*, " tape       ", our_rev_mode
-      our_rev_mode%arg_store=.TRUE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.TRUE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.FALSE.
 ! taping
   RNNZ = ANNZ
   RROW_COMPRESSED(1 : INT(N + 1)) = AROW_COMPRESSED(1 : INT(N + 1 ))
@@ -3358,21 +2176,8 @@ CONTAINS
   END DO
   integer_tape(integer_tape_pointer) = OpenAD_Symbol_230
   integer_tape_pointer = integer_tape_pointer+1
-
-! taping end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.TRUE.
     end if
     if (our_rev_mode%adjoint) then
-!            print*, " adjoint    ", our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
 ! adjoint
   integer_tape_pointer = integer_tape_pointer-1
   OpenAD_Symbol_228 = integer_tape(integer_tape_pointer)
@@ -3380,13 +2185,6 @@ CONTAINS
   DO WHILE(INT(OpenAD_Symbol_229) .LE. INT(OpenAD_Symbol_228))
     OpenAD_Symbol_229 = INT(OpenAD_Symbol_229) + 1
   END DO
-
-! adjoint end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
     end if
   end subroutine SCALAR_MULTIPLY_SPMAT
 !#########################################################
@@ -3398,7 +2196,6 @@ CONTAINS
   SUBROUTINE MYMIN_0_0_DOUBLE(SCALARIN1, SCALARIN2, SCALAROUT)
     use OAD_tape
     use OAD_rev
-    use OAD_cp
 
 ! original arguments get inserted before version
 !         ! and declared here together with all local variables
@@ -3423,59 +2220,21 @@ CONTAINS
   REAL(w2f__8) SCALAROUT
 
 
-! checkpointing stacks and offsets
-    integer :: cp_loop_variable_1,cp_loop_variable_2,cp_loop_variable_3,cp_loop_&
-     &variable_4,cp_loop_variable_5,cp_loop_variable_6
-
-
-! floats 'F'
-    double precision, dimension(:), allocatable, save :: theArgFStack
-    integer, save :: theArgFStackoffset=0, theArgFStackSize=0
-! integers 'I'
-    integer, dimension(:), allocatable, save :: theArgIStack
-    integer, save :: theArgIStackoffset=0, theArgIStackSize=0
-! booleans 'B'
-    logical, dimension(:), allocatable, save :: theArgBStack
-    integer, save :: theArgBStackoffset=0, theArgBStackSize=0
-! strings 'S'
-    character*(80), dimension(:), allocatable, save :: theArgSStack
-    integer, save :: theArgSStackoffset=0, theArgSStackSize=0
-
-    type(modeType) :: our_orig_mode
-
-! external C function used in inlined code
     integer iaddr
     external iaddr
 !
 !       **** Statements ****
 !
 
-    if (our_rev_mode%arg_store) then
-! store arguments
-    end if
-    if (our_rev_mode%arg_restore) then
-! restore arguments
-    end if
-    if (our_rev_mode%plain) then
-      our_orig_mode=our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
+   if (our_rev_mode%plain) then
 ! original function
   IF(SCALARIN1 .LE. SCALARIN2) THEN
     SCALAROUT = SCALARIN1
   ELSE
     SCALAROUT = SCALARIN2
   ENDIF
-
-! original function end
-      our_rev_mode=our_orig_mode
     end if
     if (our_rev_mode%tape) then
-!            print*, " tape       ", our_rev_mode
-      our_rev_mode%arg_store=.TRUE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.TRUE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.FALSE.
 ! taping
   IF(SCALARIN1 .LE. SCALARIN2) THEN
     SCALAROUT = SCALARIN1
@@ -3488,33 +2247,13 @@ CONTAINS
     integer_tape(integer_tape_pointer) = OpenAD_Symbol_236
     integer_tape_pointer = integer_tape_pointer+1
   ENDIF
-
-! taping end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.TRUE.
     end if
     if (our_rev_mode%adjoint) then
-!            print*, " adjoint    ", our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
 ! adjoint
   integer_tape_pointer = integer_tape_pointer-1
   OpenAD_Symbol_234 = integer_tape(integer_tape_pointer)
   IF(OpenAD_Symbol_234 .ne. 0) THEN
   ENDIF
-
-! adjoint end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
     end if
   end subroutine MYMIN_0_0_DOUBLE
 !#########################################################
@@ -3526,7 +2265,6 @@ CONTAINS
   SUBROUTINE MYMIN_1_0_DOUBLE(VECTORIN, SCALARIN, VECTOROUT)
     use OAD_tape
     use OAD_rev
-    use OAD_cp
 
 ! original arguments get inserted before version
 !         ! and declared here together with all local variables
@@ -3563,54 +2301,13 @@ CONTAINS
   INTEGER(w2f__i4) OpenAD_Symbol_937
 
 
-! checkpointing stacks and offsets
-    integer :: cp_loop_variable_1,cp_loop_variable_2,cp_loop_variable_3,cp_loop_&
-     &variable_4,cp_loop_variable_5,cp_loop_variable_6
-
-
-! floats 'F'
-    double precision, dimension(:), allocatable, save :: theArgFStack
-    integer, save :: theArgFStackoffset=0, theArgFStackSize=0
-! integers 'I'
-    integer, dimension(:), allocatable, save :: theArgIStack
-    integer, save :: theArgIStackoffset=0, theArgIStackSize=0
-! booleans 'B'
-    logical, dimension(:), allocatable, save :: theArgBStack
-    integer, save :: theArgBStackoffset=0, theArgBStackSize=0
-! strings 'S'
-    character*(80), dimension(:), allocatable, save :: theArgSStack
-    integer, save :: theArgSStackoffset=0, theArgSStackSize=0
-
-    type(modeType) :: our_orig_mode
-
-! external C function used in inlined code
     integer iaddr
     external iaddr
 !
 !       **** Statements ****
 !
 
-    if (our_rev_mode%arg_store) then
-! store arguments
-  call cp_store_real_vector(VECTORIN,size(VECTORIN),theArgFStack,theArgFStackoff&
-     &set,theArgFStackSize)
-
-  call cp_store_real_scalar(SCALARIN,theArgFStack,theArgFStackoffset,theArgFStac&
-     &kSize)
-
-    end if
-    if (our_rev_mode%arg_restore) then
-! restore arguments
-  SCALARIN = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  do cp_loop_variable_1 = ubound(VECTORIN,1),lbound(VECTORIN,1),-1
-  VECTORIN(cp_loop_variable_1)%v = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  end do
-    end if
-    if (our_rev_mode%plain) then
-      our_orig_mode=our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
+   if (our_rev_mode%plain) then
 ! original function
   DO I = 1, SIZE(VECTORIN, 1), 1
     IF (VECTORIN(I)%v.GE.SCALARIN) THEN
@@ -3619,17 +2316,8 @@ CONTAINS
       VECTOROUT(INT(I))%v = VECTORIN(I)%v
     ENDIF
   END DO
-
-! original function end
-      our_rev_mode=our_orig_mode
     end if
     if (our_rev_mode%tape) then
-!            print*, " tape       ", our_rev_mode
-      our_rev_mode%arg_store=.TRUE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.TRUE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.FALSE.
 ! taping
   OpenAD_Symbol_243 = 0_w2f__i8
   DO I = 1,SIZE(VECTORIN,1),1
@@ -3652,21 +2340,8 @@ CONTAINS
   END DO
   integer_tape(integer_tape_pointer) = OpenAD_Symbol_243
   integer_tape_pointer = integer_tape_pointer+1
-
-! taping end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.TRUE.
     end if
     if (our_rev_mode%adjoint) then
-!            print*, " adjoint    ", our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
 ! adjoint
   integer_tape_pointer = integer_tape_pointer-1
   OpenAD_Symbol_240 = integer_tape(integer_tape_pointer)
@@ -3688,13 +2363,6 @@ CONTAINS
     ENDIF
     OpenAD_Symbol_241 = INT(OpenAD_Symbol_241)+1
   END DO
-
-! adjoint end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
     end if
   end subroutine MYMIN_1_0_DOUBLE
 !#########################################################
@@ -3706,7 +2374,6 @@ CONTAINS
   SUBROUTINE MYMIN_1_1_DOUBLE(VECTORIN1, VECTORIN2, VECTOROUT)
     use OAD_tape
     use OAD_rev
-    use OAD_cp
 
 ! original arguments get inserted before version
 !         ! and declared here together with all local variables
@@ -3741,42 +2408,13 @@ CONTAINS
   INTEGER(w2f__i4) I
 
 
-! checkpointing stacks and offsets
-    integer :: cp_loop_variable_1,cp_loop_variable_2,cp_loop_variable_3,cp_loop_&
-     &variable_4,cp_loop_variable_5,cp_loop_variable_6
-
-
-! floats 'F'
-    double precision, dimension(:), allocatable, save :: theArgFStack
-    integer, save :: theArgFStackoffset=0, theArgFStackSize=0
-! integers 'I'
-    integer, dimension(:), allocatable, save :: theArgIStack
-    integer, save :: theArgIStackoffset=0, theArgIStackSize=0
-! booleans 'B'
-    logical, dimension(:), allocatable, save :: theArgBStack
-    integer, save :: theArgBStackoffset=0, theArgBStackSize=0
-! strings 'S'
-    character*(80), dimension(:), allocatable, save :: theArgSStack
-    integer, save :: theArgSStackoffset=0, theArgSStackSize=0
-
-    type(modeType) :: our_orig_mode
-
-! external C function used in inlined code
     integer iaddr
     external iaddr
 !
 !       **** Statements ****
 !
 
-    if (our_rev_mode%arg_store) then
-! store arguments
-    end if
-    if (our_rev_mode%arg_restore) then
-! restore arguments
-    end if
-    if (our_rev_mode%plain) then
-      our_orig_mode=our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
+   if (our_rev_mode%plain) then
 ! original function
   DO I = 1, SIZE(VECTORIN1, 1), 1
     IF(VECTORIN1(I) .GE. VECTORIN2(I)) THEN
@@ -3785,17 +2423,8 @@ CONTAINS
       VECTOROUT(INT(I)) = VECTORIN1(I)
     ENDIF
   END DO
-
-! original function end
-      our_rev_mode=our_orig_mode
     end if
     if (our_rev_mode%tape) then
-!            print*, " tape       ", our_rev_mode
-      our_rev_mode%arg_store=.TRUE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.TRUE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.FALSE.
 ! taping
   OpenAD_Symbol_255 = 0_w2f__i8
   DO I = 1, SIZE(VECTORIN1, 1), 1
@@ -3814,21 +2443,8 @@ CONTAINS
   END DO
   integer_tape(integer_tape_pointer) = OpenAD_Symbol_255
   integer_tape_pointer = integer_tape_pointer+1
-
-! taping end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.TRUE.
     end if
     if (our_rev_mode%adjoint) then
-!            print*, " adjoint    ", our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
 ! adjoint
   integer_tape_pointer = integer_tape_pointer-1
   OpenAD_Symbol_252 = integer_tape(integer_tape_pointer)
@@ -3840,13 +2456,6 @@ CONTAINS
     ENDIF
     OpenAD_Symbol_253 = INT(OpenAD_Symbol_253) + 1
   END DO
-
-! adjoint end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
     end if
   end subroutine MYMIN_1_1_DOUBLE
 !#########################################################
@@ -3858,7 +2467,6 @@ CONTAINS
   SUBROUTINE MYMAX_0_0_DOUBLE(SCALARIN1, SCALARIN2, SCALAROUT)
     use OAD_tape
     use OAD_rev
-    use OAD_cp
 
 ! original arguments get inserted before version
 !         ! and declared here together with all local variables
@@ -3883,59 +2491,21 @@ CONTAINS
   REAL(w2f__8) SCALAROUT
 
 
-! checkpointing stacks and offsets
-    integer :: cp_loop_variable_1,cp_loop_variable_2,cp_loop_variable_3,cp_loop_&
-     &variable_4,cp_loop_variable_5,cp_loop_variable_6
-
-
-! floats 'F'
-    double precision, dimension(:), allocatable, save :: theArgFStack
-    integer, save :: theArgFStackoffset=0, theArgFStackSize=0
-! integers 'I'
-    integer, dimension(:), allocatable, save :: theArgIStack
-    integer, save :: theArgIStackoffset=0, theArgIStackSize=0
-! booleans 'B'
-    logical, dimension(:), allocatable, save :: theArgBStack
-    integer, save :: theArgBStackoffset=0, theArgBStackSize=0
-! strings 'S'
-    character*(80), dimension(:), allocatable, save :: theArgSStack
-    integer, save :: theArgSStackoffset=0, theArgSStackSize=0
-
-    type(modeType) :: our_orig_mode
-
-! external C function used in inlined code
     integer iaddr
     external iaddr
 !
 !       **** Statements ****
 !
 
-    if (our_rev_mode%arg_store) then
-! store arguments
-    end if
-    if (our_rev_mode%arg_restore) then
-! restore arguments
-    end if
-    if (our_rev_mode%plain) then
-      our_orig_mode=our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
+   if (our_rev_mode%plain) then
 ! original function
   IF(SCALARIN1 .GE. SCALARIN2) THEN
     SCALAROUT = SCALARIN1
   ELSE
     SCALAROUT = SCALARIN2
   ENDIF
-
-! original function end
-      our_rev_mode=our_orig_mode
     end if
     if (our_rev_mode%tape) then
-!            print*, " tape       ", our_rev_mode
-      our_rev_mode%arg_store=.TRUE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.TRUE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.FALSE.
 ! taping
   IF(SCALARIN1 .GE. SCALARIN2) THEN
     SCALAROUT = SCALARIN1
@@ -3948,33 +2518,13 @@ CONTAINS
     integer_tape(integer_tape_pointer) = OpenAD_Symbol_266
     integer_tape_pointer = integer_tape_pointer+1
   ENDIF
-
-! taping end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.TRUE.
     end if
     if (our_rev_mode%adjoint) then
-!            print*, " adjoint    ", our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
 ! adjoint
   integer_tape_pointer = integer_tape_pointer-1
   OpenAD_Symbol_264 = integer_tape(integer_tape_pointer)
   IF(OpenAD_Symbol_264 .ne. 0) THEN
   ENDIF
-
-! adjoint end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
     end if
   end subroutine MYMAX_0_0_DOUBLE
 !#########################################################
@@ -3986,7 +2536,6 @@ CONTAINS
   SUBROUTINE MYMAX_1_0_DOUBLE(VECTORIN, SCALARIN, VECTOROUT)
     use OAD_tape
     use OAD_rev
-    use OAD_cp
 
 ! original arguments get inserted before version
 !         ! and declared here together with all local variables
@@ -4023,54 +2572,13 @@ CONTAINS
   INTEGER(w2f__i4) OpenAD_Symbol_939
 
 
-! checkpointing stacks and offsets
-    integer :: cp_loop_variable_1,cp_loop_variable_2,cp_loop_variable_3,cp_loop_&
-     &variable_4,cp_loop_variable_5,cp_loop_variable_6
-
-
-! floats 'F'
-    double precision, dimension(:), allocatable, save :: theArgFStack
-    integer, save :: theArgFStackoffset=0, theArgFStackSize=0
-! integers 'I'
-    integer, dimension(:), allocatable, save :: theArgIStack
-    integer, save :: theArgIStackoffset=0, theArgIStackSize=0
-! booleans 'B'
-    logical, dimension(:), allocatable, save :: theArgBStack
-    integer, save :: theArgBStackoffset=0, theArgBStackSize=0
-! strings 'S'
-    character*(80), dimension(:), allocatable, save :: theArgSStack
-    integer, save :: theArgSStackoffset=0, theArgSStackSize=0
-
-    type(modeType) :: our_orig_mode
-
-! external C function used in inlined code
     integer iaddr
     external iaddr
 !
 !       **** Statements ****
 !
 
-    if (our_rev_mode%arg_store) then
-! store arguments
-  call cp_store_real_vector(VECTORIN,size(VECTORIN),theArgFStack,theArgFStackoff&
-     &set,theArgFStackSize)
-
-  call cp_store_real_scalar(SCALARIN,theArgFStack,theArgFStackoffset,theArgFStac&
-     &kSize)
-
-    end if
-    if (our_rev_mode%arg_restore) then
-! restore arguments
-  SCALARIN = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  do cp_loop_variable_1 = ubound(VECTORIN,1),lbound(VECTORIN,1),-1
-  VECTORIN(cp_loop_variable_1)%v = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  end do
-    end if
-    if (our_rev_mode%plain) then
-      our_orig_mode=our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
+   if (our_rev_mode%plain) then
 ! original function
   DO I = 1, SIZE(VECTORIN, 1), 1
     IF (VECTORIN(I)%v.LE.SCALARIN) THEN
@@ -4079,17 +2587,8 @@ CONTAINS
       VECTOROUT(INT(I))%v = VECTORIN(I)%v
     ENDIF
   END DO
-
-! original function end
-      our_rev_mode=our_orig_mode
     end if
     if (our_rev_mode%tape) then
-!            print*, " tape       ", our_rev_mode
-      our_rev_mode%arg_store=.TRUE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.TRUE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.FALSE.
 ! taping
   OpenAD_Symbol_273 = 0_w2f__i8
   DO I = 1,SIZE(VECTORIN,1),1
@@ -4112,21 +2611,8 @@ CONTAINS
   END DO
   integer_tape(integer_tape_pointer) = OpenAD_Symbol_273
   integer_tape_pointer = integer_tape_pointer+1
-
-! taping end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.TRUE.
     end if
     if (our_rev_mode%adjoint) then
-!            print*, " adjoint    ", our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
 ! adjoint
   integer_tape_pointer = integer_tape_pointer-1
   OpenAD_Symbol_270 = integer_tape(integer_tape_pointer)
@@ -4148,13 +2634,6 @@ CONTAINS
     ENDIF
     OpenAD_Symbol_271 = INT(OpenAD_Symbol_271)+1
   END DO
-
-! adjoint end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
     end if
   end subroutine MYMAX_1_0_DOUBLE
 !#########################################################
@@ -4166,7 +2645,6 @@ CONTAINS
   SUBROUTINE MYMAX_1_1_DOUBLE(VECTORIN1, VECTORIN2, VECTOROUT)
     use OAD_tape
     use OAD_rev
-    use OAD_cp
 
 ! original arguments get inserted before version
 !         ! and declared here together with all local variables
@@ -4201,42 +2679,13 @@ CONTAINS
   INTEGER(w2f__i4) I
 
 
-! checkpointing stacks and offsets
-    integer :: cp_loop_variable_1,cp_loop_variable_2,cp_loop_variable_3,cp_loop_&
-     &variable_4,cp_loop_variable_5,cp_loop_variable_6
-
-
-! floats 'F'
-    double precision, dimension(:), allocatable, save :: theArgFStack
-    integer, save :: theArgFStackoffset=0, theArgFStackSize=0
-! integers 'I'
-    integer, dimension(:), allocatable, save :: theArgIStack
-    integer, save :: theArgIStackoffset=0, theArgIStackSize=0
-! booleans 'B'
-    logical, dimension(:), allocatable, save :: theArgBStack
-    integer, save :: theArgBStackoffset=0, theArgBStackSize=0
-! strings 'S'
-    character*(80), dimension(:), allocatable, save :: theArgSStack
-    integer, save :: theArgSStackoffset=0, theArgSStackSize=0
-
-    type(modeType) :: our_orig_mode
-
-! external C function used in inlined code
     integer iaddr
     external iaddr
 !
 !       **** Statements ****
 !
 
-    if (our_rev_mode%arg_store) then
-! store arguments
-    end if
-    if (our_rev_mode%arg_restore) then
-! restore arguments
-    end if
-    if (our_rev_mode%plain) then
-      our_orig_mode=our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
+   if (our_rev_mode%plain) then
 ! original function
   DO I = 1, SIZE(VECTORIN1, 1), 1
     IF(VECTORIN1(I) .LE. VECTORIN2(I)) THEN
@@ -4245,17 +2694,8 @@ CONTAINS
       VECTOROUT(INT(I)) = VECTORIN1(I)
     ENDIF
   END DO
-
-! original function end
-      our_rev_mode=our_orig_mode
     end if
     if (our_rev_mode%tape) then
-!            print*, " tape       ", our_rev_mode
-      our_rev_mode%arg_store=.TRUE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.TRUE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.FALSE.
 ! taping
   OpenAD_Symbol_285 = 0_w2f__i8
   DO I = 1, SIZE(VECTORIN1, 1), 1
@@ -4274,21 +2714,8 @@ CONTAINS
   END DO
   integer_tape(integer_tape_pointer) = OpenAD_Symbol_285
   integer_tape_pointer = integer_tape_pointer+1
-
-! taping end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.TRUE.
     end if
     if (our_rev_mode%adjoint) then
-!            print*, " adjoint    ", our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
 ! adjoint
   integer_tape_pointer = integer_tape_pointer-1
   OpenAD_Symbol_282 = integer_tape(integer_tape_pointer)
@@ -4300,13 +2727,6 @@ CONTAINS
     ENDIF
     OpenAD_Symbol_283 = INT(OpenAD_Symbol_283) + 1
   END DO
-
-! adjoint end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
     end if
   end subroutine MYMAX_1_1_DOUBLE
 END
@@ -4342,7 +2762,6 @@ CONTAINS
 
     use OAD_tape
     use OAD_rev
-    use OAD_cp
 
 ! original arguments get inserted before version
 !         ! and declared here together with all local variables
@@ -4367,108 +2786,20 @@ CONTAINS
   INTEGER(w2f__i4) OAD_CTMP0
 
 
-! checkpointing stacks and offsets
-    integer :: cp_loop_variable_1,cp_loop_variable_2,cp_loop_variable_3,cp_loop_&
-     &variable_4,cp_loop_variable_5,cp_loop_variable_6
-
-
-! floats 'F'
-    double precision, dimension(:), allocatable, save :: theArgFStack
-    integer, save :: theArgFStackoffset=0, theArgFStackSize=0
-! integers 'I'
-    integer, dimension(:), allocatable, save :: theArgIStack
-    integer, save :: theArgIStackoffset=0, theArgIStackSize=0
-! booleans 'B'
-    logical, dimension(:), allocatable, save :: theArgBStack
-    integer, save :: theArgBStackoffset=0, theArgBStackSize=0
-! strings 'S'
-    character*(80), dimension(:), allocatable, save :: theArgSStack
-    integer, save :: theArgSStackoffset=0, theArgSStackSize=0
-
-    type(modeType) :: our_orig_mode
-
-! external C function used in inlined code
     integer iaddr
     external iaddr
 !
 !       **** Statements ****
 !
 
-    if (our_rev_mode%arg_store) then
-! store arguments
-  call cp_store_int_scalar(N,theArgIStack,theArgIStackoffset,theArgIStackSize)
-  call cp_store_int_scalar(ANNZ,theArgIStack,theArgIStackoffset,theArgIStackSize&
-     &)
-
-  call cp_store_int_vector(AROW_INDEX,size(AROW_INDEX),theArgIStack,theArgIStack&
-     &offset,theArgIStackSize)
-
-  call cp_store_int_vector(AROW_COMPRESSED,size(AROW_COMPRESSED),theArgIStack,th&
-     &eArgIStackoffset,theArgIStackSize)
-
-  call cp_store_int_vector(ACOL_INDEX,size(ACOL_INDEX),theArgIStack,theArgIStack&
-     &offset,theArgIStackSize)
-
-  call cp_store_real_vector(AVALUES,size(AVALUES),theArgFStack,theArgFStackoffse&
-     &t,theArgFStackSize)
-
-  call cp_store_real_vector(B,size(B),theArgFStack,theArgFStackoffset,theArgFSta&
-     &ckSize)
-
-  call cp_store_real_vector(X,size(X),theArgFStack,theArgFStackoffset,theArgFSta&
-     &ckSize)
-
-    end if
-    if (our_rev_mode%arg_restore) then
-! restore arguments
-  do cp_loop_variable_1 = ubound(X,1),lbound(X,1),-1
-  X(cp_loop_variable_1)%v = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  end do
-  do cp_loop_variable_1 = ubound(B,1),lbound(B,1),-1
-  B(cp_loop_variable_1)%v = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  end do
-  do cp_loop_variable_1 = ubound(AVALUES,1),lbound(AVALUES,1),-1
-  AVALUES(cp_loop_variable_1)%v = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  end do
-  do cp_loop_variable_1 = ubound(ACOL_INDEX,1),lbound(ACOL_INDEX,1),-1
-  ACOL_INDEX(cp_loop_variable_1) = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  end do
-  do cp_loop_variable_1 = ubound(AROW_COMPRESSED,1),lbound(AROW_COMPRESSED,1),-1
-  AROW_COMPRESSED(cp_loop_variable_1) = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  end do
-  do cp_loop_variable_1 = ubound(AROW_INDEX,1),lbound(AROW_INDEX,1),-1
-  AROW_INDEX(cp_loop_variable_1) = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  end do
-  ANNZ = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  N = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-    end if
-    if (our_rev_mode%plain) then
-      our_orig_mode=our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
+   if (our_rev_mode%plain) then
 ! original function
   OAD_CTMP0 = (N * 7)
   CALL SPARSE_DUMMY_METHOD(N,ANNZ,OAD_CTMP0,AROW_INDEX,AROW_COMPRESSED,ACOL_INDE&
      &X,AVALUES,B,X,SOLVER_INNER,SOLVER_OUTER,VERBOSE)
 
-
-! original function end
-      our_rev_mode=our_orig_mode
     end if
     if (our_rev_mode%tape) then
-!            print*, " tape       ", our_rev_mode
-      our_rev_mode%arg_store=.TRUE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.TRUE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.FALSE.
 ! taping
   OAD_CTMP0 = (N*7)
   CALL SPARSE_DUMMY_METHOD(N,ANNZ,OAD_CTMP0,AROW_INDEX,AROW_COMPRESSED,ACOL_INDE&
@@ -4478,21 +2809,8 @@ CONTAINS
   integer_tape_pointer = integer_tape_pointer+1
   integer_tape(integer_tape_pointer) = OAD_CTMP0
   integer_tape_pointer = integer_tape_pointer+1
-
-! taping end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.TRUE.
     end if
     if (our_rev_mode%adjoint) then
-!            print*, " adjoint    ", our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
 ! adjoint
   integer_tape_pointer = integer_tape_pointer-1
   OAD_CTMP0 = integer_tape(integer_tape_pointer)
@@ -4501,13 +2819,6 @@ CONTAINS
   CALL SPARSE_DUMMY_METHOD(N,ANNZ,OAD_CTMP0,AROW_INDEX,AROW_COMPRESSED,ACOL_INDE&
      &X,AVALUES,B,X,SOLVER_INNER,SOLVER_OUTER,VERBOSE)
 
-
-! adjoint end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
     end if
   end subroutine SPARSE_SOLVE
 !#########################################################
@@ -4521,7 +2832,6 @@ CONTAINS
 
     use OAD_tape
     use OAD_rev
-    use OAD_cp
 
 ! original arguments get inserted before version
 !         ! and declared here together with all local variables
@@ -4546,146 +2856,33 @@ CONTAINS
   LOGICAL(w2f__i4) VERBOSE
 
 
-! checkpointing stacks and offsets
-    integer :: cp_loop_variable_1,cp_loop_variable_2,cp_loop_variable_3,cp_loop_&
-     &variable_4,cp_loop_variable_5,cp_loop_variable_6
-
-
-! floats 'F'
-    double precision, dimension(:), allocatable, save :: theArgFStack
-    integer, save :: theArgFStackoffset=0, theArgFStackSize=0
-! integers 'I'
-    integer, dimension(:), allocatable, save :: theArgIStack
-    integer, save :: theArgIStackoffset=0, theArgIStackSize=0
-! booleans 'B'
-    logical, dimension(:), allocatable, save :: theArgBStack
-    integer, save :: theArgBStackoffset=0, theArgBStackSize=0
-! strings 'S'
-    character*(80), dimension(:), allocatable, save :: theArgSStack
-    integer, save :: theArgSStackoffset=0, theArgSStackSize=0
-
-    type(modeType) :: our_orig_mode
-
-! external C function used in inlined code
     integer iaddr
     external iaddr
 !
 !       **** Statements ****
 !
 
-    if (our_rev_mode%arg_store) then
-! store arguments
-  call cp_store_int_scalar(N,theArgIStack,theArgIStackoffset,theArgIStackSize)
-  call cp_store_int_scalar(ANNZ,theArgIStack,theArgIStackoffset,theArgIStackSize&
-     &)
-
-  call cp_store_int_vector(AROW_INDEX,size(AROW_INDEX),theArgIStack,theArgIStack&
-     &offset,theArgIStackSize)
-
-  call cp_store_int_vector(AROW_COMPRESSED,size(AROW_COMPRESSED),theArgIStack,th&
-     &eArgIStackoffset,theArgIStackSize)
-
-  call cp_store_int_vector(ACOL_INDEX,size(ACOL_INDEX),theArgIStack,theArgIStack&
-     &offset,theArgIStackSize)
-
-  call cp_store_real_vector(AVALUES,size(AVALUES),theArgFStack,theArgFStackoffse&
-     &t,theArgFStackSize)
-
-  call cp_store_real_vector(B,size(B),theArgFStack,theArgFStackoffset,theArgFSta&
-     &ckSize)
-
-  call cp_store_real_vector(X,size(X),theArgFStack,theArgFStackoffset,theArgFSta&
-     &ckSize)
-
-  call cp_store_int_scalar(ALEN,theArgIStack,theArgIStackoffset,theArgIStackSize&
-     &)
-
-    end if
-    if (our_rev_mode%arg_restore) then
-! restore arguments
-  ALEN = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  do cp_loop_variable_1 = ubound(X,1),lbound(X,1),-1
-  X(cp_loop_variable_1)%v = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  end do
-  do cp_loop_variable_1 = ubound(B,1),lbound(B,1),-1
-  B(cp_loop_variable_1)%v = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  end do
-  do cp_loop_variable_1 = ubound(AVALUES,1),lbound(AVALUES,1),-1
-  AVALUES(cp_loop_variable_1)%v = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  end do
-  do cp_loop_variable_1 = ubound(ACOL_INDEX,1),lbound(ACOL_INDEX,1),-1
-  ACOL_INDEX(cp_loop_variable_1) = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  end do
-  do cp_loop_variable_1 = ubound(AROW_COMPRESSED,1),lbound(AROW_COMPRESSED,1),-1
-  AROW_COMPRESSED(cp_loop_variable_1) = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  end do
-  do cp_loop_variable_1 = ubound(AROW_INDEX,1),lbound(AROW_INDEX,1),-1
-  AROW_INDEX(cp_loop_variable_1) = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  end do
-  ANNZ = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  N = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-    end if
-    if (our_rev_mode%plain) then
-      our_orig_mode=our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
+   if (our_rev_mode%plain) then
 ! original function
   CALL SPMAT_MULTIPLY_VECTOR(N,ANNZ,AROW_INDEX,AROW_COMPRESSED,ACOL_INDEX,AVALUE&
      &S,B,X,'PRE')
 
-
-! original function end
-      our_rev_mode=our_orig_mode
     end if
     if (our_rev_mode%tape) then
-!            print*, " tape       ", our_rev_mode
-      our_rev_mode%arg_store=.TRUE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.TRUE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.FALSE.
 ! taping
   CALL SPMAT_MULTIPLY_VECTOR(N,ANNZ,AROW_INDEX,AROW_COMPRESSED,ACOL_INDEX,AVALUE&
      &S,B,X,'PRE')
 
   integer_tape(integer_tape_pointer) = N
   integer_tape_pointer = integer_tape_pointer+1
-
-! taping end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.TRUE.
     end if
     if (our_rev_mode%adjoint) then
-!            print*, " adjoint    ", our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
 ! adjoint
   integer_tape_pointer = integer_tape_pointer-1
   N = integer_tape(integer_tape_pointer)
   CALL SPMAT_MULTIPLY_VECTOR(N,ANNZ,AROW_INDEX,AROW_COMPRESSED,ACOL_INDEX,AVALUE&
      &S,B,X,'PRE')
 
-
-! adjoint end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
     end if
   end subroutine SPARSE_DUMMY_METHOD
 END
@@ -4721,7 +2918,6 @@ CONTAINS
   SUBROUTINE NEWTRAPH(NX, NY, NZ, ND, PT, ST, Q, V, S)
     use OAD_tape
     use OAD_rev
-    use OAD_cp
 
 ! original arguments get inserted before version
 !         ! and declared here together with all local variables
@@ -4983,118 +3179,13 @@ CONTAINS
   ALLOCATABLE OpenAD_tyc_7
 
 
-! checkpointing stacks and offsets
-    integer :: cp_loop_variable_1,cp_loop_variable_2,cp_loop_variable_3,cp_loop_&
-     &variable_4,cp_loop_variable_5,cp_loop_variable_6
-
-
-! floats 'F'
-    double precision, dimension(:), allocatable, save :: theArgFStack
-    integer, save :: theArgFStackoffset=0, theArgFStackSize=0
-! integers 'I'
-    integer, dimension(:), allocatable, save :: theArgIStack
-    integer, save :: theArgIStackoffset=0, theArgIStackSize=0
-! booleans 'B'
-    logical, dimension(:), allocatable, save :: theArgBStack
-    integer, save :: theArgBStackoffset=0, theArgBStackSize=0
-! strings 'S'
-    character*(80), dimension(:), allocatable, save :: theArgSStack
-    integer, save :: theArgSStackoffset=0, theArgSStackSize=0
-
-    type(modeType) :: our_orig_mode
-
-! external C function used in inlined code
     integer iaddr
     external iaddr
 !
 !       **** Statements ****
 !
 
-    if (our_rev_mode%arg_store) then
-! store arguments
-  call cp_store_real_scalar(SOR,theArgFStack,theArgFStackoffset,theArgFStackSize&
-     &)
-
-  call cp_store_real_scalar(SWC,theArgFStack,theArgFStackoffset,theArgFStackSize&
-     &)
-
-  call cp_store_real_scalar(VO,theArgFStack,theArgFStackoffset,theArgFStackSize)
-  call cp_store_real_scalar(VOL,theArgFStack,theArgFStackoffset,theArgFStackSize&
-     &)
-
-  call cp_store_real_scalar(VW,theArgFStack,theArgFStackoffset,theArgFStackSize)
-  call cp_store_int_scalar(NX,theArgIStack,theArgIStackoffset,theArgIStackSize)
-  call cp_store_int_scalar(NY,theArgIStack,theArgIStackoffset,theArgIStackSize)
-  call cp_store_int_scalar(NZ,theArgIStack,theArgIStackoffset,theArgIStackSize)
-  call cp_store_real_vector(Q,size(Q),theArgFStack,theArgFStackoffset,theArgFSta&
-     &ckSize)
-
-  do cp_loop_variable_4 = lbound(V,4),ubound(V,4)
-  do cp_loop_variable_3 = lbound(V,3),ubound(V,3)
-  do cp_loop_variable_2 = lbound(V,2),ubound(V,2)
-  call cp_store_real_vector(V(:,cp_loop_variable_2,cp_loop_variable_3,cp_loop_va&
-     &riable_4),size(V(:,cp_loop_variable_2,cp_loop_variable_3,cp_loop_variable_&
-     &4)),theArgFStack,theArgFStackoffset,theArgFStackSize)
-
-  end do
-  end do
-  end do
-  call cp_store_real_vector(S,size(S),theArgFStack,theArgFStackoffset,theArgFSta&
-     &ckSize)
-
-  call cp_store_int_scalar(ST,theArgIStack,theArgIStackoffset,theArgIStackSize)
-  call cp_store_p_real_vector(POR,size(POR),theArgFStack,theArgFStackoffset,theA&
-     &rgFStackSize)
-
-    end if
-    if (our_rev_mode%arg_restore) then
-! restore arguments
-  do cp_loop_variable_1 = ubound(POR,1),lbound(POR,1),-1
-  POR(cp_loop_variable_1) = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  end do
-  ST = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  do cp_loop_variable_1 = ubound(S,1),lbound(S,1),-1
-  S(cp_loop_variable_1)%v = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  end do
-  do cp_loop_variable_4 = ubound(V,4),lbound(V,4),-1
-  do cp_loop_variable_3 = ubound(V,3),lbound(V,3),-1
-  do cp_loop_variable_2 = ubound(V,2),lbound(V,2),-1
-  do cp_loop_variable_1 = ubound(V,1),lbound(V,1),-1
-  V(cp_loop_variable_1,cp_loop_variable_2,cp_loop_variable_3,cp_loop_variable_4)&
-     &%v = theArgFStack(theArgFStackoffset)
-
-  theArgFStackoffset = theArgFStackoffset-1
-  end do
-  end do
-  end do
-  end do
-  do cp_loop_variable_1 = ubound(Q,1),lbound(Q,1),-1
-  Q(cp_loop_variable_1)%v = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  end do
-  NZ = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  NY = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  NX = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  VW = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  VOL = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  VO = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  SWC = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  SOR = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-    end if
-    if (our_rev_mode%plain) then
-      our_orig_mode=our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
+   if (our_rev_mode%plain) then
 ! original function
   CONVERGED = .FALSE.
   N = (NZ * NX * NY)
@@ -5175,17 +3266,8 @@ CONTAINS
       IT = (IT+1)
     ENDIF
   END DO
-
-! original function end
-      our_rev_mode=our_orig_mode
     end if
     if (our_rev_mode%tape) then
-!            print*, " tape       ", our_rev_mode
-      our_rev_mode%arg_store=.TRUE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.TRUE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.FALSE.
 ! taping
   CONVERGED = .FALSE.
   N = (NZ*NX*NY)
@@ -5541,21 +3623,8 @@ CONTAINS
   END DO
   integer_tape(integer_tape_pointer) = OpenAD_Symbol_302
   integer_tape_pointer = integer_tape_pointer+1
-
-! taping end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.TRUE.
     end if
     if (our_rev_mode%adjoint) then
-!            print*, " adjoint    ", our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
 ! adjoint
   integer_tape_pointer = integer_tape_pointer-1
   OpenAD_Symbol_294 = integer_tape(integer_tape_pointer)
@@ -5857,13 +3926,6 @@ CONTAINS
   integer_tape_pointer = integer_tape_pointer-1
   NX = integer_tape(integer_tape_pointer)
   CALL GENA(NX,NY,NZ,V,Q,ANNZ,AROW_INDEX,AROW_COMPRESSED,ACOL_INDEX,AVALUES)
-
-! adjoint end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
     end if
   end subroutine NEWTRAPH
 !#########################################################
@@ -5875,7 +3937,6 @@ CONTAINS
   SUBROUTINE PRES(NX, NY, NZ, Q, S, P, V)
     use OAD_tape
     use OAD_rev
-    use OAD_cp
 
 ! original arguments get inserted before version
 !         ! and declared here together with all local variables
@@ -5964,152 +4025,13 @@ CONTAINS
   type(active) :: OpenAD_prp_19
 
 
-! checkpointing stacks and offsets
-    integer :: cp_loop_variable_1,cp_loop_variable_2,cp_loop_variable_3,cp_loop_&
-     &variable_4,cp_loop_variable_5,cp_loop_variable_6
-
-
-! floats 'F'
-    double precision, dimension(:), allocatable, save :: theArgFStack
-    integer, save :: theArgFStackoffset=0, theArgFStackSize=0
-! integers 'I'
-    integer, dimension(:), allocatable, save :: theArgIStack
-    integer, save :: theArgIStackoffset=0, theArgIStackSize=0
-! booleans 'B'
-    logical, dimension(:), allocatable, save :: theArgBStack
-    integer, save :: theArgBStackoffset=0, theArgBStackSize=0
-! strings 'S'
-    character*(80), dimension(:), allocatable, save :: theArgSStack
-    integer, save :: theArgSStackoffset=0, theArgSStackSize=0
-
-    type(modeType) :: our_orig_mode
-
-! external C function used in inlined code
     integer iaddr
     external iaddr
 !
 !       **** Statements ****
 !
 
-    if (our_rev_mode%arg_store) then
-! store arguments
-  call cp_store_real_scalar(HX,theArgFStack,theArgFStackoffset,theArgFStackSize)
-  call cp_store_real_scalar(HY,theArgFStack,theArgFStackoffset,theArgFStackSize)
-  call cp_store_real_scalar(HZ,theArgFStack,theArgFStackoffset,theArgFStackSize)
-  call cp_store_real_scalar(SOR,theArgFStack,theArgFStackoffset,theArgFStackSize&
-     &)
-
-  call cp_store_real_scalar(SWC,theArgFStack,theArgFStackoffset,theArgFStackSize&
-     &)
-
-  call cp_store_real_scalar(VO,theArgFStack,theArgFStackoffset,theArgFStackSize)
-  call cp_store_real_scalar(VW,theArgFStack,theArgFStackoffset,theArgFStackSize)
-  call cp_store_int_scalar(NX,theArgIStack,theArgIStackoffset,theArgIStackSize)
-  call cp_store_int_scalar(NY,theArgIStack,theArgIStackoffset,theArgIStackSize)
-  call cp_store_int_scalar(NZ,theArgIStack,theArgIStackoffset,theArgIStackSize)
-  call cp_store_real_vector(Q,size(Q),theArgFStack,theArgFStackoffset,theArgFSta&
-     &ckSize)
-
-  call cp_store_real_vector(S,size(S),theArgFStack,theArgFStackoffset,theArgFSta&
-     &ckSize)
-
-  do cp_loop_variable_3 = lbound(P,3),ubound(P,3)
-  do cp_loop_variable_2 = lbound(P,2),ubound(P,2)
-  call cp_store_real_vector(P(:,cp_loop_variable_2,cp_loop_variable_3),size(P(:,&
-     &cp_loop_variable_2,cp_loop_variable_3)),theArgFStack,theArgFStackoffset,th&
-     &eArgFStackSize)
-
-  end do
-  end do
-  do cp_loop_variable_4 = lbound(V,4),ubound(V,4)
-  do cp_loop_variable_3 = lbound(V,3),ubound(V,3)
-  do cp_loop_variable_2 = lbound(V,2),ubound(V,2)
-  call cp_store_real_vector(V(:,cp_loop_variable_2,cp_loop_variable_3,cp_loop_va&
-     &riable_4),size(V(:,cp_loop_variable_2,cp_loop_variable_3,cp_loop_variable_&
-     &4)),theArgFStack,theArgFStackoffset,theArgFStackSize)
-
-  end do
-  end do
-  end do
-  do cp_loop_variable_4 = lbound(PERM,4),ubound(PERM,4)
-  do cp_loop_variable_3 = lbound(PERM,3),ubound(PERM,3)
-  do cp_loop_variable_2 = lbound(PERM,2),ubound(PERM,2)
-  call cp_store_p_real_vector(PERM(:,cp_loop_variable_2,cp_loop_variable_3,cp_lo&
-     &op_variable_4),size(PERM(:,cp_loop_variable_2,cp_loop_variable_3,cp_loop_v&
-     &ariable_4)),theArgFStack,theArgFStackoffset,theArgFStackSize)
-
-  end do
-  end do
-  end do
-    end if
-    if (our_rev_mode%arg_restore) then
-! restore arguments
-  do cp_loop_variable_4 = ubound(PERM,4),lbound(PERM,4),-1
-  do cp_loop_variable_3 = ubound(PERM,3),lbound(PERM,3),-1
-  do cp_loop_variable_2 = ubound(PERM,2),lbound(PERM,2),-1
-  do cp_loop_variable_1 = ubound(PERM,1),lbound(PERM,1),-1
-  PERM(cp_loop_variable_1,cp_loop_variable_2,cp_loop_variable_3,cp_loop_variable&
-     &_4) = theArgFStack(theArgFStackoffset)
-
-  theArgFStackoffset = theArgFStackoffset-1
-  end do
-  end do
-  end do
-  end do
-  do cp_loop_variable_4 = ubound(V,4),lbound(V,4),-1
-  do cp_loop_variable_3 = ubound(V,3),lbound(V,3),-1
-  do cp_loop_variable_2 = ubound(V,2),lbound(V,2),-1
-  do cp_loop_variable_1 = ubound(V,1),lbound(V,1),-1
-  V(cp_loop_variable_1,cp_loop_variable_2,cp_loop_variable_3,cp_loop_variable_4)&
-     &%v = theArgFStack(theArgFStackoffset)
-
-  theArgFStackoffset = theArgFStackoffset-1
-  end do
-  end do
-  end do
-  end do
-  do cp_loop_variable_3 = ubound(P,3),lbound(P,3),-1
-  do cp_loop_variable_2 = ubound(P,2),lbound(P,2),-1
-  do cp_loop_variable_1 = ubound(P,1),lbound(P,1),-1
-  P(cp_loop_variable_1,cp_loop_variable_2,cp_loop_variable_3)%v = theArgFStack(t&
-     &heArgFStackoffset)
-
-  theArgFStackoffset = theArgFStackoffset-1
-  end do
-  end do
-  end do
-  do cp_loop_variable_1 = ubound(S,1),lbound(S,1),-1
-  S(cp_loop_variable_1)%v = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  end do
-  do cp_loop_variable_1 = ubound(Q,1),lbound(Q,1),-1
-  Q(cp_loop_variable_1)%v = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  end do
-  NZ = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  NY = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  NX = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  VW = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  VO = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  SWC = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  SOR = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  HZ = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  HY = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  HX = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-    end if
-    if (our_rev_mode%plain) then
-      our_orig_mode=our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
+   if (our_rev_mode%plain) then
 ! original function
   CALL RELPERM_VECTOR(NX,NY,NZ,S,MW,MO)
   DO I = 1,(NZ*NX*NY),1
@@ -6128,17 +4050,8 @@ CONTAINS
     END DO
   END DO
   CALL TPFA(NX,NY,NZ,KM,Q,P,V)
-
-! original function end
-      our_rev_mode=our_orig_mode
     end if
     if (our_rev_mode%tape) then
-!            print*, " tape       ", our_rev_mode
-      our_rev_mode%arg_store=.TRUE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.TRUE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.FALSE.
 ! taping
   CALL RELPERM_VECTOR(NX,NY,NZ,S,MW,MO)
   integer_tape(integer_tape_pointer) = NX
@@ -6220,21 +4133,8 @@ CONTAINS
   integer_tape_pointer = integer_tape_pointer+1
   integer_tape(integer_tape_pointer) = NZ
   integer_tape_pointer = integer_tape_pointer+1
-
-! taping end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.TRUE.
     end if
     if (our_rev_mode%adjoint) then
-!            print*, " adjoint    ", our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
 ! adjoint
   integer_tape_pointer = integer_tape_pointer-1
   NZ = integer_tape(integer_tape_pointer)
@@ -6327,13 +4227,6 @@ CONTAINS
   integer_tape_pointer = integer_tape_pointer-1
   NX = integer_tape(integer_tape_pointer)
   CALL RELPERM_VECTOR(NX,NY,NZ,S,MW,MO)
-
-! adjoint end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
     end if
   end subroutine PRES
 !#########################################################
@@ -6345,7 +4238,6 @@ CONTAINS
   SUBROUTINE RELPERM_VECTOR(NX, NY, NZ, S, MW, MO, DMW, DMO)
     use OAD_tape
     use OAD_rev
-    use OAD_cp
 
 ! original arguments get inserted before version
 !         ! and declared here together with all local variables
@@ -6466,85 +4358,10 @@ CONTAINS
 !
 
 
-! checkpointing stacks and offsets
-    integer :: cp_loop_variable_1,cp_loop_variable_2,cp_loop_variable_3,cp_loop_&
-     &variable_4,cp_loop_variable_5,cp_loop_variable_6
-
-
-! floats 'F'
-    double precision, dimension(:), allocatable, save :: theArgFStack
-    integer, save :: theArgFStackoffset=0, theArgFStackSize=0
-! integers 'I'
-    integer, dimension(:), allocatable, save :: theArgIStack
-    integer, save :: theArgIStackoffset=0, theArgIStackSize=0
-! booleans 'B'
-    logical, dimension(:), allocatable, save :: theArgBStack
-    integer, save :: theArgBStackoffset=0, theArgBStackSize=0
-! strings 'S'
-    character*(80), dimension(:), allocatable, save :: theArgSStack
-    integer, save :: theArgSStackoffset=0, theArgSStackSize=0
-
-    type(modeType) :: our_orig_mode
-
-! external C function used in inlined code
     integer iaddr
     external iaddr
 
-    if (our_rev_mode%arg_store) then
-! store arguments
-  call cp_store_real_scalar(SOR,theArgFStack,theArgFStackoffset,theArgFStackSize&
-     &)
-
-  call cp_store_real_scalar(SWC,theArgFStack,theArgFStackoffset,theArgFStackSize&
-     &)
-
-  call cp_store_real_scalar(VO,theArgFStack,theArgFStackoffset,theArgFStackSize)
-  call cp_store_real_scalar(VW,theArgFStack,theArgFStackoffset,theArgFStackSize)
-  call cp_store_int_scalar(NX,theArgIStack,theArgIStackoffset,theArgIStackSize)
-  call cp_store_int_scalar(NY,theArgIStack,theArgIStackoffset,theArgIStackSize)
-  call cp_store_int_scalar(NZ,theArgIStack,theArgIStackoffset,theArgIStackSize)
-  call cp_store_real_vector(DMW,size(DMW),theArgFStack,theArgFStackoffset,theArg&
-     &FStackSize)
-
-  call cp_store_real_vector(DMO,size(DMO),theArgFStack,theArgFStackoffset,theArg&
-     &FStackSize)
-
-  call cp_store_real_vector(S,size(S),theArgFStack,theArgFStackoffset,theArgFSta&
-     &ckSize)
-
-    end if
-    if (our_rev_mode%arg_restore) then
-! restore arguments
-  do cp_loop_variable_1 = ubound(S,1),lbound(S,1),-1
-  S(cp_loop_variable_1)%v = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  end do
-  do cp_loop_variable_1 = ubound(DMO,1),lbound(DMO,1),-1
-  DMO(cp_loop_variable_1)%v = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  end do
-  do cp_loop_variable_1 = ubound(DMW,1),lbound(DMW,1),-1
-  DMW(cp_loop_variable_1)%v = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  end do
-  NZ = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  NY = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  NX = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  VW = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  VO = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  SWC = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  SOR = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-    end if
-    if (our_rev_mode%plain) then
-      our_orig_mode=our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
+   if (our_rev_mode%plain) then
 ! original function
   S_TEMP(1:NZ*NX*NY)%v = ((S(1:NZ*NX*NY)%v-SWC)/(1.0D00-SWC-SOR))
   MW(1:NZ*NX*NY)%v = ((S_TEMP(1:NZ*NX*NY)%v**2)/VW)
@@ -6563,17 +4380,8 @@ CONTAINS
      &WC-SOR)))
 
   ENDIF
-
-! original function end
-      our_rev_mode=our_orig_mode
     end if
     if (our_rev_mode%tape) then
-!            print*, " tape       ", our_rev_mode
-      our_rev_mode%arg_store=.TRUE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.TRUE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.FALSE.
 ! taping
 !!! requested inline of 'oad_AllocateMatching' has no defn
   CALL oad_AllocateMatching(OpenAD_aux_6,S(1:NZ*NX*NY))
@@ -6713,21 +4521,8 @@ CONTAINS
     integer_tape(integer_tape_pointer) = OpenAD_Symbol_423
     integer_tape_pointer = integer_tape_pointer+1
   ENDIF
-
-! taping end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.TRUE.
     end if
     if (our_rev_mode%adjoint) then
-!            print*, " adjoint    ", our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
 ! adjoint
   integer_tape_pointer = integer_tape_pointer-1
   OpenAD_Symbol_415 = integer_tape(integer_tape_pointer)
@@ -6804,13 +4599,6 @@ CONTAINS
      &068)%d*(OpenAD_Symbol_1067)
 
   S_TEMP(1:OpenAD_Symbol_1068)%d = 0.0d0
-
-! adjoint end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
     end if
   end subroutine RELPERM_VECTOR
 !#########################################################
@@ -6822,7 +4610,6 @@ CONTAINS
   SUBROUTINE RELPERM_SCALAR(S, MW, MO, DMW, DMO)
     use OAD_tape
     use OAD_rev
-    use OAD_cp
 
 ! original arguments get inserted before version
 !         ! and declared here together with all local variables
@@ -6886,60 +4673,10 @@ CONTAINS
 !
 
 
-! checkpointing stacks and offsets
-    integer :: cp_loop_variable_1,cp_loop_variable_2,cp_loop_variable_3,cp_loop_&
-     &variable_4,cp_loop_variable_5,cp_loop_variable_6
-
-
-! floats 'F'
-    double precision, dimension(:), allocatable, save :: theArgFStack
-    integer, save :: theArgFStackoffset=0, theArgFStackSize=0
-! integers 'I'
-    integer, dimension(:), allocatable, save :: theArgIStack
-    integer, save :: theArgIStackoffset=0, theArgIStackSize=0
-! booleans 'B'
-    logical, dimension(:), allocatable, save :: theArgBStack
-    integer, save :: theArgBStackoffset=0, theArgBStackSize=0
-! strings 'S'
-    character*(80), dimension(:), allocatable, save :: theArgSStack
-    integer, save :: theArgSStackoffset=0, theArgSStackSize=0
-
-    type(modeType) :: our_orig_mode
-
-! external C function used in inlined code
     integer iaddr
     external iaddr
 
-    if (our_rev_mode%arg_store) then
-! store arguments
-  call cp_store_real_scalar(SOR,theArgFStack,theArgFStackoffset,theArgFStackSize&
-     &)
-
-  call cp_store_real_scalar(SWC,theArgFStack,theArgFStackoffset,theArgFStackSize&
-     &)
-
-  call cp_store_real_scalar(VO,theArgFStack,theArgFStackoffset,theArgFStackSize)
-  call cp_store_real_scalar(VW,theArgFStack,theArgFStackoffset,theArgFStackSize)
-  call cp_store_real_scalar(S%v,theArgFStack,theArgFStackoffset,theArgFStackSize&
-     &)
-
-    end if
-    if (our_rev_mode%arg_restore) then
-! restore arguments
-  S%v = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  VW = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  VO = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  SWC = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  SOR = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-    end if
-    if (our_rev_mode%plain) then
-      our_orig_mode=our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
+   if (our_rev_mode%plain) then
 ! original function
   S_TEMP%v = ((S%v-SWC)/(1.0D00-SWC-SOR))
   MW%v = ((S_TEMP%v**2)/VW)
@@ -6956,17 +4693,8 @@ CONTAINS
     DMW = (((S_TEMP%v*2.0D00)/VW)/(1.0D00-SWC-SOR))
     DMO = (-((((1.0D00-S_TEMP%v)*2.0D00)/VO)/(1.0D00-SWC-SOR)))
   ENDIF
-
-! original function end
-      our_rev_mode=our_orig_mode
     end if
     if (our_rev_mode%tape) then
-!            print*, " tape       ", our_rev_mode
-      our_rev_mode%arg_store=.TRUE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.TRUE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.FALSE.
 ! taping
   OpenAD_aux_24 = (S%v-SWC)
   OpenAD_aux_25 = (1.0D00-SWC-SOR)
@@ -7021,21 +4749,8 @@ CONTAINS
     integer_tape(integer_tape_pointer) = OpenAD_Symbol_771
     integer_tape_pointer = integer_tape_pointer+1
   ENDIF
-
-! taping end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.TRUE.
     end if
     if (our_rev_mode%adjoint) then
-!            print*, " adjoint    ", our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
 ! adjoint
   integer_tape_pointer = integer_tape_pointer-1
   OpenAD_Symbol_763 = integer_tape(integer_tape_pointer)
@@ -7062,13 +4777,6 @@ CONTAINS
   MW%d = 0.0d0
   S%d = S%d+S_TEMP%d*(OpenAD_Symbol_1167)
   S_TEMP%d = 0.0d0
-
-! adjoint end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
     end if
   end subroutine RELPERM_SCALAR
 !#########################################################
@@ -7082,7 +4790,6 @@ CONTAINS
 
     use OAD_tape
     use OAD_rev
-    use OAD_cp
 
 ! original arguments get inserted before version
 !         ! and declared here together with all local variables
@@ -7225,110 +4932,10 @@ CONTAINS
 !
 
 
-! checkpointing stacks and offsets
-    integer :: cp_loop_variable_1,cp_loop_variable_2,cp_loop_variable_3,cp_loop_&
-     &variable_4,cp_loop_variable_5,cp_loop_variable_6
-
-
-! floats 'F'
-    double precision, dimension(:), allocatable, save :: theArgFStack
-    integer, save :: theArgFStackoffset=0, theArgFStackSize=0
-! integers 'I'
-    integer, dimension(:), allocatable, save :: theArgIStack
-    integer, save :: theArgIStackoffset=0, theArgIStackSize=0
-! booleans 'B'
-    logical, dimension(:), allocatable, save :: theArgBStack
-    integer, save :: theArgBStackoffset=0, theArgBStackSize=0
-! strings 'S'
-    character*(80), dimension(:), allocatable, save :: theArgSStack
-    integer, save :: theArgSStackoffset=0, theArgSStackSize=0
-
-    type(modeType) :: our_orig_mode
-
-! external C function used in inlined code
     integer iaddr
     external iaddr
 
-    if (our_rev_mode%arg_store) then
-! store arguments
-  call cp_store_int_scalar(NX,theArgIStack,theArgIStackoffset,theArgIStackSize)
-  call cp_store_int_scalar(NY,theArgIStack,theArgIStackoffset,theArgIStackSize)
-  call cp_store_int_scalar(NZ,theArgIStack,theArgIStackoffset,theArgIStackSize)
-  call cp_store_real_vector(Q,size(Q),theArgFStack,theArgFStackoffset,theArgFSta&
-     &ckSize)
-
-  call cp_store_int_scalar(ANNZ,theArgIStack,theArgIStackoffset,theArgIStackSize&
-     &)
-
-  call cp_store_int_vector(AROW_INDEX,size(AROW_INDEX),theArgIStack,theArgIStack&
-     &offset,theArgIStackSize)
-
-  call cp_store_int_vector(AROW_COMPRESSED,size(AROW_COMPRESSED),theArgIStack,th&
-     &eArgIStackoffset,theArgIStackSize)
-
-  call cp_store_int_vector(ACOL_INDEX,size(ACOL_INDEX),theArgIStack,theArgIStack&
-     &offset,theArgIStackSize)
-
-  call cp_store_real_vector(AVALUES,size(AVALUES),theArgFStack,theArgFStackoffse&
-     &t,theArgFStackSize)
-
-  do cp_loop_variable_4 = lbound(V,4),ubound(V,4)
-  do cp_loop_variable_3 = lbound(V,3),ubound(V,3)
-  do cp_loop_variable_2 = lbound(V,2),ubound(V,2)
-  call cp_store_real_vector(V(:,cp_loop_variable_2,cp_loop_variable_3,cp_loop_va&
-     &riable_4),size(V(:,cp_loop_variable_2,cp_loop_variable_3,cp_loop_variable_&
-     &4)),theArgFStack,theArgFStackoffset,theArgFStackSize)
-
-  end do
-  end do
-  end do
-    end if
-    if (our_rev_mode%arg_restore) then
-! restore arguments
-  do cp_loop_variable_4 = ubound(V,4),lbound(V,4),-1
-  do cp_loop_variable_3 = ubound(V,3),lbound(V,3),-1
-  do cp_loop_variable_2 = ubound(V,2),lbound(V,2),-1
-  do cp_loop_variable_1 = ubound(V,1),lbound(V,1),-1
-  V(cp_loop_variable_1,cp_loop_variable_2,cp_loop_variable_3,cp_loop_variable_4)&
-     &%v = theArgFStack(theArgFStackoffset)
-
-  theArgFStackoffset = theArgFStackoffset-1
-  end do
-  end do
-  end do
-  end do
-  do cp_loop_variable_1 = ubound(AVALUES,1),lbound(AVALUES,1),-1
-  AVALUES(cp_loop_variable_1)%v = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  end do
-  do cp_loop_variable_1 = ubound(ACOL_INDEX,1),lbound(ACOL_INDEX,1),-1
-  ACOL_INDEX(cp_loop_variable_1) = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  end do
-  do cp_loop_variable_1 = ubound(AROW_COMPRESSED,1),lbound(AROW_COMPRESSED,1),-1
-  AROW_COMPRESSED(cp_loop_variable_1) = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  end do
-  do cp_loop_variable_1 = ubound(AROW_INDEX,1),lbound(AROW_INDEX,1),-1
-  AROW_INDEX(cp_loop_variable_1) = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  end do
-  ANNZ = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  do cp_loop_variable_1 = ubound(Q,1),lbound(Q,1),-1
-  Q(cp_loop_variable_1)%v = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  end do
-  NZ = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  NY = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  NX = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-    end if
-    if (our_rev_mode%plain) then
-      our_orig_mode=our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
+   if (our_rev_mode%plain) then
 ! original function
   DIAGS(1:NZ*NX*NY,1:7)%v = 0.0D00
   VXYZ(1:INT(NX),1:INT(NY),1:INT(NZ))%v = V(3,1:NX,1:NY,2:NZ+1)%v
@@ -7377,17 +4984,8 @@ CONTAINS
   CALL SPDIAGS_FVM_CSR(NX,NY,NZ,DIAGS,ANNZ,AROW_INDEX,AROW_COMPRESSED,ACOL_INDEX&
      &,AVALUES)
 
-
-! original function end
-      our_rev_mode=our_orig_mode
     end if
     if (our_rev_mode%tape) then
-!            print*, " tape       ", our_rev_mode
-      our_rev_mode%arg_store=.TRUE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.TRUE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.FALSE.
 ! taping
   DIAGS(1:NZ*NX*NY,1:7)%v = 0.0D00
   VXYZ(1:INT(NX),1:INT(NY),1:INT(NZ))%v = V(3,1:NX,1:NY,2:NZ+1)%v
@@ -7661,21 +5259,8 @@ CONTAINS
   integer_tape_pointer = integer_tape_pointer+1
   integer_tape(integer_tape_pointer) = NZ
   integer_tape_pointer = integer_tape_pointer+1
-
-! taping end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.TRUE.
     end if
     if (our_rev_mode%adjoint) then
-!            print*, " adjoint    ", our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
 ! adjoint
   integer_tape_pointer = integer_tape_pointer-1
   NZ = integer_tape(integer_tape_pointer)
@@ -7989,13 +5574,6 @@ CONTAINS
   integer_tape_pointer = integer_tape_pointer-1
   OpenAD_Symbol_1056 = integer_tape(integer_tape_pointer)
   DIAGS(1:OpenAD_Symbol_1056,1:7)%d = 0.0d0
-
-! adjoint end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
     end if
   end subroutine GENA
 !#########################################################
@@ -8007,7 +5585,6 @@ CONTAINS
   SUBROUTINE TPFA(NX, NY, NZ, K, Q, P, V)
     use OAD_tape
     use OAD_rev
-    use OAD_cp
 
 ! original arguments get inserted before version
 !         ! and declared here together with all local variables
@@ -8444,107 +6021,13 @@ CONTAINS
   type(active) :: OpenAD_prp_31
 
 
-! checkpointing stacks and offsets
-    integer :: cp_loop_variable_1,cp_loop_variable_2,cp_loop_variable_3,cp_loop_&
-     &variable_4,cp_loop_variable_5,cp_loop_variable_6
-
-
-! floats 'F'
-    double precision, dimension(:), allocatable, save :: theArgFStack
-    integer, save :: theArgFStackoffset=0, theArgFStackSize=0
-! integers 'I'
-    integer, dimension(:), allocatable, save :: theArgIStack
-    integer, save :: theArgIStackoffset=0, theArgIStackSize=0
-! booleans 'B'
-    logical, dimension(:), allocatable, save :: theArgBStack
-    integer, save :: theArgBStackoffset=0, theArgBStackSize=0
-! strings 'S'
-    character*(80), dimension(:), allocatable, save :: theArgSStack
-    integer, save :: theArgSStackoffset=0, theArgSStackSize=0
-
-    type(modeType) :: our_orig_mode
-
-! external C function used in inlined code
     integer iaddr
     external iaddr
 !
 !       **** Statements ****
 !
 
-    if (our_rev_mode%arg_store) then
-! store arguments
-  call cp_store_real_scalar(HX,theArgFStack,theArgFStackoffset,theArgFStackSize)
-  call cp_store_real_scalar(HY,theArgFStack,theArgFStackoffset,theArgFStackSize)
-  call cp_store_real_scalar(HZ,theArgFStack,theArgFStackoffset,theArgFStackSize)
-  call cp_store_int_scalar(NX,theArgIStack,theArgIStackoffset,theArgIStackSize)
-  call cp_store_int_scalar(NY,theArgIStack,theArgIStackoffset,theArgIStackSize)
-  call cp_store_int_scalar(NZ,theArgIStack,theArgIStackoffset,theArgIStackSize)
-  call cp_store_real_vector(Q,size(Q),theArgFStack,theArgFStackoffset,theArgFSta&
-     &ckSize)
-
-  do cp_loop_variable_3 = lbound(P,3),ubound(P,3)
-  do cp_loop_variable_2 = lbound(P,2),ubound(P,2)
-  call cp_store_real_vector(P(:,cp_loop_variable_2,cp_loop_variable_3),size(P(:,&
-     &cp_loop_variable_2,cp_loop_variable_3)),theArgFStack,theArgFStackoffset,th&
-     &eArgFStackSize)
-
-  end do
-  end do
-  do cp_loop_variable_4 = lbound(K,4),ubound(K,4)
-  do cp_loop_variable_3 = lbound(K,3),ubound(K,3)
-  do cp_loop_variable_2 = lbound(K,2),ubound(K,2)
-  call cp_store_real_vector(K(:,cp_loop_variable_2,cp_loop_variable_3,cp_loop_va&
-     &riable_4),size(K(:,cp_loop_variable_2,cp_loop_variable_3,cp_loop_variable_&
-     &4)),theArgFStack,theArgFStackoffset,theArgFStackSize)
-
-  end do
-  end do
-  end do
-    end if
-    if (our_rev_mode%arg_restore) then
-! restore arguments
-  do cp_loop_variable_4 = ubound(K,4),lbound(K,4),-1
-  do cp_loop_variable_3 = ubound(K,3),lbound(K,3),-1
-  do cp_loop_variable_2 = ubound(K,2),lbound(K,2),-1
-  do cp_loop_variable_1 = ubound(K,1),lbound(K,1),-1
-  K(cp_loop_variable_1,cp_loop_variable_2,cp_loop_variable_3,cp_loop_variable_4)&
-     &%v = theArgFStack(theArgFStackoffset)
-
-  theArgFStackoffset = theArgFStackoffset-1
-  end do
-  end do
-  end do
-  end do
-  do cp_loop_variable_3 = ubound(P,3),lbound(P,3),-1
-  do cp_loop_variable_2 = ubound(P,2),lbound(P,2),-1
-  do cp_loop_variable_1 = ubound(P,1),lbound(P,1),-1
-  P(cp_loop_variable_1,cp_loop_variable_2,cp_loop_variable_3)%v = theArgFStack(t&
-     &heArgFStackoffset)
-
-  theArgFStackoffset = theArgFStackoffset-1
-  end do
-  end do
-  end do
-  do cp_loop_variable_1 = ubound(Q,1),lbound(Q,1),-1
-  Q(cp_loop_variable_1)%v = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  end do
-  NZ = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  NY = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  NX = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  HZ = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  HY = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  HX = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-    end if
-    if (our_rev_mode%plain) then
-      our_orig_mode=our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
+   if (our_rev_mode%plain) then
 ! original function
   N = (NZ * NX * NY)
   DO H = 1, 3, 1
@@ -8671,17 +6154,8 @@ CONTAINS
       END DO
     END DO
   END DO
-
-! original function end
-      our_rev_mode=our_orig_mode
     end if
     if (our_rev_mode%tape) then
-!            print*, " tape       ", our_rev_mode
-      our_rev_mode%arg_store=.TRUE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.TRUE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.FALSE.
 ! taping
   N = (NZ*NX*NY)
   OpenAD_Symbol_567 = 0_w2f__i8
@@ -9221,21 +6695,8 @@ CONTAINS
   END DO
   integer_tape(integer_tape_pointer) = OpenAD_Symbol_609
   integer_tape_pointer = integer_tape_pointer+1
-
-! taping end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.TRUE.
     end if
     if (our_rev_mode%adjoint) then
-!            print*, " adjoint    ", our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
 ! adjoint
   integer_tape_pointer = integer_tape_pointer-1
   OpenAD_Symbol_483 = integer_tape(integer_tape_pointer)
@@ -9866,13 +7327,6 @@ CONTAINS
     END DO
     OpenAD_Symbol_560 = INT(OpenAD_Symbol_560)+1
   END DO
-
-! adjoint end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
     end if
   end subroutine TPFA
 !#########################################################
@@ -9886,7 +7340,6 @@ CONTAINS
 
     use OAD_tape
     use OAD_rev
-    use OAD_cp
 
 ! original arguments get inserted before version
 !         ! and declared here together with all local variables
@@ -9951,42 +7404,13 @@ CONTAINS
   INTEGER(w2f__i4) START_ROW_IMATRIX
 
 
-! checkpointing stacks and offsets
-    integer :: cp_loop_variable_1,cp_loop_variable_2,cp_loop_variable_3,cp_loop_&
-     &variable_4,cp_loop_variable_5,cp_loop_variable_6
-
-
-! floats 'F'
-    double precision, dimension(:), allocatable, save :: theArgFStack
-    integer, save :: theArgFStackoffset=0, theArgFStackSize=0
-! integers 'I'
-    integer, dimension(:), allocatable, save :: theArgIStack
-    integer, save :: theArgIStackoffset=0, theArgIStackSize=0
-! booleans 'B'
-    logical, dimension(:), allocatable, save :: theArgBStack
-    integer, save :: theArgBStackoffset=0, theArgBStackSize=0
-! strings 'S'
-    character*(80), dimension(:), allocatable, save :: theArgSStack
-    integer, save :: theArgSStackoffset=0, theArgSStackSize=0
-
-    type(modeType) :: our_orig_mode
-
-! external C function used in inlined code
     integer iaddr
     external iaddr
 !
 !       **** Statements ****
 !
 
-    if (our_rev_mode%arg_store) then
-! store arguments
-    end if
-    if (our_rev_mode%arg_restore) then
-! restore arguments
-    end if
-    if (our_rev_mode%plain) then
-      our_orig_mode=our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
+   if (our_rev_mode%plain) then
 ! original function
   IDIAGS(1) = (-(NX * NY))
   IDIAGS(2) = (- NX)
@@ -10019,17 +7443,8 @@ CONTAINS
       COL = (COL + 1)
     END DO
   END DO
-
-! original function end
-      our_rev_mode=our_orig_mode
     end if
     if (our_rev_mode%tape) then
-!            print*, " tape       ", our_rev_mode
-      our_rev_mode%arg_store=.TRUE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.TRUE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.FALSE.
 ! taping
   IDIAGS(1) = (-(NX * NY))
   IDIAGS(2) = (- NX)
@@ -10092,21 +7507,8 @@ CONTAINS
   END DO
   integer_tape(integer_tape_pointer) = OpenAD_Symbol_830
   integer_tape_pointer = integer_tape_pointer+1
-
-! taping end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.TRUE.
     end if
     if (our_rev_mode%adjoint) then
-!            print*, " adjoint    ", our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
 ! adjoint
   integer_tape_pointer = integer_tape_pointer-1
   OpenAD_Symbol_823 = integer_tape(integer_tape_pointer)
@@ -10136,13 +7538,6 @@ CONTAINS
     ENDIF
     OpenAD_Symbol_824 = INT(OpenAD_Symbol_824) + 1
   END DO
-
-! adjoint end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
     end if
   end subroutine SPDIAGS_FVM
 !#########################################################
@@ -10156,7 +7551,6 @@ CONTAINS
 
     use OAD_tape
     use OAD_rev
-    use OAD_cp
 
 ! original arguments get inserted before version
 !         ! and declared here together with all local variables
@@ -10237,76 +7631,13 @@ CONTAINS
   INTEGER(w2f__i4) OpenAD_Symbol_1170
 
 
-! checkpointing stacks and offsets
-    integer :: cp_loop_variable_1,cp_loop_variable_2,cp_loop_variable_3,cp_loop_&
-     &variable_4,cp_loop_variable_5,cp_loop_variable_6
-
-
-! floats 'F'
-    double precision, dimension(:), allocatable, save :: theArgFStack
-    integer, save :: theArgFStackoffset=0, theArgFStackSize=0
-! integers 'I'
-    integer, dimension(:), allocatable, save :: theArgIStack
-    integer, save :: theArgIStackoffset=0, theArgIStackSize=0
-! booleans 'B'
-    logical, dimension(:), allocatable, save :: theArgBStack
-    integer, save :: theArgBStackoffset=0, theArgBStackSize=0
-! strings 'S'
-    character*(80), dimension(:), allocatable, save :: theArgSStack
-    integer, save :: theArgSStackoffset=0, theArgSStackSize=0
-
-    type(modeType) :: our_orig_mode
-
-! external C function used in inlined code
     integer iaddr
     external iaddr
 !
 !       **** Statements ****
 !
 
-    if (our_rev_mode%arg_store) then
-! store arguments
-  call cp_store_int_scalar(NX,theArgIStack,theArgIStackoffset,theArgIStackSize)
-  call cp_store_int_scalar(NY,theArgIStack,theArgIStackoffset,theArgIStackSize)
-  call cp_store_int_scalar(NZ,theArgIStack,theArgIStackoffset,theArgIStackSize)
-  call cp_store_int_scalar(ONNZ,theArgIStack,theArgIStackoffset,theArgIStackSize&
-     &)
-
-  do cp_loop_variable_2 = lbound(IMATRIX,2),ubound(IMATRIX,2)
-  call cp_store_real_vector(IMATRIX(:,cp_loop_variable_2),size(IMATRIX(:,cp_loop&
-     &_variable_2)),theArgFStack,theArgFStackoffset,theArgFStackSize)
-
-  end do
-  call cp_store_int_vector(OROW_COMPRESSED,size(OROW_COMPRESSED),theArgIStack,th&
-     &eArgIStackoffset,theArgIStackSize)
-
-    end if
-    if (our_rev_mode%arg_restore) then
-! restore arguments
-  do cp_loop_variable_1 = ubound(OROW_COMPRESSED,1),lbound(OROW_COMPRESSED,1),-1
-  OROW_COMPRESSED(cp_loop_variable_1) = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  end do
-  do cp_loop_variable_2 = ubound(IMATRIX,2),lbound(IMATRIX,2),-1
-  do cp_loop_variable_1 = ubound(IMATRIX,1),lbound(IMATRIX,1),-1
-  IMATRIX(cp_loop_variable_1,cp_loop_variable_2)%v = theArgFStack(theArgFStackof&
-     &fset)
-
-  theArgFStackoffset = theArgFStackoffset-1
-  end do
-  end do
-  ONNZ = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  NZ = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  NY = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  NX = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-    end if
-    if (our_rev_mode%plain) then
-      our_orig_mode=our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
+   if (our_rev_mode%plain) then
 ! original function
   IDIAGS(1) = (-(NX * NY))
   IDIAGS(2) = (- NX)
@@ -10350,17 +7681,8 @@ CONTAINS
     END DO
     OROW_COMPRESSED(I+1) = (OROW_COMPRESSED(I)+ROWNNZ)
   END DO
-
-! original function end
-      our_rev_mode=our_orig_mode
     end if
     if (our_rev_mode%tape) then
-!            print*, " tape       ", our_rev_mode
-      our_rev_mode%arg_store=.TRUE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.TRUE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.FALSE.
 ! taping
   IDIAGS(1) = (-(NX*NY))
   IDIAGS(2) = (-NX)
@@ -10451,21 +7773,8 @@ CONTAINS
   END DO
   integer_tape(integer_tape_pointer) = OpenAD_Symbol_796
   integer_tape_pointer = integer_tape_pointer+1
-
-! taping end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.TRUE.
     end if
     if (our_rev_mode%adjoint) then
-!            print*, " adjoint    ", our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
 ! adjoint
   integer_tape_pointer = integer_tape_pointer-1
   OpenAD_Symbol_781 = integer_tape(integer_tape_pointer)
@@ -10515,13 +7824,6 @@ CONTAINS
     ENDIF
     OpenAD_Symbol_788 = INT(OpenAD_Symbol_788)+1
   END DO
-
-! adjoint end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
     end if
   end subroutine SPDIAGS_FVM_CSR
 END
@@ -10548,7 +7850,6 @@ CONTAINS
   SUBROUTINE INIT_FLW_TRNC_NORM_XIN_PT_OUT(NX, NY, NZ, MU, SIGMA, Q)
     use OAD_tape
     use OAD_rev
-    use OAD_cp
 
 ! original arguments get inserted before version
 !         ! and declared here together with all local variables
@@ -10638,64 +7939,13 @@ CONTAINS
   type(active) :: OpenAD_prp_33
 
 
-! checkpointing stacks and offsets
-    integer :: cp_loop_variable_1,cp_loop_variable_2,cp_loop_variable_3,cp_loop_&
-     &variable_4,cp_loop_variable_5,cp_loop_variable_6
-
-
-! floats 'F'
-    double precision, dimension(:), allocatable, save :: theArgFStack
-    integer, save :: theArgFStackoffset=0, theArgFStackSize=0
-! integers 'I'
-    integer, dimension(:), allocatable, save :: theArgIStack
-    integer, save :: theArgIStackoffset=0, theArgIStackSize=0
-! booleans 'B'
-    logical, dimension(:), allocatable, save :: theArgBStack
-    integer, save :: theArgBStackoffset=0, theArgBStackSize=0
-! strings 'S'
-    character*(80), dimension(:), allocatable, save :: theArgSStack
-    integer, save :: theArgSStackoffset=0, theArgSStackSize=0
-
-    type(modeType) :: our_orig_mode
-
-! external C function used in inlined code
     integer iaddr
     external iaddr
 !
 !       **** Statements ****
 !
 
-    if (our_rev_mode%arg_store) then
-! store arguments
-  call cp_store_real_scalar(IR,theArgFStack,theArgFStackoffset,theArgFStackSize)
-  call cp_store_int_scalar(NX,theArgIStack,theArgIStackoffset,theArgIStackSize)
-  call cp_store_int_scalar(NY,theArgIStack,theArgIStackoffset,theArgIStackSize)
-  call cp_store_int_scalar(NZ,theArgIStack,theArgIStackoffset,theArgIStackSize)
-  call cp_store_real_scalar(MU%v,theArgFStack,theArgFStackoffset,theArgFStackSiz&
-     &e)
-
-  call cp_store_real_scalar(SIGMA%v,theArgFStack,theArgFStackoffset,theArgFStack&
-     &Size)
-
-    end if
-    if (our_rev_mode%arg_restore) then
-! restore arguments
-  SIGMA%v = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  MU%v = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  NZ = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  NY = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  NX = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  IR = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-    end if
-    if (our_rev_mode%plain) then
-      our_orig_mode=our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
+   if (our_rev_mode%plain) then
 ! original function
   PI = 3.141592653589793116D00
   MASS%v = 0.0D00
@@ -10718,17 +7968,8 @@ CONTAINS
     J = (J+1)
   END DO
   Q(NZ*NX*NY)%v = (-IR)
-
-! original function end
-      our_rev_mode=our_orig_mode
     end if
     if (our_rev_mode%tape) then
-!            print*, " tape       ", our_rev_mode
-      our_rev_mode%arg_store=.TRUE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.TRUE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.FALSE.
 ! taping
   PI = 3.141592653589793116D00
   MASS%v = 0.0D00
@@ -10809,21 +8050,8 @@ CONTAINS
   OpenAD_Symbol_871 = (NZ*NX*NY)
   integer_tape(integer_tape_pointer) = OpenAD_Symbol_871
   integer_tape_pointer = integer_tape_pointer+1
-
-! taping end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.TRUE.
     end if
     if (our_rev_mode%adjoint) then
-!            print*, " adjoint    ", our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
 ! adjoint
   integer_tape_pointer = integer_tape_pointer-1
   OpenAD_Symbol_1181 = integer_tape(integer_tape_pointer)
@@ -10890,13 +8118,6 @@ CONTAINS
   OpenAD_Symbol_1171 = integer_tape(integer_tape_pointer)
   Q_X(1:OpenAD_Symbol_1171)%d = 0.0d0
   MASS%d = 0.0d0
-
-! adjoint end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
     end if
   end subroutine INIT_FLW_TRNC_NORM_XIN_PT_OUT
 !#########################################################
@@ -10908,7 +8129,6 @@ CONTAINS
   SUBROUTINE SIMULATE_RESERVOIR(NX, NY, NZ, ND, PT, ST, Q, S, P, V, TT, PC, OIL)
     use OAD_tape
     use OAD_rev
-    use OAD_cp
 
 ! original arguments get inserted before version
 !         ! and declared here together with all local variables
@@ -10986,181 +8206,10 @@ CONTAINS
 !
 
 
-! checkpointing stacks and offsets
-    integer :: cp_loop_variable_1,cp_loop_variable_2,cp_loop_variable_3,cp_loop_&
-     &variable_4,cp_loop_variable_5,cp_loop_variable_6
-
-
-! floats 'F'
-    double precision, dimension(:), allocatable, save :: theArgFStack
-    integer, save :: theArgFStackoffset=0, theArgFStackSize=0
-! integers 'I'
-    integer, dimension(:), allocatable, save :: theArgIStack
-    integer, save :: theArgIStackoffset=0, theArgIStackSize=0
-! booleans 'B'
-    logical, dimension(:), allocatable, save :: theArgBStack
-    integer, save :: theArgBStackoffset=0, theArgBStackSize=0
-! strings 'S'
-    character*(80), dimension(:), allocatable, save :: theArgSStack
-    integer, save :: theArgSStackoffset=0, theArgSStackSize=0
-
-    type(modeType) :: our_orig_mode
-
-! external C function used in inlined code
     integer iaddr
     external iaddr
 
-    if (our_rev_mode%arg_store) then
-! store arguments
-  call cp_store_real_scalar(HX,theArgFStack,theArgFStackoffset,theArgFStackSize)
-  call cp_store_real_scalar(HY,theArgFStack,theArgFStackoffset,theArgFStackSize)
-  call cp_store_real_scalar(HZ,theArgFStack,theArgFStackoffset,theArgFStackSize)
-  call cp_store_real_scalar(SOR,theArgFStack,theArgFStackoffset,theArgFStackSize&
-     &)
-
-  call cp_store_real_scalar(SWC,theArgFStack,theArgFStackoffset,theArgFStackSize&
-     &)
-
-  call cp_store_real_scalar(VO,theArgFStack,theArgFStackoffset,theArgFStackSize)
-  call cp_store_real_scalar(VOL,theArgFStack,theArgFStackoffset,theArgFStackSize&
-     &)
-
-  call cp_store_real_scalar(VW,theArgFStack,theArgFStackoffset,theArgFStackSize)
-  call cp_store_int_scalar(NX,theArgIStack,theArgIStackoffset,theArgIStackSize)
-  call cp_store_int_scalar(NY,theArgIStack,theArgIStackoffset,theArgIStackSize)
-  call cp_store_int_scalar(NZ,theArgIStack,theArgIStackoffset,theArgIStackSize)
-  call cp_store_int_scalar(ND,theArgIStack,theArgIStackoffset,theArgIStackSize)
-  call cp_store_int_scalar(PT,theArgIStack,theArgIStackoffset,theArgIStackSize)
-  call cp_store_int_scalar(ST,theArgIStack,theArgIStackoffset,theArgIStackSize)
-  call cp_store_real_vector(Q,size(Q),theArgFStack,theArgFStackoffset,theArgFSta&
-     &ckSize)
-
-  call cp_store_real_vector(S,size(S),theArgFStack,theArgFStackoffset,theArgFSta&
-     &ckSize)
-
-  do cp_loop_variable_3 = lbound(P,3),ubound(P,3)
-  do cp_loop_variable_2 = lbound(P,2),ubound(P,2)
-  call cp_store_real_vector(P(:,cp_loop_variable_2,cp_loop_variable_3),size(P(:,&
-     &cp_loop_variable_2,cp_loop_variable_3)),theArgFStack,theArgFStackoffset,th&
-     &eArgFStackSize)
-
-  end do
-  end do
-  do cp_loop_variable_4 = lbound(V,4),ubound(V,4)
-  do cp_loop_variable_3 = lbound(V,3),ubound(V,3)
-  do cp_loop_variable_2 = lbound(V,2),ubound(V,2)
-  call cp_store_real_vector(V(:,cp_loop_variable_2,cp_loop_variable_3,cp_loop_va&
-     &riable_4),size(V(:,cp_loop_variable_2,cp_loop_variable_3,cp_loop_variable_&
-     &4)),theArgFStack,theArgFStackoffset,theArgFStackSize)
-
-  end do
-  end do
-  end do
-  do cp_loop_variable_2 = lbound(PC,2),ubound(PC,2)
-  call cp_store_real_vector(PC(:,cp_loop_variable_2),size(PC(:,cp_loop_variable_&
-     &2)),theArgFStack,theArgFStackoffset,theArgFStackSize)
-
-  end do
-  do cp_loop_variable_4 = lbound(PERM,4),ubound(PERM,4)
-  do cp_loop_variable_3 = lbound(PERM,3),ubound(PERM,3)
-  do cp_loop_variable_2 = lbound(PERM,2),ubound(PERM,2)
-  call cp_store_p_real_vector(PERM(:,cp_loop_variable_2,cp_loop_variable_3,cp_lo&
-     &op_variable_4),size(PERM(:,cp_loop_variable_2,cp_loop_variable_3,cp_loop_v&
-     &ariable_4)),theArgFStack,theArgFStackoffset,theArgFStackSize)
-
-  end do
-  end do
-  end do
-  call cp_store_p_real_vector(POR,size(POR),theArgFStack,theArgFStackoffset,theA&
-     &rgFStackSize)
-
-    end if
-    if (our_rev_mode%arg_restore) then
-! restore arguments
-  do cp_loop_variable_1 = ubound(POR,1),lbound(POR,1),-1
-  POR(cp_loop_variable_1) = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  end do
-  do cp_loop_variable_4 = ubound(PERM,4),lbound(PERM,4),-1
-  do cp_loop_variable_3 = ubound(PERM,3),lbound(PERM,3),-1
-  do cp_loop_variable_2 = ubound(PERM,2),lbound(PERM,2),-1
-  do cp_loop_variable_1 = ubound(PERM,1),lbound(PERM,1),-1
-  PERM(cp_loop_variable_1,cp_loop_variable_2,cp_loop_variable_3,cp_loop_variable&
-     &_4) = theArgFStack(theArgFStackoffset)
-
-  theArgFStackoffset = theArgFStackoffset-1
-  end do
-  end do
-  end do
-  end do
-  do cp_loop_variable_2 = ubound(PC,2),lbound(PC,2),-1
-  do cp_loop_variable_1 = ubound(PC,1),lbound(PC,1),-1
-  PC(cp_loop_variable_1,cp_loop_variable_2)%v = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  end do
-  end do
-  do cp_loop_variable_4 = ubound(V,4),lbound(V,4),-1
-  do cp_loop_variable_3 = ubound(V,3),lbound(V,3),-1
-  do cp_loop_variable_2 = ubound(V,2),lbound(V,2),-1
-  do cp_loop_variable_1 = ubound(V,1),lbound(V,1),-1
-  V(cp_loop_variable_1,cp_loop_variable_2,cp_loop_variable_3,cp_loop_variable_4)&
-     &%v = theArgFStack(theArgFStackoffset)
-
-  theArgFStackoffset = theArgFStackoffset-1
-  end do
-  end do
-  end do
-  end do
-  do cp_loop_variable_3 = ubound(P,3),lbound(P,3),-1
-  do cp_loop_variable_2 = ubound(P,2),lbound(P,2),-1
-  do cp_loop_variable_1 = ubound(P,1),lbound(P,1),-1
-  P(cp_loop_variable_1,cp_loop_variable_2,cp_loop_variable_3)%v = theArgFStack(t&
-     &heArgFStackoffset)
-
-  theArgFStackoffset = theArgFStackoffset-1
-  end do
-  end do
-  end do
-  do cp_loop_variable_1 = ubound(S,1),lbound(S,1),-1
-  S(cp_loop_variable_1)%v = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  end do
-  do cp_loop_variable_1 = ubound(Q,1),lbound(Q,1),-1
-  Q(cp_loop_variable_1)%v = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  end do
-  ST = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  PT = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  ND = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  NZ = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  NY = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  NX = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  VW = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  VOL = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  VO = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  SWC = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  SOR = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  HZ = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  HY = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  HX = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-    end if
-    if (our_rev_mode%plain) then
-      our_orig_mode=our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
+   if (our_rev_mode%plain) then
 ! original function
   S(1:NZ*NX*NY)%v = SWC
   PC(1,1)%v = 0.0D00
@@ -11188,17 +8237,8 @@ CONTAINS
     END DO
   END DO
   OIL%v = TEMPOIL2%v
-
-! original function end
-      our_rev_mode=our_orig_mode
     end if
     if (our_rev_mode%tape) then
-!            print*, " tape       ", our_rev_mode
-      our_rev_mode%arg_store=.TRUE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.TRUE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.FALSE.
 ! taping
   S(1:NZ*NX*NY)%v = SWC
   PC(1,1)%v = 0.0D00
@@ -11275,21 +8315,8 @@ CONTAINS
   integer_tape(integer_tape_pointer) = OpenAD_Symbol_877
   integer_tape_pointer = integer_tape_pointer+1
   OIL%v = TEMPOIL2%v
-
-! taping end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.TRUE.
     end if
     if (our_rev_mode%adjoint) then
-!            print*, " adjoint    ", our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
 ! adjoint
   TEMPOIL2%d = TEMPOIL2%d+OIL%d
   OIL%d = 0.0d0
@@ -11359,13 +8386,6 @@ CONTAINS
   integer_tape_pointer = integer_tape_pointer-1
   OpenAD_Symbol_1182 = integer_tape(integer_tape_pointer)
   S(1:OpenAD_Symbol_1182)%d = 0.0d0
-
-! adjoint end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
     end if
   end subroutine SIMULATE_RESERVOIR
 !#########################################################
@@ -11379,7 +8399,6 @@ CONTAINS
 
     use OAD_tape
     use OAD_rev
-    use OAD_cp
 
 ! original arguments get inserted before version
 !         ! and declared here together with all local variables
@@ -11414,205 +8433,21 @@ CONTAINS
   type(active) :: MO
 
 
-! checkpointing stacks and offsets
-    integer :: cp_loop_variable_1,cp_loop_variable_2,cp_loop_variable_3,cp_loop_&
-     &variable_4,cp_loop_variable_5,cp_loop_variable_6
-
-
-! floats 'F'
-    double precision, dimension(:), allocatable, save :: theArgFStack
-    integer, save :: theArgFStackoffset=0, theArgFStackSize=0
-! integers 'I'
-    integer, dimension(:), allocatable, save :: theArgIStack
-    integer, save :: theArgIStackoffset=0, theArgIStackSize=0
-! booleans 'B'
-    logical, dimension(:), allocatable, save :: theArgBStack
-    integer, save :: theArgBStackoffset=0, theArgBStackSize=0
-! strings 'S'
-    character*(80), dimension(:), allocatable, save :: theArgSStack
-    integer, save :: theArgSStackoffset=0, theArgSStackSize=0
-
-    type(modeType) :: our_orig_mode
-
-! external C function used in inlined code
     integer iaddr
     external iaddr
 !
 !       **** Statements ****
 !
 
-    if (our_rev_mode%arg_store) then
-! store arguments
-  call cp_store_real_scalar(HX,theArgFStack,theArgFStackoffset,theArgFStackSize)
-  call cp_store_real_scalar(HY,theArgFStack,theArgFStackoffset,theArgFStackSize)
-  call cp_store_real_scalar(HZ,theArgFStack,theArgFStackoffset,theArgFStackSize)
-  call cp_store_real_scalar(SOR,theArgFStack,theArgFStackoffset,theArgFStackSize&
-     &)
-
-  call cp_store_real_scalar(SWC,theArgFStack,theArgFStackoffset,theArgFStackSize&
-     &)
-
-  call cp_store_real_scalar(VO,theArgFStack,theArgFStackoffset,theArgFStackSize)
-  call cp_store_real_scalar(VOL,theArgFStack,theArgFStackoffset,theArgFStackSize&
-     &)
-
-  call cp_store_real_scalar(VW,theArgFStack,theArgFStackoffset,theArgFStackSize)
-  call cp_store_int_scalar(NX,theArgIStack,theArgIStackoffset,theArgIStackSize)
-  call cp_store_int_scalar(NY,theArgIStack,theArgIStackoffset,theArgIStackSize)
-  call cp_store_int_scalar(NZ,theArgIStack,theArgIStackoffset,theArgIStackSize)
-  call cp_store_int_scalar(ND,theArgIStack,theArgIStackoffset,theArgIStackSize)
-  call cp_store_int_scalar(PT,theArgIStack,theArgIStackoffset,theArgIStackSize)
-  call cp_store_int_scalar(ST,theArgIStack,theArgIStackoffset,theArgIStackSize)
-  call cp_store_real_vector(Q,size(Q),theArgFStack,theArgFStackoffset,theArgFSta&
-     &ckSize)
-
-  call cp_store_real_vector(S,size(S),theArgFStack,theArgFStackoffset,theArgFSta&
-     &ckSize)
-
-  do cp_loop_variable_3 = lbound(P,3),ubound(P,3)
-  do cp_loop_variable_2 = lbound(P,2),ubound(P,2)
-  call cp_store_real_vector(P(:,cp_loop_variable_2,cp_loop_variable_3),size(P(:,&
-     &cp_loop_variable_2,cp_loop_variable_3)),theArgFStack,theArgFStackoffset,th&
-     &eArgFStackSize)
-
-  end do
-  end do
-  do cp_loop_variable_4 = lbound(V,4),ubound(V,4)
-  do cp_loop_variable_3 = lbound(V,3),ubound(V,3)
-  do cp_loop_variable_2 = lbound(V,2),ubound(V,2)
-  call cp_store_real_vector(V(:,cp_loop_variable_2,cp_loop_variable_3,cp_loop_va&
-     &riable_4),size(V(:,cp_loop_variable_2,cp_loop_variable_3,cp_loop_variable_&
-     &4)),theArgFStack,theArgFStackoffset,theArgFStackSize)
-
-  end do
-  end do
-  end do
-  call cp_store_real_scalar(MW%v,theArgFStack,theArgFStackoffset,theArgFStackSiz&
-     &e)
-
-  call cp_store_real_scalar(MO%v,theArgFStack,theArgFStackoffset,theArgFStackSiz&
-     &e)
-
-  call cp_store_int_scalar(PRESSURE_STEP,theArgIStack,theArgIStackoffset,theArgI&
-     &StackSize)
-
-  do cp_loop_variable_4 = lbound(PERM,4),ubound(PERM,4)
-  do cp_loop_variable_3 = lbound(PERM,3),ubound(PERM,3)
-  do cp_loop_variable_2 = lbound(PERM,2),ubound(PERM,2)
-  call cp_store_p_real_vector(PERM(:,cp_loop_variable_2,cp_loop_variable_3,cp_lo&
-     &op_variable_4),size(PERM(:,cp_loop_variable_2,cp_loop_variable_3,cp_loop_v&
-     &ariable_4)),theArgFStack,theArgFStackoffset,theArgFStackSize)
-
-  end do
-  end do
-  end do
-  call cp_store_p_real_vector(POR,size(POR),theArgFStack,theArgFStackoffset,theA&
-     &rgFStackSize)
-
-    end if
-    if (our_rev_mode%arg_restore) then
-! restore arguments
-  do cp_loop_variable_1 = ubound(POR,1),lbound(POR,1),-1
-  POR(cp_loop_variable_1) = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  end do
-  do cp_loop_variable_4 = ubound(PERM,4),lbound(PERM,4),-1
-  do cp_loop_variable_3 = ubound(PERM,3),lbound(PERM,3),-1
-  do cp_loop_variable_2 = ubound(PERM,2),lbound(PERM,2),-1
-  do cp_loop_variable_1 = ubound(PERM,1),lbound(PERM,1),-1
-  PERM(cp_loop_variable_1,cp_loop_variable_2,cp_loop_variable_3,cp_loop_variable&
-     &_4) = theArgFStack(theArgFStackoffset)
-
-  theArgFStackoffset = theArgFStackoffset-1
-  end do
-  end do
-  end do
-  end do
-  PRESSURE_STEP = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  MO%v = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  MW%v = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  do cp_loop_variable_4 = ubound(V,4),lbound(V,4),-1
-  do cp_loop_variable_3 = ubound(V,3),lbound(V,3),-1
-  do cp_loop_variable_2 = ubound(V,2),lbound(V,2),-1
-  do cp_loop_variable_1 = ubound(V,1),lbound(V,1),-1
-  V(cp_loop_variable_1,cp_loop_variable_2,cp_loop_variable_3,cp_loop_variable_4)&
-     &%v = theArgFStack(theArgFStackoffset)
-
-  theArgFStackoffset = theArgFStackoffset-1
-  end do
-  end do
-  end do
-  end do
-  do cp_loop_variable_3 = ubound(P,3),lbound(P,3),-1
-  do cp_loop_variable_2 = ubound(P,2),lbound(P,2),-1
-  do cp_loop_variable_1 = ubound(P,1),lbound(P,1),-1
-  P(cp_loop_variable_1,cp_loop_variable_2,cp_loop_variable_3)%v = theArgFStack(t&
-     &heArgFStackoffset)
-
-  theArgFStackoffset = theArgFStackoffset-1
-  end do
-  end do
-  end do
-  do cp_loop_variable_1 = ubound(S,1),lbound(S,1),-1
-  S(cp_loop_variable_1)%v = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  end do
-  do cp_loop_variable_1 = ubound(Q,1),lbound(Q,1),-1
-  Q(cp_loop_variable_1)%v = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  end do
-  ST = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  PT = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  ND = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  NZ = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  NY = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  NX = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  VW = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  VOL = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  VO = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  SWC = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  SOR = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  HZ = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  HY = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  HX = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-    end if
-    if (our_rev_mode%plain) then
-      our_orig_mode=our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
+   if (our_rev_mode%plain) then
 ! original function
   IF(PRESSURE_STEP .eq. 1) THEN
     CALL PRES(NX,NY,NZ,Q,S,P,V)
   ENDIF
   CALL NEWTRAPH(NX,NY,NZ,ND,PT,ST,Q,V,S)
   CALL RELPERM_SCALAR(S(NZ*NX*NY),MW,MO)
-
-! original function end
-      our_rev_mode=our_orig_mode
     end if
     if (our_rev_mode%tape) then
-!            print*, " tape       ", our_rev_mode
-      our_rev_mode%arg_store=.TRUE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.TRUE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.FALSE.
 ! taping
   IF (PRESSURE_STEP.eq.1) THEN
     CALL PRES(NX,NY,NZ,Q,S,P,V)
@@ -11644,21 +8479,8 @@ CONTAINS
   integer_tape_pointer = integer_tape_pointer+1
   integer_tape(integer_tape_pointer) = NY
   integer_tape_pointer = integer_tape_pointer+1
-
-! taping end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.TRUE.
     end if
     if (our_rev_mode%adjoint) then
-!            print*, " adjoint    ", our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
 ! adjoint
   integer_tape_pointer = integer_tape_pointer-1
   NY = integer_tape(integer_tape_pointer)
@@ -11685,13 +8507,6 @@ CONTAINS
     NX = integer_tape(integer_tape_pointer)
     CALL PRES(NX,NY,NZ,Q,S,P,V)
   ENDIF
-
-! adjoint end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
     end if
   end subroutine STEPFORWARD
 !#########################################################
@@ -11703,7 +8518,6 @@ CONTAINS
   SUBROUTINE UPDATE_OIL(ND, PT, ST, PC, K, OILIN, OILOUT)
     use OAD_tape
     use OAD_rev
-    use OAD_cp
 
 ! original arguments get inserted before version
 !         ! and declared here together with all local variables
@@ -11732,77 +8546,14 @@ CONTAINS
 !
 
 
-! checkpointing stacks and offsets
-    integer :: cp_loop_variable_1,cp_loop_variable_2,cp_loop_variable_3,cp_loop_&
-     &variable_4,cp_loop_variable_5,cp_loop_variable_6
-
-
-! floats 'F'
-    double precision, dimension(:), allocatable, save :: theArgFStack
-    integer, save :: theArgFStackoffset=0, theArgFStackSize=0
-! integers 'I'
-    integer, dimension(:), allocatable, save :: theArgIStack
-    integer, save :: theArgIStackoffset=0, theArgIStackSize=0
-! booleans 'B'
-    logical, dimension(:), allocatable, save :: theArgBStack
-    integer, save :: theArgBStackoffset=0, theArgBStackSize=0
-! strings 'S'
-    character*(80), dimension(:), allocatable, save :: theArgSStack
-    integer, save :: theArgSStackoffset=0, theArgSStackSize=0
-
-    type(modeType) :: our_orig_mode
-
-! external C function used in inlined code
     integer iaddr
     external iaddr
 
-    if (our_rev_mode%arg_store) then
-! store arguments
-  call cp_store_int_scalar(ND,theArgIStack,theArgIStackoffset,theArgIStackSize)
-  call cp_store_int_scalar(ST,theArgIStack,theArgIStackoffset,theArgIStackSize)
-  call cp_store_int_scalar(K,theArgIStack,theArgIStackoffset,theArgIStackSize)
-  call cp_store_real_scalar(OILIN%v,theArgFStack,theArgFStackoffset,theArgFStack&
-     &Size)
-
-  do cp_loop_variable_2 = lbound(PC,2),ubound(PC,2)
-  call cp_store_real_vector(PC(:,cp_loop_variable_2),size(PC(:,cp_loop_variable_&
-     &2)),theArgFStack,theArgFStackoffset,theArgFStackSize)
-
-  end do
-    end if
-    if (our_rev_mode%arg_restore) then
-! restore arguments
-  do cp_loop_variable_2 = ubound(PC,2),lbound(PC,2),-1
-  do cp_loop_variable_1 = ubound(PC,1),lbound(PC,1),-1
-  PC(cp_loop_variable_1,cp_loop_variable_2)%v = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  end do
-  end do
-  OILIN%v = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  K = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  ST = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-  ND = theArgIStack(theArgIStackoffset)
-  theArgIStackoffset = theArgIStackoffset-1
-    end if
-    if (our_rev_mode%plain) then
-      our_orig_mode=our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
+   if (our_rev_mode%plain) then
 ! original function
   OILOUT%v = (OILIN%v+ST*PC(2,K)%v)
-
-! original function end
-      our_rev_mode=our_orig_mode
     end if
     if (our_rev_mode%tape) then
-!            print*, " tape       ", our_rev_mode
-      our_rev_mode%arg_store=.TRUE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.TRUE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.FALSE.
 ! taping
   OpenAD_lin_58 = ST
   OILOUT%v = (OILIN%v+ST*PC(2,K)%v)
@@ -11810,21 +8561,8 @@ CONTAINS
   double_tape_pointer = double_tape_pointer+1
   integer_tape(integer_tape_pointer) = K
   integer_tape_pointer = integer_tape_pointer+1
-
-! taping end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.TRUE.
     end if
     if (our_rev_mode%adjoint) then
-!            print*, " adjoint    ", our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
 ! adjoint
   integer_tape_pointer = integer_tape_pointer-1
   OpenAD_Symbol_1189 = integer_tape(integer_tape_pointer)
@@ -11835,13 +8573,6 @@ CONTAINS
 
   OILIN%d = OILIN%d+OILOUT%d
   OILOUT%d = 0.0d0
-
-! adjoint end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
     end if
   end subroutine UPDATE_OIL
 !#########################################################
@@ -11853,7 +8584,6 @@ CONTAINS
   SUBROUTINE WRAPPER(NX, NY, NZ, ND, PT, ST, MU, SIGMA, Q, S, P, V, TT, PC, OIL)
     use OAD_tape
     use OAD_rev
-    use OAD_cp
 
 ! original arguments get inserted before version
 !         ! and declared here together with all local variables
@@ -11899,27 +8629,6 @@ CONTAINS
   ALLOCATABLE OpenAD_tyc_9
 
 
-! checkpointing stacks and offsets
-    integer :: cp_loop_variable_1,cp_loop_variable_2,cp_loop_variable_3,cp_loop_&
-     &variable_4,cp_loop_variable_5,cp_loop_variable_6
-
-
-! floats 'F'
-    double precision, dimension(:), allocatable, save :: theArgFStack
-    integer, save :: theArgFStackoffset=0, theArgFStackSize=0
-! integers 'I'
-    integer, dimension(:), allocatable, save :: theArgIStack
-    integer, save :: theArgIStackoffset=0, theArgIStackSize=0
-! booleans 'B'
-    logical, dimension(:), allocatable, save :: theArgBStack
-    integer, save :: theArgBStackoffset=0, theArgBStackSize=0
-! strings 'S'
-    character*(80), dimension(:), allocatable, save :: theArgSStack
-    integer, save :: theArgSStackoffset=0, theArgSStackSize=0
-
-    type(modeType) :: our_orig_mode
-
-! external C function used in inlined code
     integer iaddr
     external iaddr
 !
@@ -11932,77 +8641,7 @@ CONTAINS
 !       **** Statements ****
 !
 
-    if (our_rev_mode%arg_store) then
-! store arguments
-  call cp_store_real_scalar(HX,theArgFStack,theArgFStackoffset,theArgFStackSize)
-  call cp_store_real_scalar(HY,theArgFStack,theArgFStackoffset,theArgFStackSize)
-  call cp_store_real_scalar(HZ,theArgFStack,theArgFStackoffset,theArgFStackSize)
-  call cp_store_real_scalar(IR,theArgFStack,theArgFStackoffset,theArgFStackSize)
-  call cp_store_real_scalar(SOR,theArgFStack,theArgFStackoffset,theArgFStackSize&
-     &)
-
-  call cp_store_real_scalar(SWC,theArgFStack,theArgFStackoffset,theArgFStackSize&
-     &)
-
-  call cp_store_real_scalar(VO,theArgFStack,theArgFStackoffset,theArgFStackSize)
-  call cp_store_real_scalar(VOL,theArgFStack,theArgFStackoffset,theArgFStackSize&
-     &)
-
-  call cp_store_real_scalar(VW,theArgFStack,theArgFStackoffset,theArgFStackSize)
-  do cp_loop_variable_4 = lbound(PERM,4),ubound(PERM,4)
-  do cp_loop_variable_3 = lbound(PERM,3),ubound(PERM,3)
-  do cp_loop_variable_2 = lbound(PERM,2),ubound(PERM,2)
-  call cp_store_p_real_vector(PERM(:,cp_loop_variable_2,cp_loop_variable_3,cp_lo&
-     &op_variable_4),size(PERM(:,cp_loop_variable_2,cp_loop_variable_3,cp_loop_v&
-     &ariable_4)),theArgFStack,theArgFStackoffset,theArgFStackSize)
-
-  end do
-  end do
-  end do
-  call cp_store_p_real_vector(POR,size(POR),theArgFStack,theArgFStackoffset,theA&
-     &rgFStackSize)
-
-    end if
-    if (our_rev_mode%arg_restore) then
-! restore arguments
-  do cp_loop_variable_1 = ubound(POR,1),lbound(POR,1),-1
-  POR(cp_loop_variable_1) = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  end do
-  do cp_loop_variable_4 = ubound(PERM,4),lbound(PERM,4),-1
-  do cp_loop_variable_3 = ubound(PERM,3),lbound(PERM,3),-1
-  do cp_loop_variable_2 = ubound(PERM,2),lbound(PERM,2),-1
-  do cp_loop_variable_1 = ubound(PERM,1),lbound(PERM,1),-1
-  PERM(cp_loop_variable_1,cp_loop_variable_2,cp_loop_variable_3,cp_loop_variable&
-     &_4) = theArgFStack(theArgFStackoffset)
-
-  theArgFStackoffset = theArgFStackoffset-1
-  end do
-  end do
-  end do
-  end do
-  VW = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  VOL = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  VO = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  SWC = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  SOR = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  IR = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  HZ = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  HY = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-  HX = theArgFStack(theArgFStackoffset)
-  theArgFStackoffset = theArgFStackoffset-1
-    end if
-    if (our_rev_mode%plain) then
-      our_orig_mode=our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
+   if (our_rev_mode%plain) then
 ! original function
   CALL INIT_FLW_TRNC_NORM_XIN_PT_OUT(NX,NY,NZ,MU,SIGMA,Q)
 !!! requested inline of 'oad_AllocateMatching' has no defn
@@ -12032,17 +8671,8 @@ CONTAINS
   CALL oad_ShapeTest(OpenAD_tyc_4,PC)
 !!! requested inline of 'oad_convert' has no defn
   CALL oad_convert(PC,OpenAD_tyc_4)
-
-! original function end
-      our_rev_mode=our_orig_mode
     end if
     if (our_rev_mode%tape) then
-!            print*, " tape       ", our_rev_mode
-      our_rev_mode%arg_store=.TRUE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.TRUE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.FALSE.
 ! taping
   CALL INIT_FLW_TRNC_NORM_XIN_PT_OUT(NX,NY,NZ,MU,SIGMA,Q)
   integer_tape(integer_tape_pointer) = NX
@@ -12088,21 +8718,8 @@ CONTAINS
   integer_tape_pointer = integer_tape_pointer+1
   integer_tape(integer_tape_pointer) = ST
   integer_tape_pointer = integer_tape_pointer+1
-
-! taping end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.FALSE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.FALSE.
-      our_rev_mode%adjoint=.TRUE.
     end if
     if (our_rev_mode%adjoint) then
-!            print*, " adjoint    ", our_rev_mode
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
 ! adjoint
   integer_tape_pointer = integer_tape_pointer-1
   ST = integer_tape(integer_tape_pointer)
@@ -12130,13 +8747,6 @@ CONTAINS
   integer_tape_pointer = integer_tape_pointer-1
   NX = integer_tape(integer_tape_pointer)
   CALL INIT_FLW_TRNC_NORM_XIN_PT_OUT(NX,NY,NZ,MU,SIGMA,Q)
-
-! adjoint end
-      our_rev_mode%arg_store=.FALSE.
-      our_rev_mode%arg_restore=.TRUE.
-      our_rev_mode%plain=.FALSE.
-      our_rev_mode%tape=.TRUE.
-      our_rev_mode%adjoint=.FALSE.
     end if
   end subroutine WRAPPER
 END

@@ -22,6 +22,10 @@ end
 % now rescale all the entities
 q_x = q_x/mass*ir;
 
+f1 = figure();
+plot(q_x);
+savefig(f1, 'inflow');
+
 % Assign Q_x to Q
 j = 1;
 for i=1:Grid.Ny:Grid.Nx*Grid.Ny
