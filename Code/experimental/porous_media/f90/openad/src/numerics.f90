@@ -1041,7 +1041,7 @@ contains
     do i = 2,nx+1
        do j = 1,ny
           do m = 1,nz
-             TXYZ(i,j,m) = -TX(i,j,m)
+             TXYZ(i-1,j,m) = -TX(i,j,m)
           end do
        end do
     end do
@@ -1050,7 +1050,7 @@ contains
     do i = 1,nx
        do j = 2,ny+1
           do m = 1,nz
-             TXYZ(i,j,m) = -TY(i,j,m)
+             TXYZ(i,j-1,m) = -TY(i,j,m)
           end do
        end do
     end do
@@ -1060,7 +1060,7 @@ contains
     do i = 1,nx
        do j = 1,ny
           do m = 2,nz+1
-             TXYZ(i,j,m) = -TZ(i,j,m)
+             TXYZ(i,j,m-1) = -TZ(i,j,m)
           end do
        end do
     end do

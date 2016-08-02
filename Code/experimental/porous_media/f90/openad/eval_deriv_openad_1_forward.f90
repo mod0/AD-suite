@@ -1,11 +1,12 @@
 program runspe10
-  use gnufor2
-  use parameters_d
+  use OAD_active
+  use parameters
   use utils
-  use matrix_d
-  use finitevolume_d
-  use simulation_d
+  use matrix
+  use finitevolume
+  use simulation
   use netcdf
+  use gnufor2
 
   implicit none
 
@@ -14,27 +15,18 @@ program runspe10
   integer :: nd, st, pt
 
   ! input/intermediate variables
-  double precision :: mu, sigma
-  double precision :: mud, sigmad
-  double precision, dimension(:), allocatable :: Q
-  double precision, dimension(:), allocatable :: S
+  type(active) :: mu, sigma
+  type(active), dimension(:), allocatable :: Q
+  type(active), dimension(:), allocatable :: S
   double precision, dimension(:, :, :), allocatable :: P
   double precision, dimension(:, :, :, :), allocatable :: V
 
   ! output variables
-  double precision :: totaloil
-  double precision :: totaloil_mud
-  double precision :: totaloil_sigmad
+  type(active) :: totaloil_mud
+  type(active) :: totaloil_sigmad
   double precision, dimension(:), allocatable :: Tt
   double precision, dimension(:, :), allocatable :: Pc
 
-  ! direction version of arrays Ttd is unused and is only present for convenience
-  double precision, dimension(:), allocatable :: Qd
-  double precision, dimension(:), allocatable :: Sd
-  double precision, dimension(:, :, :), allocatable :: Pd
-  double precision, dimension(:, :, :, :), allocatable :: Vd
-  double precision, dimension(:), allocatable :: Ttd
-  double precision, dimension(:, :), allocatable :: Pcd
 
   ! read the command line argument for the location of the data files
   integer :: iargs
@@ -57,50 +49,50 @@ program runspe10
 
   ! allocate arrays
   call allocate_arrays(nx, ny, nz, st, pt, nd, Q, S, P, V, Tt, Pc)
-  call allocate_arrays(nx, ny, nz, st, pt, nd, Qd, Sd, Pd, Vd, Ttd, Pcd)
   call allocate_shared_arrays(nx, ny, nz, st, pt, nd)
 
   ! initialize arrays
   call initialize_arrays(Q, S, P, V, Tt, Pc)
-  call initialize_arrays(Qd, Sd, Pd, Vd, Ttd, Pcd)
   call initialize_shared_arrays(data_directory, nx, ny, nz, st, pt, nd)  ! will not be reinitialized
 
   ! initialize scalar inputs and outputs
-  mu = 0.0d0
-  sigma = 1.0d0
-  totaloil = 0.0d0         
+  mu%v = 0.0d0
+  sigma%v = 1.0d0
+  totaloil_mud%v = 0.0d0         
 
   ! initialize directions
-  mud = 1.0d0
-  sigmad = 0.0d0
-  totaloil_mud = 0.0d0
+  mu%d = 1.0d0
+  sigma%d = 0.0d0
+  totaloil_mud%d = 0.0d0
 
   ! solver verbose parameter, inner and outer iterations are read from
   ! command file.
   verbose = .false.              ! Verbose solver output  
 
-  call wrapper_d(nx, ny, nz, nd, pt, st, mu, mud, sigma, sigmad, Q, &
-       Qd, S, Sd, P, Pd, V, Vd, Tt, Pc, Pcd, totaloil, totaloil_mud)
+  call wrapper(nx, ny, nz, nd, pt, st, mu, sigma, Q, S, P, V, Tt, Pc, totaloil_mud)
 
   ! reinitialize arrays
   call initialize_arrays(Q, S, P, V, Tt, Pc)
-  call initialize_arrays(Qd, Sd, Pd, Vd, Ttd, Pcd)
 
-  ! reinitialize directions
-  mud = 0.0d0
-  sigmad = 1.0d0
-  totaloil_sigmad = 0.0d0
+  ! initialize scalar inputs and outputs
+  mu%v = 0.0d0
+  sigma%v = 1.0d0
+  totaloil_sigmad%v = 0.0d0         
 
-  call wrapper_d(nx, ny, nz, nd, pt, st, mu, mud, sigma, sigmad, Q, &
-       Qd, S, Sd, P, Pd, V, Vd, Tt, Pc, Pcd, totaloil, totaloil_sigmad)
+  ! initialize directions
+  mu%d = 0.0d0
+  sigma%d = 1.0d0
+  totaloil_sigmad%d = 0.0d0
+
+  call wrapper(nx, ny, nz, nd, pt, st, mu, sigma, Q, S, P, V, Tt, Pc, totaloil_sigmad)
 
   ! write results from both experiments
-  call write_results(results_directory, nx, ny, nz, mu, sigma, Tt, Pc, totaloil, totaloil_mud, totaloil_sigmad)
+  call write_results(results_directory, nx, ny, nz, mu, sigma, Tt, Pc, totaloil_mud, totaloil_sigmad)
 
+  ! plot the production curve
   call plot(Tt, Pc(1,:), Tt, Pc(2,:), terminal='png', filename='WaterOilProductionCurves.png')
 
   call deallocate_arrays(Q, S, P, V, Tt, Pc)
-  call deallocate_arrays(Qd, Sd, Pd, Vd, Ttd, Pcd)
   call deallocate_shared_arrays()
   return
 contains
@@ -130,12 +122,11 @@ contains
 
   subroutine allocate_arrays(nx, ny, nz, st, pt, nd, Q, S, P, V, Tt, Pc)
     implicit none
-
     integer :: nx, ny, nz
     integer :: st, pt, nd
      
-    double precision, dimension(:), allocatable          :: Q
-    double precision, dimension(:), allocatable          :: S
+    type(active), dimension(:), allocatable          :: Q
+    type(active), dimension(:), allocatable          :: S
     double precision, dimension(:, :, :), allocatable    :: P
     double precision, dimension(:, :, :, :), allocatable :: V
     double precision, dimension(:), allocatable          :: Tt
@@ -154,9 +145,8 @@ contains
 
   subroutine deallocate_arrays(Q, S, P, V, Tt, Pc)
     implicit none
-
-    double precision, dimension(:), allocatable          :: Q
-    double precision, dimension(:), allocatable          :: S
+    type(active), dimension(:), allocatable          :: Q
+    type(active), dimension(:), allocatable          :: S
     double precision, dimension(:, :, :), allocatable    :: P
     double precision, dimension(:, :, :, :), allocatable :: V
     double precision, dimension(:), allocatable          :: Tt
@@ -168,16 +158,23 @@ contains
   end subroutine deallocate_arrays
 
   subroutine initialize_arrays(Q, S, P, V, Tt, Pc)
-    double precision, dimension(:)          :: Q
-    double precision, dimension(:)          :: S
+    type(active), dimension(:)          :: Q
+    type(active), dimension(:)          :: S
     double precision, dimension(:, :, :)    :: P
     double precision, dimension(:, :, :, :) :: V
     double precision, dimension(:)          :: Tt
     double precision, dimension(:, :)       :: Pc
 
     ! initialize memory for inflow and saturation
-    Q = 0.0d0
-    S = 0.0d0
+    do i = 1, size(Q, 1)
+       Q%v = 0.0d0
+       Q%d = 0.0d0
+    end do
+
+    do i = 1, size(S, 1)
+       S%v = 0.0d0
+       S%d = 0.0d0
+    end do
 
     ! initialize memory for P and V
     P = 0.0d0
@@ -243,27 +240,27 @@ contains
 
     ! read hX, hY, hZ
     call iserror(nf90_inq_varid(ncid, "hX", varid))
-    call iserror(nf90_get_var(ncid, varid, hx_))
+    call iserror(nf90_get_var(ncid, varid, hx))
     call iserror(nf90_inq_varid(ncid, "hY", varid))
-    call iserror(nf90_get_var(ncid, varid, hy_))
+    call iserror(nf90_get_var(ncid, varid, hy))
     call iserror(nf90_inq_varid(ncid, "hZ", varid))
-    call iserror(nf90_get_var(ncid, varid, hz_))
-    write (*,*) "(hX, hY, hZ) = ", hx_, hy_, hz_
+    call iserror(nf90_get_var(ncid, varid, hz))
+    write (*,*) "(hX, hY, hZ) = ", hx, hy, hz
 
     ! compute V
-    V_ = hx_ * hy_ * hz_
-    write (*,*) "(V) = ", V_
+    Vol = hx * hy * hz
+    write (*,*) "(Vol) = ", Vol
 
     ! read vw, vo, swc, sor
     call iserror(nf90_inq_varid(ncid, "vw", varid))
-    call iserror(nf90_get_var(ncid, varid, vw_))
+    call iserror(nf90_get_var(ncid, varid, vw))
     call iserror(nf90_inq_varid(ncid, "vo", varid))
-    call iserror(nf90_get_var(ncid, varid, vo_))
+    call iserror(nf90_get_var(ncid, varid, vo))
     call iserror(nf90_inq_varid(ncid, "swc", varid))
-    call iserror(nf90_get_var(ncid, varid, swc_))
+    call iserror(nf90_get_var(ncid, varid, swc))
     call iserror(nf90_inq_varid(ncid, "sor", varid))
-    call iserror(nf90_get_var(ncid, varid, sor_))
-    write (*,*) "(vw, vo, swc, sor) = ", vw_, vo_, swc_, sor_ 
+    call iserror(nf90_get_var(ncid, varid, sor))
+    write (*,*) "(vw, vo, swc, sor) = ", vw, vo, swc, sor 
 
     ! read solver_parameters
     call iserror(nf90_inq_varid(ncid, "solver_inner", varid))
@@ -275,12 +272,12 @@ contains
     call iserror(nf90_close(ncid))
   end subroutine initialize_scenario
 
-  subroutine write_results(results_directory, nx, ny, nz, mu, sigma, Tt, Pc, totaloil, totaloil_mud, totaloil_sigmad)
+  subroutine write_results(results_directory, nx, ny, nz, mu, sigma, Tt, Pc, totaloil_mud, totaloil_sigmad)
     implicit none
     character(len = *) :: results_directory
 
     integer :: nx, ny, nz
-    double precision :: mu, sigma, totaloil, totaloil_mud, totaloil_sigmad
+    type(active) :: mu, sigma, totaloil_mud, totaloil_sigmad
     double precision, dimension(:)             :: Tt
     double precision, dimension(:, :)          :: Pc
 
@@ -323,7 +320,7 @@ contains
 
     ! Start writing netCDF file having all the computed values
     ! Open file
-    call iserror(nf90_create(trim(adjustl(results_directory))//"results_eval_deriv_tapenade_1_forward.nc", &
+    call iserror(nf90_create(trim(adjustl(results_directory))//"results_eval_deriv_openad_1_forward.nc", &
          nf90_clobber, ncid))
 
     ! setup the sizes of the dimensions
@@ -373,8 +370,8 @@ contains
     call iserror(nf90_put_var(ncid, var_nx_id, nx))
     call iserror(nf90_put_var(ncid, var_ny_id, ny))
     call iserror(nf90_put_var(ncid, var_nz_id, nz))
-    call iserror(nf90_put_var(ncid, var_mu_id, mu))
-    call iserror(nf90_put_var(ncid, var_sigma_id, sigma))
+    call iserror(nf90_put_var(ncid, var_mu_id, mu%v))
+    call iserror(nf90_put_var(ncid, var_sigma_id, sigma%v))
 
     ! Write the time data. 
     call iserror(nf90_put_var(ncid, var_time_id, Tt))
@@ -383,9 +380,9 @@ contains
     ! The arrays of data are the same size as
     ! the netCDF variables we have defined.
     call iserror(nf90_put_var(ncid, var_mobility_id, Pc))
-    call iserror(nf90_put_var(ncid, var_oil_id, totaloil))
-    call iserror(nf90_put_var(ncid, var_oil_mud_id, totaloil_mud))
-    call iserror(nf90_put_var(ncid, var_oil_sigmad_id, totaloil_sigmad))
+    call iserror(nf90_put_var(ncid, var_oil_id, totaloil_mud%v))
+    call iserror(nf90_put_var(ncid, var_oil_mud_id, totaloil_mud%d))
+    call iserror(nf90_put_var(ncid, var_oil_sigmad_id, totaloil_sigmad%d))
 
     ! Close the file.
     call iserror(nf90_close(ncid))
@@ -434,7 +431,7 @@ contains
     call iserror(nf90_get_var(ncid, varid, POR_temp))
     call iserror(nf90_close(ncid))
 
-    call mymax_1_0_double(POR_temp, 1.0d-3, POR)
+    POR = max(1.0d-3, POR_temp)
   end subroutine read_permeability_and_porosity
 
   ! !
