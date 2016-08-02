@@ -3,7 +3,7 @@ include ../../../make.config
 OBJ_DIR = ../obj
 MOD_DIR = ../modules
 OBJS_SUPP = supporting_routines.o
-OBJS_AD_SUPP = w2f__types.o OAD_active.o OAD_tape.o OAD_rev.o OAD_cp.o ad_inline.f ad_template.f iaddr.o 
+OBJS_AD_SUPP = w2f__types.o OAD_active.o OAD_tape.o OAD_rev.o OAD_cp.o iaddr.o
 OBJS_SIM = numerics_f.o numerics_rj.o numerics_rs.o
 OBJS= ${OBJS_SUPP} ${OBJS_AD_SUPP} ${OBJS_SIM}
 

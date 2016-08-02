@@ -857,7 +857,7 @@ CONTAINS
 
   END SUBROUTINE
 
-SUBROUTINE SPARSE_DUMMY_METHOD(N, ANNZ, ALEN, AROW_INDEX, AROW_COMPRESSED, ACO&
+SUBROUTINE SPARSE_PMGMRES_METHOD(N, ANNZ, ALEN, AROW_INDEX, AROW_COMPRESSED, ACO&
      &L_INDEX, AVALUES, B, X, SOLVER_INNER, SOLVER_OUTER, VERBOSE)
 
   use w2f__types
@@ -935,7 +935,7 @@ SUBROUTINE SPARSE_DUMMY_METHOD(N, ANNZ, ALEN, AROW_INDEX, AROW_COMPRESSED, ACO&
   end do
 
   RETURN
-END SUBROUTINE SPARSE_DUMMY_METHOD
+END SUBROUTINE SPARSE_PMGMRES_METHOD
 
 END
 
@@ -1796,8 +1796,8 @@ CONTAINS
   DO I = 2,(NX+1),1
     DO J = 1,NY,1
       DO M = 1,NZ,1
-        TXYZ(INT(I),INT(J),INT(M))%v = (-TX(I,J,M)%v)
-        CALL set_neg_deriv(TXYZ(I,J,M),TX(I,J,M))
+        TXYZ(I+(-1),INT(J),INT(M))%v = (-TX(I,J,M)%v)
+        CALL set_neg_deriv(TXYZ(I+(-1),J,M),TX(I,J,M))
       END DO
     END DO
   END DO
@@ -1805,8 +1805,8 @@ CONTAINS
   DO I = 1,NX,1
     DO J = 2,(NY+1),1
       DO M = 1,NZ,1
-        TXYZ(INT(I),INT(J),INT(M))%v = (-TY(I,J,M)%v)
-        CALL set_neg_deriv(TXYZ(I,J,M),TY(I,J,M))
+        TXYZ(INT(I),J+(-1),INT(M))%v = (-TY(I,J,M)%v)
+        CALL set_neg_deriv(TXYZ(I,J+(-1),M),TY(I,J,M))
       END DO
     END DO
   END DO
@@ -1814,8 +1814,8 @@ CONTAINS
   DO I = 1,NX,1
     DO J = 1,NY,1
       DO M = 2,(NZ+1),1
-        TXYZ(INT(I),INT(J),INT(M))%v = (-TZ(I,J,M)%v)
-        CALL set_neg_deriv(TXYZ(I,J,M),TZ(I,J,M))
+        TXYZ(INT(I),INT(J),M+(-1))%v = (-TZ(I,J,M)%v)
+        CALL set_neg_deriv(TXYZ(I,J,M+(-1)),TZ(I,J,M))
       END DO
     END DO
   END DO
@@ -2311,6 +2311,8 @@ CONTAINS
   OILOUT%v = (OILIN%v+ST*PC(2,K)%v)
   CALL setderiv(OILOUT,OILIN)
   CALL saxpy(OpenAD_lin_58,PC(2,K),OILOUT)
+  write(*,*) "MobilityVal:", PC(2,K)%v, "MobilityDeriv:", PC(2,K)%d ,&
+  "OutDeriv:", OILOUT%d, "OutVal:", OILOUT%v, "InDeriv:", OILIN%d, "InVal:", OILIN%v
   END SUBROUTINE
 
   SUBROUTINE WRAPPER(NX, NY, NZ, ND, PT, ST, MU, SIGMA, Q, S, P, V, TT, PC, OIL)
