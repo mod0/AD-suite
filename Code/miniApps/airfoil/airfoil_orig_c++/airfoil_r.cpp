@@ -81,7 +81,7 @@ int main()
         in2 = cell[ic][1] -1;
         in3 = cell[ic][2] -1;
         in4 = cell[ic][3] -1;
-        time_cell(&x[in1][0], &x[in2][1], &x[in3][2],&x[in4][3],&q[ic][0],adt[ic]);
+        time_cell(&x[in1][0], &x[in2][0], &x[in3][0],&x[in4][0],&q[ic][0],adt[ic]);
       }
       adt[ncell] = 0.0;
 //-----flux evaluation loop--------------------
