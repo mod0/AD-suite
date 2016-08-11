@@ -8,13 +8,13 @@ contains
   !
   ! Initialize inflow and outflow.
   !
-  subroutine init_flw_trnc_norm_xin_pt_out(nx, ny, nz, mu, sigma, Q)
-    integer :: nx, ny, nz
-    double precision :: mu, sigma
+  subroutine init_flw_trnc_norm_xin_pt_out(nx, ny, nz, ndof, mu, sigma, Q)
+    integer :: nx, ny, nz, ndof
+    double precision, dimension( : ) :: mu, sigma
     double precision, dimension((nx * ny * nz)) :: Q
 
     integer :: i, j
-    double precision :: x, pi, pdf, mass
+    double precision :: x, pi, pdf, mass, arg1
     double precision, dimension(nx) :: idx
     double precision, dimension(nx) :: Q_x
 
@@ -28,20 +28,14 @@ contains
     ! Note that the portion of the  Standard Normal distribution between
     ! -3sigma/2 to 3sigma/2 is assumed to fit the 1..Nx where sigma is 1
     do i = 1, nx
-       ! get the real x coordinate
-       x = -1.5d0 + ((i - 1) * 3.0d0)/(nx - 1)    ! Mapping x = [-1.5, 1.5] to nx dimension
-
-       ! Now use mu and sigma to find the pdf value at x
-       pdf = 1.0d0/(sigma * sqrt(2.0d0 * pi)) * exp(-(((x - mu)/sigma)**2.0d0)/2.0d0)
-
-       ! set the value at the index equal to the pdf value at that point
-       Q_x(i) = pdf
-
-       ! increment the mass by the value of the pdf
-       mass = mass + pdf
-
-       ! index to test initialization by plot
-       idx(i) = i * 1.0
+      x   = (i-1.0)*2.0/(nx-1.0d0) - 1.0d0;
+      pdf = 0.0d0
+      do j = 1, ndof
+          arg1 = -(((x-mu(j))**2/sigma(j))**2.0/2.0);
+          pdf = pdf + 1.0/(sqrt(2.0*pi)*sigma(j))*exp(arg1);
+      end do
+      Q_x(i) = pdf;
+      mass = mass + pdf;
     end do
 
     ! now rescale all the entities
@@ -145,10 +139,11 @@ contains
     oilout = oilin +  Pc(2, k) * st                     ! Reimann sum
   end subroutine update_oil
 
-  subroutine wrapper(nx, ny, nz, nd, pt, st, mu, sigma, Q, S, P, V, Tt, Pc, oil) 
-    integer :: nx, ny, nz
+  subroutine wrapper(nx, ny, nz, nd, ndof, pt, st, mu, sigma, Q, S, P, V, Tt, Pc, oil) 
+    integer :: nx, ny, nz, ndof
     integer :: nd, pt, st
-    double precision :: mu, sigma
+    double precision, dimension( ndof ) :: mu
+    double precision, dimension( ndof ) :: sigma
     double precision, dimension((nx * ny * nz)) :: Q
     double precision, dimension((nx * ny * nz)) :: S
     double precision, dimension(nx, ny, nz) :: P
@@ -157,7 +152,7 @@ contains
     double precision, dimension(2, (nd/st) + 1) :: Pc
     double precision :: oil
 
-    call init_flw_trnc_norm_xin_pt_out(nx, ny, nz, mu, sigma, Q)
+    call init_flw_trnc_norm_xin_pt_out(nx, ny, nz, ndof, mu, sigma, Q)
     call simulate_reservoir(nx, ny, nz, nd, pt, st, Q, S, P, V, Tt, Pc, oil)
   end subroutine wrapper
 end module simulation

@@ -8,12 +8,13 @@ program runspe10
 
   implicit none
 
-  integer :: i, j, k
+  integer :: i, j, k, ndof
   integer :: nx, ny, nz
   integer :: nd, st, pt
 
   ! input/intermediate variables
-  double precision :: mu, sigma
+  double precision, dimension(:), allocatable :: mu
+  double precision, dimension(:), allocatable :: sigma
   double precision, dimension(:), allocatable :: Q
   double precision, dimension(:), allocatable :: S
   double precision, dimension(:, :, :), allocatable :: P
@@ -53,20 +54,29 @@ program runspe10
   call initialize_shared_arrays(data_directory, nx, ny, nz, st, pt, nd)  ! will not be reinitialized
   
   ! initialize scalar inputs and outputs
-  mu = 0.0d0
-  sigma = 1.0d0
+  ndof = 3
+  allocate( mu(ndof)    )
+  allocate( sigma(ndof) )    
+  mu(1)    = -1.0d0
+  mu(2)    =  0.0d0
+  mu(3)    = +1.0d0
+  sigma(1) = 0.0001d0
+  sigma(2) = 0.0001d0
+  sigma(3) = 0.0001d0
 
   ! solver verbose parameter, inner and outer iterations are read from
   ! command file.
   verbose = .false.              ! Verbose solver output  
 
-  call wrapper(nx, ny, nz, nd, pt, st, mu, sigma, Q, S, P, V, Tt, Pc, totaloil)
+  call wrapper(nx, ny, nz, nd, ndof, pt, st, mu, sigma, Q, S, P, V, Tt, Pc, totaloil)
   
   ! write results
-  call write_results(results_directory, nx, ny, nz, mu, sigma, Tt, Pc, totaloil)
+  call write_results(results_directory, nx, ny, nz, ndof, mu, sigma, Tt, Pc, totaloil)
 
   call deallocate_arrays(Q, S, P, V, Tt, Pc)
   call deallocate_shared_arrays()
+  deallocate(mu)
+  deallocate(sigma)
   return
 contains
 
@@ -240,12 +250,14 @@ contains
     call iserror(nf90_close(ncid))
   end subroutine initialize_scenario
 
-  subroutine write_results(results_directory, nx, ny, nz, mu, sigma, Tt, Pc, totaloil)
+  subroutine write_results(results_directory, nx, ny, nz, ndof, mu, sigma, Tt, Pc, totaloil)
     implicit none
     character(len = *) :: results_directory
 
-    integer :: nx, ny, nz
-    double precision :: mu, sigma, totaloil, totaloil_mud, totaloil_sigmad
+    integer :: nx, ny, nz, ndof
+    double precision :: totaloil, totaloil_mud, totaloil_sigmad
+    double precision, dimension(:)             :: mu
+    double precision, dimension(:)             :: sigma
     double precision, dimension(:)             :: Tt
     double precision, dimension(:, :)          :: Pc
 
@@ -259,10 +271,10 @@ contains
     character(len = *), parameter :: var_ny_name = "NY"                 ! ny variable name
     integer :: var_nz_id                                                ! nz variable id
     character(len = *), parameter :: var_nz_name = "NZ"                 ! nz variable name
-    integer :: var_mu_id                                                ! mu variable id
-    character(len = *), parameter :: var_mu_name = "Mu"                 ! mu variable name
-    integer :: var_sigma_id                                             ! sigma variable id
-    character(len = *), parameter :: var_sigma_name = "Sigma"           ! sigma variable name
+!     integer :: var_mu_id                                                ! mu variable id
+!     character(len = *), parameter :: var_mu_name = "Mu"                 ! mu variable name
+!     integer :: var_sigma_id                                             ! sigma variable id
+!     character(len = *), parameter :: var_sigma_name = "Sigma"           ! sigma variable name
                                                                         
     integer :: dim_time_id                                              ! time dimension id
     integer :: dim_time_len                                             ! time dimension length
@@ -306,9 +318,9 @@ contains
     ! Define scalar nz input
     call iserror(nf90_def_var(ncid, var_nz_name, NF90_INT, var_nz_id))
     ! Define scalar mu input
-    call iserror(nf90_def_var(ncid, var_mu_name, NF90_DOUBLE, var_mu_id))
+!     call iserror(nf90_def_var(ncid, var_mu_name, NF90_DOUBLE, var_mu_id))
     ! Define scalar sigma input
-    call iserror(nf90_def_var(ncid, var_sigma_name, NF90_DOUBLE, var_sigma_id))
+!     call iserror(nf90_def_var(ncid, var_sigma_name, NF90_DOUBLE, var_sigma_id))
 
     ! Define the time variables. Varid is returned.
     call iserror(nf90_def_var(ncid, var_time_name, NF90_DOUBLE, dim_time_id, var_time_id))
@@ -330,8 +342,8 @@ contains
     call iserror(nf90_put_var(ncid, var_nx_id, nx))
     call iserror(nf90_put_var(ncid, var_ny_id, ny))
     call iserror(nf90_put_var(ncid, var_nz_id, nz))
-    call iserror(nf90_put_var(ncid, var_mu_id, mu))
-    call iserror(nf90_put_var(ncid, var_sigma_id, sigma))
+!     call iserror(nf90_put_var(ncid, var_mu_id, mu))
+!     call iserror(nf90_put_var(ncid, var_sigma_id, sigma))
 
     ! Write the time data. 
     call iserror(nf90_put_var(ncid, var_time_id, Tt))
@@ -391,78 +403,6 @@ contains
 
     call mymax_1_0_double(POR_temp, 1.0d-3, POR)
   end subroutine read_permeability_and_porosity
-
-  ! !
-  ! ! This routine opens the permeability and porosity used by
-  ! ! the MATLAB program and uses it for the simulation.
-  ! !
-  ! subroutine read_permeability_and_porosity(data_directory, nx, ny, nz, PERM, POR)   
-    
-  !   integer :: i, j, k, l, m
-  !   integer :: nx, ny, nz
-  !   integer :: maxnx, maxny, maxnz
-  !   parameter(maxnx = 60, maxny = 220, maxnz = 85)
-  !   character(len = *) :: data_directory                             ! directory location of parameters 
-  !   double precision, dimension((nx * ny * nz)) :: POR                 ! Porosities
-  !   double precision, dimension(3, nx, ny, nz) :: PERM  ! Permeabilities
-
-  !   double precision, dimension(nx, ny, nz) :: P
-  !   double precision, dimension(maxnx * maxny * maxnz) :: pUr
-  !   double precision, dimension(3 * maxnx, maxny * maxnz) :: KUr
-  !   double precision, dimension(3 * maxnx * maxny * maxnz) :: KUrl
-
-  !   integer, dimension(nx * ny * nz) :: Pindices
-  !   integer, dimension(3 * nx * ny * nz) :: Kindices
-
-  !   ! initialize porosity and permeability to zero
-  !   PERM = 0.0d0
-  !   POR = 0.0d0
-
-  !   ! read KUr
-  !   open(1,file=trim(adjustl(data_directory))//"KUr.txt",status='old')
-  !   read(1,*) ((KUr(i,j), j=1,maxny * maxnz), i=1,3 * maxnx)
-  !   close(1)
-
-  !   ! reshape 2 dimension to 1 dimension
-  !   call myreshape_2_1(KUr, KUrl)
-
-  !   ! select according to specified dimension
-  !   m = 0
-  !   do l = 1, nz
-  !      do k = 1,ny
-  !         do j = 1,nx
-  !            do i = 1,3
-  !               m = m + 1
-  !               Kindices(m) = ((l - 1) * (maxnx * maxny * 3) &
-  !                    + (k - 1) * (maxnx * 3) &
-  !                    + 3 * (j-1) + i)
-  !            end do
-  !         end do
-  !      end do
-  !   end do
-
-  !   ! then reshape 1 dimension to 4 dimension (hack for time being)
-  !   call myreshape_1_4(KUrl(Kindices), PERM)
-
-  !   ! read KUr
-  !   open(1,file=trim(adjustl(data_directory))//"pUr.txt",status='old')
-  !   read(1,*) (pUr(i), i=1,maxnx * maxny * maxnz)
-
-  !   close(1)
-
-  !   m = 0
-  !   do k = 1,nz
-  !      do j = 1,ny
-  !         do i = 1,nx
-  !            m = m + 1
-  !            Pindices(m) = ((k - 1) * (maxnx * maxny) &
-  !                 + (j - 1) * (maxnx) + i)
-  !         end do
-  !      end do
-  !   end do
-
-  !   call mymax_1_0_double(pUr(Pindices), 1.0d-3, POR) 
-  ! end subroutine read_permeability_and_porosity
 
   ! netCDF Error Check Routine
   subroutine iserror(status)
