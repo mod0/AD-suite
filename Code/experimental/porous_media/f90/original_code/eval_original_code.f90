@@ -194,7 +194,7 @@ subroutine deallocate_parameter_variables( p_dim, param)
   ! N/A
   ! Standard AD-Suite Interface
   ! ===========================  
-  deallocate( param )
+  ! N/A
 end subroutine deallocate_parameter_variables
 
 

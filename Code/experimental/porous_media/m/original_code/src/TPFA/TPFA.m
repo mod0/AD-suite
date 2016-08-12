@@ -19,11 +19,20 @@ DiagVecs = [-z2,-y2,-x2,x1+x2+y1+y2+z1+z2,-x1,-y1,-z1];
 DiagIndx = [-Nx*Ny,-Nx,-1,0,1,Nx,Nx*Ny];
 A = spdiags(DiagVecs,DiagIndx,N,N);
 
+% Aarnes
 %A(1,1) = A(1,1)+sum(Grid.K(:,1,1,1));
-for i = 1:Ny:Nx*Ny
- A(i, :) = 0;
- A(i, i) = 1;
+
+% ???? - 
+%  for i = 1:Ny:Nx*Ny
+%   A(i, :) = 0;
+%   A(i, i) = 1;
+%  end
+
+% Corrected version
+for i = 1:Nx
+ A((i-1)*Ny+1, :) = A((i-1)*Ny+1, :)+sum(Grid.K(:,i,i,1));
 end
+
     
 
 % Solve linear system and extract interface fluxes.

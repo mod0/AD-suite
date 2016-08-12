@@ -1,24 +1,21 @@
 function Q = init_flw_trnc_norm_xin_pt_out(Grid, ir, mu, sigma, Q)
 %initialize the total mass to 0
 mass = 0.0;
-
 q_x = zeros(1, Grid.Nx);
 
-% Note that the portion of the  Standard Normal distribution between
-% -3sigma/2 to 3sigma/2 is assumed to fit the 1..Nx
-for i=1:Grid.Nx
-% get the real x coordinate
-  x = -1.5d0 + (i-1)*3.0d0/(Grid.Nx-1);
-% Now use mu and sigma to find the pdf value at x
-  result1 = sqrt(2.0d0*pi);
-  arg1 = -(((x-mu)/sigma)^2.0d0/2.0d0);
-  pdf = 1.0d0/(sigma*result1)*exp(arg1);
-% set the value at the index equal to the pdf value at that point
-  q_x(i) = pdf;
-% increment the mass by the value of the pdf
-  mass = mass + pdf;
-end
+assert(isequal(length(mu),length(sigma)));
 
+    
+for i=1:Grid.Nx
+    x = (i-1.0)*2.0/(double(Grid.Nx)-1.0) - 1.0;
+    pdf = 0.0;
+    for j = 1:length(mu)
+          arg1 = -(((x-mu(j)).^2/sigma(j))^2.0/2.0);
+          pdf = pdf + 1.0/(sqrt(2.0*pi).*sigma(j))*exp(arg1);
+    end
+    q_x(i) = pdf;
+    mass = mass + pdf;
+end
 % now rescale all the entities
 q_x = q_x/mass*ir;
 
