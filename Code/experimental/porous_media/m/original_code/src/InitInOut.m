@@ -1,11 +1,9 @@
-function Q = init_flw_trnc_norm_xin_pt_out(Grid, ir, mu, sigma, Q)
+function Q = InitInOut(Grid, ir, mu, sigma)
 %initialize the total mass to 0
-mass = 0.0;
-q_x = zeros(1, Grid.Nx);
-
-assert(isequal(length(mu),length(sigma)));
-
+Q   = zeros(Grid.N, 1);
+q_x = zeros(Grid.Nx,1);
     
+mass = 0.0;
 for i=1:Grid.Nx
     x = (i-1.0)*2.0/(double(Grid.Nx)-1.0) - 1.0;
     pdf = 0.0;
@@ -27,5 +25,7 @@ for i=1:Grid.Ny:Grid.Nx*Grid.Ny
 end
 
 % now set the output
-Q(Grid.N) = -ir;
+Q(Grid.N)          = -ir/2;
+Q(Grid.Ny)         = -ir/2;
+
 end
