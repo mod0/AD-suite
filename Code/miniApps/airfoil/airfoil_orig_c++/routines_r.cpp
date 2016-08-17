@@ -49,12 +49,10 @@ int time_cell(double* x1, double* x2, double* x3, double* x4, double* q,
 
 	for (i = 0; i < 4; i++) 
 	{
-		adt = adt + fabs(u*dy[i] - v*dx[i]) + c*sqrt(dx[i]*dx[i] 
-		      + dy[i]*dy[i]); 
+	  adt = adt+fabs(u*dy[i]-v*dx[i])+c*sqrt(dx[i]*dx[i]+dy[i]*dy[i]); 
 	} 
 
 	adt = adt/cfl;
-
 delete[] dx;
 delete[] dy;
 
