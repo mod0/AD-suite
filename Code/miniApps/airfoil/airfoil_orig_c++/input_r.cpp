@@ -12,7 +12,6 @@ using namespace std;
 
 #include "const.h"
 
-
 void input(int maxnode, int maxcell, int maxedge, int& nnode, int& ncell,
 	   int& nedge, double **x, double** q, int** cell, int** edge, 
 	   int** ecell, int* boun) 
@@ -24,11 +23,10 @@ void input(int maxnode, int maxcell, int maxedge, int& nnode, int& ncell,
 
 //--------------------------------set universal constants-------------------------------------------------
 	
-        const double gam = 1.4; 
-	const double gm1 = gam - 1.0;
-	const double cfl = 0.9;
-	const double eps = 0.05;
-
+        gam = 1.4; 
+        gm1 = gam - 1.0;
+        cfl = 0.9;
+        eps = 0.05;
 
 //--------------------------------reda in data from grid file----------------------------------------------
 
@@ -71,15 +69,18 @@ void input(int maxnode, int maxcell, int maxedge, int& nnode, int& ncell,
 
 //-------------------------read in data from flow file,initialising if necessary-----------------------	
 	
-        ifstream f2; 
-	f2.open("flow.dat");	
+//        ifstream f2; 
+//	f2.open("flow.dat");	
 
-	f2 >> p >> r >> mach >> alpha;
-
-	alpha = alpha*atan(1.0)/45.0;
+//	f2 >> p >> r >> mach >> alpha;
 
 	p = 1.0;
 	r = 1.0;
+        mach = 0.4;
+        alpha = 3;
+
+	alpha = alpha*atan(1.0)/45.0;
+
 	u = sqrt(gam*p/r)*mach;
 	e = p/(r*gm1) + 0.5*u*u;
 
@@ -91,7 +92,7 @@ void input(int maxnode, int maxcell, int maxedge, int& nnode, int& ncell,
 		q[ic][2] = 0.0;
 		q[ic][3] = r*e;		
 	}
-	
+/*	
         for (ic = 0; ic < ncell && !f2.eof(); ic++) 
         {
 		for (ipde = 0; ipde < 4 && !f2.eof(); ipde++) 
@@ -99,8 +100,8 @@ void input(int maxnode, int maxcell, int maxedge, int& nnode, int& ncell,
 			f2 >> q[ic][ipde];	
 		}
 	}
-
-	f2.close();
+*/
+//	f2.close();
 
 //-----------------------------rotate grid to specified angle of attack------------------------------------
 	
