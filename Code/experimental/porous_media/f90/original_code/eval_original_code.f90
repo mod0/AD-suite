@@ -17,8 +17,9 @@ program runspe10
 
   call allocate_independent_variables( n_dim, x     )
   call allocate_dependent_variables(   m_dim, y     )
+!!!!!!!!!!!!!!! Do we now remove the following statement?
   call allocate_parameter_variables(   p_dim, param )
-
+!!!!!!!!!!!!!!! Do we now remove the following statement?
   call initialize_parameter_variables(   p_dim, param )
   call initialize_independent_variables( n_dim, x     )
 
@@ -28,6 +29,7 @@ program runspe10
 
   call deallocate_independent_variables( n_dim, x )
   call deallocate_dependent_variables(   m_dim, y )
+!!!!!!!!!!!!!!! Do we now remove the following statement?
   call deallocate_parameter_variables(    p_dim, param )
   
   return
@@ -55,6 +57,7 @@ subroutine allocate_dependent_variables( m_dim, y)
   allocate( y(m_dim) )
 end subroutine allocate_dependent_variables
 
+!!!!!!!!!!!!!!! Do we now remove this?
 subroutine allocate_parameter_variables( p_dim, param)
   integer, intent(out):: p_dim
   double precision, dimension(:), allocatable, intent(out):: param
@@ -82,6 +85,7 @@ subroutine initialize_independent_variables(n_dim, x)
   ! N/A
 end subroutine initialize_independent_variables
 
+!!!!!!!!!!!!!!! Do we now remove this?
 subroutine initialize_parameter_variables(p_dim, param)
   integer, intent(in):: p_dim
   double precision, dimension(:), allocatable, intent(inout):: param
@@ -191,6 +195,7 @@ subroutine deallocate_dependent_variables( m_dim, y)
   deallocate( y )
 end subroutine deallocate_dependent_variables
 
+!!!!!!!!!!!!!!! Do we now remove this?
 subroutine deallocate_parameter_variables( p_dim, param)
   integer, intent(in):: p_dim
   double precision, dimension(:), allocatable, intent(inout):: param
