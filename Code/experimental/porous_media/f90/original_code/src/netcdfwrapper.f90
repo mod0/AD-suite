@@ -1,5 +1,44 @@
 module netcdfwrapper
   use netcdf
+
+  public :: ncread, ncwrite, ncopen, ncclose
+
+  interface ncread
+     module procedure ncread_scalar_int
+     module procedure ncread_vector_int
+     module procedure ncread_matrix_int
+     module procedure ncread_3tensor_int
+     module procedure ncread_4tensor_int
+     module procedure ncread_scalar_float
+     module procedure ncread_vector_float
+     module procedure ncread_matrix_float
+     module procedure ncread_3tensor_float
+     module procedure ncread_4tensor_float
+     module procedure ncread_scalar_double
+     module procedure ncread_vector_double
+     module procedure ncread_matrix_double
+     module procedure ncread_3tensor_double
+     module procedure ncread_4tensor_double
+  end interface ncread
+
+  interface ncwrite
+     module procedure ncwrite_scalar_int
+     module procedure ncwrite_vector_int
+     module procedure ncwrite_matrix_int
+     module procedure ncwrite_3tensor_int
+     module procedure ncwrite_4tensor_int
+     module procedure ncwrite_scalar_float
+     module procedure ncwrite_vector_float
+     module procedure ncwrite_matrix_float
+     module procedure ncwrite_3tensor_float
+     module procedure ncwrite_4tensor_float
+     module procedure ncwrite_scalar_double
+     module procedure ncwrite_vector_double
+     module procedure ncwrite_matrix_double
+     module procedure ncwrite_3tensor_double
+     module procedure ncwrite_4tensor_double
+  end interface ncwrite
+
 contains
 
   ! ============= OPEN/CLOSE/HANDLE ERROR =============
@@ -393,17 +432,318 @@ contains
 
   !=============== WRITE ROUTINES =====================
 
-  ! routine to read a scalar integer value
+  ! routine to write a scalar integer value
   subroutine ncwrite_scalar_int(ncid, varname, var)
     integer :: ncid
     character(len=31) :: varname
     integer :: varid, var
 
-    call iserror(nf90_put_var(ncid, var_nx_id, nx))
-    
-    call iserror(nf90_inq_varid(ncid, varname, varid))
-    call iserror(nf90_get_var(ncid, varid, var))    
+    call iserror(nf90_put_var(ncid, varid, var))
   end subroutine ncwrite_scalar_int
 
+  ! routine to write a vector integer value
+  subroutine ncwrite_vector_int(ncid, varname, var)
+    integer :: ncid
+    character(len=31) :: varname
+    integer :: varid
+    integer :: vardimid1
+    integer, dimension(:) :: var
 
+    ! enter define mode.
+    call iserror(nf90_redef(ncid))
+
+    ! define vector dimensions
+    call iserror(nf90_def_dim(ncid, trim(adjustl(varname))//"_dim1", size(var, 1), vardimid1))
+
+    ! exit define mode
+    call iserror(nf90_enddef(ncid))
+
+    ! define variable
+    call iserror(nf90_def_var(ncid, varname, nf90_int, (/vardimid1/), varid))
+    call iserror(nf90_put_var(ncid, varid, var))
+  end subroutine ncwrite_vector_int
+
+  ! routine to write a matrix of integer values
+  subroutine ncwrite_matrix_int(ncid, varname, var)
+    integer :: ncid
+    character(len=31) :: varname
+    integer :: varid
+    integer :: vardimid1, vardimid2
+    integer, dimension(:,:) :: var
+
+    ! enter define mode.
+    call iserror(nf90_redef(ncid))
+
+    ! define matrix dimensions
+    call iserror(nf90_def_dim(ncid, trim(adjustl(varname))//"_dim1", size(var, 1), vardimid1))
+    call iserror(nf90_def_dim(ncid, trim(adjustl(varname))//"_dim2", size(var, 2), vardimid2))
+
+    ! exit define mode
+    call iserror(nf90_enddef(ncid))
+
+    ! define variable
+    call iserror(nf90_def_var(ncid, varname, nf90_int, (/vardimid1, vardimid2/), varid))
+    call iserror(nf90_put_var(ncid, varid, var))
+  end subroutine ncwrite_matrix_int
+
+  ! routine to write a 3-tensor of integer values
+  subroutine ncwrite_3tensor_int(ncid, varname, var)
+    integer :: ncid
+    character(len=31) :: varname
+    integer :: varid
+    integer :: vardimid1, vardimid2, vardimid3
+    integer, dimension(:,:,:) :: var
+
+    ! enter define mode.
+    call iserror(nf90_redef(ncid))
+
+    ! define 3-tensor dimensions
+    call iserror(nf90_def_dim(ncid, trim(adjustl(varname))//"_dim1", size(var, 1), vardimid1))
+    call iserror(nf90_def_dim(ncid, trim(adjustl(varname))//"_dim2", size(var, 2), vardimid2))
+    call iserror(nf90_def_dim(ncid, trim(adjustl(varname))//"_dim3", size(var, 3), vardimid3))
+
+    ! exit define mode
+    call iserror(nf90_enddef(ncid))
+
+    ! define variable
+    call iserror(nf90_def_var(ncid, varname, nf90_int, (/vardimid1, vardimid2, vardimid3/), varid))
+    call iserror(nf90_put_var(ncid, varid, var))
+  end subroutine ncwrite_3tensor_int
+
+
+  ! routine to write a 4-tensor of integer values
+  subroutine ncwrite_4tensor_int(ncid, varname, var)
+    integer :: ncid
+    character(len=31) :: varname
+    integer :: varid
+    integer :: vardimid1, vardimid2, vardimid3
+    integer, dimension(:,:,:,:) :: var
+
+    ! enter define mode.
+    call iserror(nf90_redef(ncid))
+
+    ! define 4-tensor dimensions
+    call iserror(nf90_def_dim(ncid, trim(adjustl(varname))//"_dim1", size(var, 1), vardimid1))
+    call iserror(nf90_def_dim(ncid, trim(adjustl(varname))//"_dim2", size(var, 2), vardimid2))
+    call iserror(nf90_def_dim(ncid, trim(adjustl(varname))//"_dim3", size(var, 3), vardimid3))
+    call iserror(nf90_def_dim(ncid, trim(adjustl(varname))//"_dim4", size(var, 4), vardimid4))
+
+    ! exit define mode
+    call iserror(nf90_enddef(ncid))
+
+    ! define variable
+    call iserror(nf90_def_var(ncid, varname, nf90_int, (/vardimid1, vardimid2, vardimid3, vardimid4/), varid))
+    call iserror(nf90_put_var(ncid, varid, var))
+  end subroutine ncwrite_4tensor_int
+
+  ! routine to write a scalar double value
+  subroutine ncwrite_scalar_double(ncid, varname, var)
+    integer :: ncid
+    character(len=31) :: varname
+    integer :: varid
+    double precision :: var
+
+    call iserror(nf90_put_var(ncid, varid, var))
+  end subroutine ncwrite_scalar_double
+
+  ! routine to write a vector double value
+  subroutine ncwrite_vector_double(ncid, varname, var)
+    integer :: ncid
+    character(len=31) :: varname
+    integer :: varid
+    integer :: vardimid1
+    double precision, dimension(:) :: var
+
+    ! enter define mode.
+    call iserror(nf90_redef(ncid))
+
+    ! define vector dimensions
+    call iserror(nf90_def_dim(ncid, trim(adjustl(varname))//"_dim1", size(var, 1), vardimid1))
+
+    ! exit define mode
+    call iserror(nf90_enddef(ncid))
+
+    ! define variable
+    call iserror(nf90_def_var(ncid, varname, nf90_int, (/vardimid1/), varid))
+    call iserror(nf90_put_var(ncid, varid, var))
+  end subroutine ncwrite_vector_double
+
+  ! routine to write a matrix of double values
+  subroutine ncwrite_matrix_double(ncid, varname, var)
+    integer :: ncid
+    character(len=31) :: varname
+    integer :: varid
+    integer :: vardimid1, vardimid2
+    double precision, dimension(:,:) :: var
+
+    ! enter define mode.
+    call iserror(nf90_redef(ncid))
+
+    ! define matrix dimensions
+    call iserror(nf90_def_dim(ncid, trim(adjustl(varname))//"_dim1", size(var, 1), vardimid1))
+    call iserror(nf90_def_dim(ncid, trim(adjustl(varname))//"_dim2", size(var, 2), vardimid2))
+
+    ! exit define mode
+    call iserror(nf90_enddef(ncid))
+
+    ! define variable
+    call iserror(nf90_def_var(ncid, varname, nf90_int, (/vardimid1, vardimid2/), varid))
+    call iserror(nf90_put_var(ncid, varid, var))
+  end subroutine ncwrite_matrix_double
+
+  ! routine to write a 3-tensor of double values
+  subroutine ncwrite_3tensor_double(ncid, varname, var)
+    integer :: ncid
+    character(len=31) :: varname
+    integer :: varid
+    integer :: vardimid1, vardimid2, vardimid3
+    double precision, dimension(:,:,:) :: var
+
+    ! enter define mode.
+    call iserror(nf90_redef(ncid))
+
+    ! define 3-tensor dimensions
+    call iserror(nf90_def_dim(ncid, trim(adjustl(varname))//"_dim1", size(var, 1), vardimid1))
+    call iserror(nf90_def_dim(ncid, trim(adjustl(varname))//"_dim2", size(var, 2), vardimid2))
+    call iserror(nf90_def_dim(ncid, trim(adjustl(varname))//"_dim3", size(var, 3), vardimid3))
+
+    ! exit define mode
+    call iserror(nf90_enddef(ncid))
+
+    ! define variable
+    call iserror(nf90_def_var(ncid, varname, nf90_int, (/vardimid1, vardimid2, vardimid3/), varid))
+    call iserror(nf90_put_var(ncid, varid, var))
+  end subroutine ncwrite_3tensor_double
+
+
+  ! routine to write a 4-tensor of double values
+  subroutine ncwrite_4tensor_double(ncid, varname, var)
+    integer :: ncid
+    character(len=31) :: varname
+    integer :: varid
+    integer :: vardimid1, vardimid2, vardimid3
+    double precision, dimension(:,:,:,:) :: var
+
+    ! enter define mode.
+    call iserror(nf90_redef(ncid))
+
+    ! define 4-tensor dimensions
+    call iserror(nf90_def_dim(ncid, trim(adjustl(varname))//"_dim1", size(var, 1), vardimid1))
+    call iserror(nf90_def_dim(ncid, trim(adjustl(varname))//"_dim2", size(var, 2), vardimid2))
+    call iserror(nf90_def_dim(ncid, trim(adjustl(varname))//"_dim3", size(var, 3), vardimid3))
+    call iserror(nf90_def_dim(ncid, trim(adjustl(varname))//"_dim4", size(var, 4), vardimid4))
+
+    ! exit define mode
+    call iserror(nf90_enddef(ncid))
+
+    ! define variable
+    call iserror(nf90_def_var(ncid, varname, nf90_int, (/vardimid1, vardimid2, vardimid3, vardimid4/), varid))
+    call iserror(nf90_put_var(ncid, varid, var))
+  end subroutine ncwrite_4tensor_double
+
+
+  ! routine to write a scalar float value
+  subroutine ncwrite_scalar_float(ncid, varname, var)
+    integer :: ncid
+    character(len=31) :: varname
+    integer :: varid
+    real*4 :: var
+
+    call iserror(nf90_put_var(ncid, varid, var))
+  end subroutine ncwrite_scalar_float
+
+  ! routine to write a vector float value
+  subroutine ncwrite_vector_float(ncid, varname, var)
+    integer :: ncid
+    character(len=31) :: varname
+    integer :: varid
+    integer :: vardimid1
+    real*4, dimension(:) :: var
+
+    ! enter define mode.
+    call iserror(nf90_redef(ncid))
+
+    ! define vector dimensions
+    call iserror(nf90_def_dim(ncid, trim(adjustl(varname))//"_dim1", size(var, 1), vardimid1))
+
+    ! exit define mode
+    call iserror(nf90_enddef(ncid))
+
+    ! define variable
+    call iserror(nf90_def_var(ncid, varname, nf90_int, (/vardimid1/), varid))
+    call iserror(nf90_put_var(ncid, varid, var))
+  end subroutine ncwrite_vector_float
+
+  ! routine to write a matrix of float values
+  subroutine ncwrite_matrix_float(ncid, varname, var)
+    integer :: ncid
+    character(len=31) :: varname
+    integer :: varid
+    integer :: vardimid1, vardimid2
+    real*4, dimension(:,:) :: var
+
+    ! enter define mode.
+    call iserror(nf90_redef(ncid))
+
+    ! define matrix dimensions
+    call iserror(nf90_def_dim(ncid, trim(adjustl(varname))//"_dim1", size(var, 1), vardimid1))
+    call iserror(nf90_def_dim(ncid, trim(adjustl(varname))//"_dim2", size(var, 2), vardimid2))
+
+    ! exit define mode
+    call iserror(nf90_enddef(ncid))
+
+    ! define variable
+    call iserror(nf90_def_var(ncid, varname, nf90_int, (/vardimid1, vardimid2/), varid))
+    call iserror(nf90_put_var(ncid, varid, var))
+  end subroutine ncwrite_matrix_float
+
+  ! routine to write a 3-tensor of float values
+  subroutine ncwrite_3tensor_float(ncid, varname, var)
+    integer :: ncid
+    character(len=31) :: varname
+    integer :: varid
+    integer :: vardimid1, vardimid2, vardimid3
+    real*4, dimension(:,:,:) :: var
+
+    ! enter define mode.
+    call iserror(nf90_redef(ncid))
+
+    ! define 3-tensor dimensions
+    call iserror(nf90_def_dim(ncid, trim(adjustl(varname))//"_dim1", size(var, 1), vardimid1))
+    call iserror(nf90_def_dim(ncid, trim(adjustl(varname))//"_dim2", size(var, 2), vardimid2))
+    call iserror(nf90_def_dim(ncid, trim(adjustl(varname))//"_dim3", size(var, 3), vardimid3))
+
+    ! exit define mode
+    call iserror(nf90_enddef(ncid))
+
+    ! define variable
+    call iserror(nf90_def_var(ncid, varname, nf90_int, (/vardimid1, vardimid2, vardimid3/), varid))
+    call iserror(nf90_put_var(ncid, varid, var))
+  end subroutine ncwrite_3tensor_float
+
+
+  ! routine to write a 4-tensor of float values
+  subroutine ncwrite_4tensor_float(ncid, varname, var)
+    integer :: ncid
+    character(len=31) :: varname
+    integer :: varid
+    integer :: vardimid1, vardimid2, vardimid3
+    real*4, dimension(:,:,:,:) :: var
+
+    ! enter define mode.
+    call iserror(nf90_redef(ncid))
+
+    ! define 4-tensor dimensions
+    call iserror(nf90_def_dim(ncid, trim(adjustl(varname))//"_dim1", size(var, 1), vardimid1))
+    call iserror(nf90_def_dim(ncid, trim(adjustl(varname))//"_dim2", size(var, 2), vardimid2))
+    call iserror(nf90_def_dim(ncid, trim(adjustl(varname))//"_dim3", size(var, 3), vardimid3))
+    call iserror(nf90_def_dim(ncid, trim(adjustl(varname))//"_dim4", size(var, 4), vardimid4))
+
+    ! exit define mode
+    call iserror(nf90_enddef(ncid))
+
+    ! define variable
+    call iserror(nf90_def_var(ncid, varname, nf90_int, (/vardimid1, vardimid2, vardimid3, vardimid4/), varid))
+    call iserror(nf90_put_var(ncid, varid, var))
+  end subroutine ncwrite_4tensor_float
 end module netcdfwrapper
