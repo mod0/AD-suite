@@ -46,13 +46,14 @@ contains
   ! Open file in mode and return ncid
   subroutine ncopen(filename, mode, ncid)
     integer :: nc_chunksize
-    parameter(nc_chunksize = 4096)
     character(len=50) :: filename
     integer :: ncid
     integer :: mode
+    
+    ! Try chunk size = 4K
+    nc_chunksize = 4096
 
-    call iserror(nf90_open(filename, &
-         mode, ncid, nc_chunksize))
+    call iserror(nf90_open(filename, mode, ncid, nc_chunksize))
 
     ! if the file is opened to write, end define mode
     ! each write operation will enter define mode 
@@ -506,7 +507,8 @@ contains
     call iserror(nf90_enddef(ncid))
 
     ! define variable
-    call iserror(nf90_def_var(ncid, varname, nf90_int, (/vardimid1, vardimid2, vardimid3/), varid))
+    call iserror(nf90_def_var(ncid, varname, nf90_int, &
+         (/vardimid1, vardimid2, vardimid3/), varid))
     call iserror(nf90_put_var(ncid, varid, var))
   end subroutine ncwrite_3tensor_int
 
@@ -516,7 +518,7 @@ contains
     integer :: ncid
     character(len=31) :: varname
     integer :: varid
-    integer :: vardimid1, vardimid2, vardimid3
+    integer :: vardimid1, vardimid2, vardimid3, vardimid4
     integer, dimension(:,:,:,:) :: var
 
     ! enter define mode.
@@ -532,7 +534,8 @@ contains
     call iserror(nf90_enddef(ncid))
 
     ! define variable
-    call iserror(nf90_def_var(ncid, varname, nf90_int, (/vardimid1, vardimid2, vardimid3, vardimid4/), varid))
+    call iserror(nf90_def_var(ncid, varname, nf90_int, &
+         (/vardimid1, vardimid2, vardimid3, vardimid4/), varid))
     call iserror(nf90_put_var(ncid, varid, var))
   end subroutine ncwrite_4tensor_int
 
@@ -611,7 +614,8 @@ contains
     call iserror(nf90_enddef(ncid))
 
     ! define variable
-    call iserror(nf90_def_var(ncid, varname, nf90_int, (/vardimid1, vardimid2, vardimid3/), varid))
+    call iserror(nf90_def_var(ncid, varname, nf90_int, &
+         (/vardimid1, vardimid2, vardimid3/), varid))
     call iserror(nf90_put_var(ncid, varid, var))
   end subroutine ncwrite_3tensor_double
 
@@ -621,7 +625,7 @@ contains
     integer :: ncid
     character(len=31) :: varname
     integer :: varid
-    integer :: vardimid1, vardimid2, vardimid3
+    integer :: vardimid1, vardimid2, vardimid3, vardimid4
     double precision, dimension(:,:,:,:) :: var
 
     ! enter define mode.
@@ -637,7 +641,8 @@ contains
     call iserror(nf90_enddef(ncid))
 
     ! define variable
-    call iserror(nf90_def_var(ncid, varname, nf90_int, (/vardimid1, vardimid2, vardimid3, vardimid4/), varid))
+    call iserror(nf90_def_var(ncid, varname, nf90_int, &
+         (/vardimid1, vardimid2, vardimid3, vardimid4/), varid))
     call iserror(nf90_put_var(ncid, varid, var))
   end subroutine ncwrite_4tensor_double
 
@@ -693,7 +698,8 @@ contains
     call iserror(nf90_enddef(ncid))
 
     ! define variable
-    call iserror(nf90_def_var(ncid, varname, nf90_int, (/vardimid1, vardimid2/), varid))
+    call iserror(nf90_def_var(ncid, varname, nf90_int, &
+         (/vardimid1, vardimid2/), varid))
     call iserror(nf90_put_var(ncid, varid, var))
   end subroutine ncwrite_matrix_float
 
@@ -717,7 +723,8 @@ contains
     call iserror(nf90_enddef(ncid))
 
     ! define variable
-    call iserror(nf90_def_var(ncid, varname, nf90_int, (/vardimid1, vardimid2, vardimid3/), varid))
+    call iserror(nf90_def_var(ncid, varname, nf90_int, &
+         (/vardimid1, vardimid2, vardimid3/), varid))
     call iserror(nf90_put_var(ncid, varid, var))
   end subroutine ncwrite_3tensor_float
 
@@ -727,7 +734,7 @@ contains
     integer :: ncid
     character(len=31) :: varname
     integer :: varid
-    integer :: vardimid1, vardimid2, vardimid3
+    integer :: vardimid1, vardimid2, vardimid3, vardimid4
     real*4, dimension(:,:,:,:) :: var
 
     ! enter define mode.
@@ -743,7 +750,8 @@ contains
     call iserror(nf90_enddef(ncid))
 
     ! define variable
-    call iserror(nf90_def_var(ncid, varname, nf90_int, (/vardimid1, vardimid2, vardimid3, vardimid4/), varid))
+    call iserror(nf90_def_var(ncid, varname, nf90_int, &
+         (/vardimid1, vardimid2, vardimid3, vardimid4/), varid))
     call iserror(nf90_put_var(ncid, varid, var))
   end subroutine ncwrite_4tensor_float
 end module netcdfwrapper
