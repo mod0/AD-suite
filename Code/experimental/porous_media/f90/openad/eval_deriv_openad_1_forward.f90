@@ -248,8 +248,8 @@ contains
     write (*,*) "(hX, hY, hZ) = ", hx, hy, hz
 
     ! compute V
-    Vol = hx * hy * hz
-    write (*,*) "(Vol) = ", Vol
+    vol = hx * hy * hz
+    write (*,*) "(vol) = ", vol
 
     ! read vw, vo, swc, sor
     call iserror(nf90_inq_varid(ncid, "vw", varid))

@@ -74,7 +74,7 @@ contains
 
     do while(.not. converged)
        dt = (1.0d0 * st)/(2**it)
-       dtx = dt/(Vol * POR)
+       dtx = dt/(vol * POR)
 
        call mymax_1_0_double(Q, 0.0d0, fi)
        fi = fi * dtx

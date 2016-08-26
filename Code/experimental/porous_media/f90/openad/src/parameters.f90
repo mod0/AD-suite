@@ -2,7 +2,7 @@ module parameters
   ! FIXED PARAMETERS
   ! grid parameters 
   integer :: scenario_id
-  double precision :: hx, hy, hz, Vol, ir
+  double precision :: hx, hy, hz, vol, ir
 
   ! fluid parameters
   double precision :: vw, vo, swc, sor

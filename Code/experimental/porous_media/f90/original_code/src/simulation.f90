@@ -2,6 +2,7 @@ module simulation
   use parameters
   use matrix
   use finitevolume
+  use netcdfwrapper
   implicit none
 contains
 
@@ -74,7 +75,7 @@ contains
     integer :: i, j, k
     double precision :: Mw, Mo, Mt, tempoil1, tempoil2
 
-    S = swc_                            ! initial saturation
+    S = swc                            ! initial saturation
 
     Pc(1, 1) = 0.0d0                    ! initial production
     Pc(2, 1) = 1.0d0
@@ -255,75 +256,49 @@ contains
     integer :: solver_inner, solver_outer  
 
     ! Open parameters file
-    nc_chunksize = 4096
-    call iserror(nf90_open(trim(adjustl(data_directory))//"/parameters.nc", &
-         NF90_NOWRITE, ncid, nc_chunksize))
-    write(*,*) "Chosen chunk size is ", nc_chunksize
+    call ncopen(trim(adjustl(data_directory))//"/param1.nc", &
+         NF90_NOWRITE, ncid)
 
     ! read scenario_id
-    call iserror(nf90_inq_varid(ncid, "scenario_id", varid))
-    call iserror(nf90_get_var(ncid, varid, scenario_id))
-    write (*,*) "Scenario: ", scenario_id
+    call ncread(ncid, "scenario_id", scenario_id)
 
     ! read NX, NY, and NZ
-    call iserror(nf90_inq_varid(ncid, "NX", varid))
-    call iserror(nf90_get_var(ncid, varid, nx))
-    call iserror(nf90_inq_varid(ncid, "NY", varid))
-    call iserror(nf90_get_var(ncid, varid, ny))
-    call iserror(nf90_inq_varid(ncid, "NZ", varid))
-    call iserror(nf90_get_var(ncid, varid, nz))
-    write (*,*) "(NX, NY, NZ) = ", NX, NY, NZ
+    call ncread(ncid, "NX", nx)
+    call ncread(ncid, "NY", ny)
+    call ncread(ncid, "NZ", nz)
 
     ! read St, Pt, ND
-    call iserror(nf90_inq_varid(ncid, "St", varid))
-    call iserror(nf90_get_var(ncid, varid, st))
-    call iserror(nf90_inq_varid(ncid, "Pt", varid))
-    call iserror(nf90_get_var(ncid, varid, pt))
-    call iserror(nf90_inq_varid(ncid, "ND", varid))
-    call iserror(nf90_get_var(ncid, varid, nd))
-    write (*,*) "(St, Pt, ND) = ", st, pt, nd
+    call ncread(ncid, "St",  st)
+    call ncread(ncid, "Pt",  pt)
+    call ncread(ncid, "ND",  nd)
 
     ! initialize all constants insize parameters file.
     ! read ir_const
-    call iserror(nf90_inq_varid(ncid, "ir_const", varid))
-    call iserror(nf90_get_var(ncid, varid, ir))
+    call ncread(ncid, "ir_const", ir)
 
     ! compute ir
     ir = ir * nx * ny * nz
-    write (*,*) "(ir) = ", ir
 
     ! read hX, hY, hZ
-    call iserror(nf90_inq_varid(ncid, "hX", varid))
-    call iserror(nf90_get_var(ncid, varid, hx_))
-    call iserror(nf90_inq_varid(ncid, "hY", varid))
-    call iserror(nf90_get_var(ncid, varid, hy_))
-    call iserror(nf90_inq_varid(ncid, "hZ", varid))
-    call iserror(nf90_get_var(ncid, varid, hz_))
-    write (*,*) "(hX, hY, hZ) = ", hx_, hy_, hz_
+    call ncread(ncid, "hX", hx)
+    call ncread(ncid, "hY", hy)
+    call ncread(ncid, "hZ", hz)
 
     ! compute V
-    V_ = hx_ * hy_ * hz_
-    write (*,*) "(V) = ", V_
+    vol = hx * hy * hz
 
     ! read vw, vo, swc, sor
-    call iserror(nf90_inq_varid(ncid, "vw", varid))
-    call iserror(nf90_get_var(ncid, varid, vw_))
-    call iserror(nf90_inq_varid(ncid, "vo", varid))
-    call iserror(nf90_get_var(ncid, varid, vo_))
-    call iserror(nf90_inq_varid(ncid, "swc", varid))
-    call iserror(nf90_get_var(ncid, varid, swc_))
-    call iserror(nf90_inq_varid(ncid, "sor", varid))
-    call iserror(nf90_get_var(ncid, varid, sor_))
-    write (*,*) "(vw, vo, swc, sor) = ", vw_, vo_, swc_, sor_ 
+    call ncread(ncid, "vw", vw)
+    call ncread(ncid, "vo", vo)
+    call ncread(ncid, "swc", swc)
+    call ncread(ncid, "sor", sor)
 
     ! read solver_parameters
-    call iserror(nf90_inq_varid(ncid, "solver_inner", varid))
-    call iserror(nf90_get_var(ncid, varid, solver_inner))    
-    call iserror(nf90_inq_varid(ncid, "solver_outer", varid))
-    call iserror(nf90_get_var(ncid, varid, solver_outer))    
+    call ncread(ncid, "solver_inner", solver_inner)    
+    call ncread(ncid, "solver_outer", solver_outer)    
 
     ! Close parameters file
-    call iserror(nf90_close(ncid))
+    call ncclose(ncid)
   end subroutine initialize_scenario
 
   subroutine write_results(results_directory, nx, ny, nz, st, pt, nd, n_dof, mu, sigma, Tt, Pc, totaloil)
@@ -479,14 +454,4 @@ contains
 
     call mymax_1_0_double(POR_temp, 1.0d-3, POR)
   end subroutine read_permeability_and_porosity
-
-  ! netCDF Error Check Routine
-  subroutine iserror(status)
-    integer, intent ( in) :: status
-
-    if(status /= nf90_noerr) then 
-       print *, trim(nf90_strerror(status))
-       stop "Error encountered. Stopped."
-    end if
-  end subroutine iserror
 end module simulation

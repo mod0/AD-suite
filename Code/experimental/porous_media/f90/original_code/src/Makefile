@@ -21,7 +21,7 @@ numerics.f90: parameters.f90 mathutil.f90 matrix.f90 linsolve.f90 finitevolume.f
 	@echo "Creating a single numerics file from all the other application files"
 	paste --delimiter=\\n --serial $^ > $@
 
-supporting_routines.f90: gnufor2.f90 utils.f90 mgmres.f90
+supporting_routines.f90: gnufor2.f90 utils.f90 mgmres.f90 netcdfwrapper.f90
 	@echo "Creating a single supporting routines file from supporting files"
 	paste --delimiter=\\n --serial $^ > $@
 
