@@ -16,7 +16,7 @@ endef
 export HELP_BODY
 
 # Space separated list of folders to build
-BUILDS = f90 matlab
+BUILDS = f90 m
 
 .PHONY: all build help clean
 

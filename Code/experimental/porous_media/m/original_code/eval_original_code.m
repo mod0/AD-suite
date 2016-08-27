@@ -34,7 +34,7 @@ function [ m_dim, y ] = allocate_dependent_variables( )
   % ===========================
   % Standard AD-Suite Interface
   % ===========================
-  file  = '../data/data_3/y.nc';
+  file  = '../../data/data_3/y.nc';
   m_dim = ncread(file,'m_dim');
   y     = zeros(m_dim,1);
 return
@@ -56,7 +56,7 @@ function [ n_dim, x ] = initialize_independent_variables(n_dim, x)
   % N/A
   % Standard AD-Suite Interface
   % =========================== 
-  file  = '../data/data_3/x.nc';
+  file  = '../../data/data_3/x.nc';
   n_dim = ncread(file,'n_dim');
   x     = ncread(file,'x');
   assert( isequal(n_dim,length(x)));
@@ -66,10 +66,10 @@ function [ p_dim, param ] = initialize_parameter_variables(p_dim, param)
   % User-Application specific
   % ===========================
   
-  file1 = '../data/data_3/parameters1.nc';
-  file2 = '../data/data_3/parameters2.nc';
-  file3 = '../data/data_3/parameters3.nc';
-  file4 = '../data/data_3/parameters4.nc';
+  file1 = '../../data/data_3/parameters1.nc';
+  file2 = '../../data/data_3/parameters2.nc';
+  file3 = '../../data/data_3/parameters3.nc';
+  file4 = '../../data/data_3/parameters4.nc';
   Grid.Nx   = double(ncread(file1,'NX'));
   Grid.Ny   = double(ncread(file1,'NY'));
   Grid.Nz   = double(ncread(file1,'NZ'));
@@ -175,7 +175,7 @@ function [ ] = save_dependent_variables(m_dim, y)
   % N/A
   % Standard AD-Suite Interface
   % ===========================
-  file = '../data/data_3/y.nc';  
+  file = '../../data/data_3/y.nc';  
   ncwrite(file,'y',m_dim);
 return
 

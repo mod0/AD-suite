@@ -324,9 +324,9 @@ contains
     ! get the point-wise inverse of the permeability matrix
     L = 1.0d0/K
 
-    tx_ = 2.0d0 * hy_ * hz_ / hx_
-    ty_ = 2.0d0 * hx_ * hz_ / hy_
-    tz_ = 2.0d0 * hy_ * hx_ / hz_
+    tx_ = 2.0d0 * hy * hz / hx
+    ty_ = 2.0d0 * hx * hz / hy
+    tz_ = 2.0d0 * hy * hx / hz
 
     TX = 0.0d0
     TY = 0.0d0

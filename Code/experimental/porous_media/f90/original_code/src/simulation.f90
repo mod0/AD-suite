@@ -242,65 +242,6 @@ contains
     Pc = 0.0d0               ! production data
   end subroutine initialize_arrays
 
-  subroutine initialize_scenario(data_directory, nx, ny, nz, st, pt, nd, solver_inner, solver_outer)
-    implicit none
-    
-    integer :: ncid                                                  ! netcdf file handle
-
-    character(len = *) :: data_directory                             ! directory location of parameters 
-    integer :: varid                                                 ! generic variable id
-    integer :: nc_chunksize                                          ! chunk size for reading
-
-    integer :: nx, ny, nz
-    integer :: st, pt, nd
-    integer :: solver_inner, solver_outer  
-
-    ! Open parameters file
-    call ncopen(trim(adjustl(data_directory))//"/param1.nc", &
-         NF90_NOWRITE, ncid)
-
-    ! read scenario_id
-    call ncread(ncid, "scenario_id", scenario_id)
-
-    ! read NX, NY, and NZ
-    call ncread(ncid, "NX", nx)
-    call ncread(ncid, "NY", ny)
-    call ncread(ncid, "NZ", nz)
-
-    ! read St, Pt, ND
-    call ncread(ncid, "St",  st)
-    call ncread(ncid, "Pt",  pt)
-    call ncread(ncid, "ND",  nd)
-
-    ! initialize all constants insize parameters file.
-    ! read ir_const
-    call ncread(ncid, "ir_const", ir)
-
-    ! compute ir
-    ir = ir * nx * ny * nz
-
-    ! read hX, hY, hZ
-    call ncread(ncid, "hX", hx)
-    call ncread(ncid, "hY", hy)
-    call ncread(ncid, "hZ", hz)
-
-    ! compute V
-    vol = hx * hy * hz
-
-    ! read vw, vo, swc, sor
-    call ncread(ncid, "vw", vw)
-    call ncread(ncid, "vo", vo)
-    call ncread(ncid, "swc", swc)
-    call ncread(ncid, "sor", sor)
-
-    ! read solver_parameters
-    call ncread(ncid, "solver_inner", solver_inner)    
-    call ncread(ncid, "solver_outer", solver_outer)    
-
-    ! Close parameters file
-    call ncclose(ncid)
-  end subroutine initialize_scenario
-
   subroutine write_results(results_directory, nx, ny, nz, st, pt, nd, n_dof, mu, sigma, Tt, Pc, totaloil)
     implicit none
     character(len = *) :: results_directory
