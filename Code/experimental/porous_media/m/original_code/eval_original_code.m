@@ -52,9 +52,7 @@ function [ p_dim, param ] = allocate_parameter_variables()
     return
 end
 
-function [ n_dim, x ] = initialize_independent_variables(n_dim, x)
-    global data_directory
-
+function [ n_dim, x ] = initialize_independent_variables(n_dim, x, data_directory)
     % User-Application specific
     % ===========================
     % N/A
@@ -67,8 +65,7 @@ function [ n_dim, x ] = initialize_independent_variables(n_dim, x)
     return
 end
 
-function [ p_dim, param ] = initialize_parameter_variables(p_dim, param)
-    global data_directory
+function [ p_dim, param ] = initialize_parameter_variables(p_dim, param, data_directory)
 
     % User-Application specific
     % ===========================
@@ -178,8 +175,7 @@ function [ m_dim, y ] = evaluate_original_code(n_dim, m_dim, p_dim, x, y, param)
     return
 end
 
-function [ ] = save_dependent_variables(m_dim, y)
-    global data_directory
+function [ ] = save_dependent_variables(m_dim, y, data_directory)
     % Standard AD-Suite Interface
     % ===========================  
     % N/A

@@ -75,8 +75,6 @@ contains
     integer :: i, j, k
     double precision :: Mw, Mo, Mt, tempoil1, tempoil2
 
-    S = swc                            ! initial saturation
-
     Pc(1, 1) = 0.0d0                    ! initial production
     Pc(2, 1) = 1.0d0
 
@@ -374,7 +372,7 @@ contains
     POR_temp = 0.0d0
 
     ! read permeability
-        nc_chunksize = 4096
+    nc_chunksize = 4096
     call iserror(nf90_open(trim(adjustl(data_directory))//"/permeability.nc", &
          NF90_NOWRITE, ncid, nc_chunksize))
     write(*,*) "Chosen chunk size is ", nc_chunksize
