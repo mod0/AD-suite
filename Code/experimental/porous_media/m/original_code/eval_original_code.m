@@ -2,14 +2,13 @@ function [  ] = eval_original_code(data_directory, results_directory)
 %UNTITLED Summary of this function goes here
 %   Detailed explanation goes here
 %   input variables
-    global data_directory results_directory
 
     [n_dim, x]     = allocate_independent_variables(  );
     [m_dim, y]     = allocate_dependent_variables(  );
     [p_dim, param] = allocate_parameter_variables(  );
     
-    [p_dim, param] = initialize_parameter_variables(   p_dim, param );
-    [n_dim, x]     = initialize_independent_variables( n_dim, x     );
+    [p_dim, param] = initialize_parameter_variables(   p_dim, param, data_directory );
+    [n_dim, x]     = initialize_independent_variables( n_dim, x,     data_directory );
 
     [m_dim, y]     = evaluate_original_code(n_dim, m_dim, p_dim, x, y, param);
     
