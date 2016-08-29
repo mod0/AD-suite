@@ -19,7 +19,7 @@ DiagVecs = [-z2,-y2,-x2,x1+x2+y1+y2+z1+z2,-x1,-y1,-z1];
 DiagIndx = [-Nx*Ny,-Nx,-1,0,1,Nx,Nx*Ny];
 A = spdiags(DiagVecs,DiagIndx,N,N);
 
-% Aarnes
+% Aarnes et al.
 %A(1,1) = A(1,1)+sum(Grid.K(:,1,1,1));
 
 % ???? - 

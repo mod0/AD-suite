@@ -5,10 +5,10 @@ q_x = zeros(Grid.Nx,1);
     
 mass = 0.0;
 for i=1:Grid.Nx
-    x = (i-1.0)*2.0/(double(Grid.Nx)-1.0) - 1.0;
+    x = (i-1.0)*2.0/(double(Grid.Nx)-1.0) - 1.0;  % Mapping 1:Nx to [0,1]
     pdf = 0.0;
     for j = 1:length(mu)
-          arg1 = -(((x-mu(j)).^2/sigma(j))^2.0/2.0);
+          arg1 = -(((x-mu(j))/sigma(j))^2.0/2.0);
           pdf = pdf + 1.0/(sqrt(2.0*pi).*sigma(j))*exp(arg1);
     end
     q_x(i) = pdf;
