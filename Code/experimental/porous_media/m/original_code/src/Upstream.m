@@ -2,7 +2,7 @@ function S=Upstream(Grid,S,Fluid,V,q,T)
 
 Nx=Grid.Nx; Ny=Grid.Ny; Nz=Grid.Nz;                    % number of grid points
 N=Nx*Ny*Nz;                                            % number of unknowns
-pv = Grid.V(:).*Grid.por(:);                           % pore volume=cell volume*porosity
+pv = Grid.vol(:).*Grid.por(:);                         % pore volume=cell volume*porosity
 
 fi=max(q,0);                                           % inflow from wells
 XP=max(V.x,0); XN=min(V.x,0);                          % influx and outflux, x-faces

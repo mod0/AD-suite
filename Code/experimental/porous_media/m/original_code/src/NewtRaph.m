@@ -6,7 +6,7 @@ A = GenA(Grid,V,q);                                          % system matrix
 conv=0; IT=0; S00=S;
 while conv==0;
  dt = T/2^IT;                                                % timestep
- dtx = dt./(Grid.V(:)*Grid.por(:));                          % timestep / pore volume
+ dtx = dt./(Grid.vol(:)*Grid.por(:));                          % timestep / pore volume
  fi = max(q,0).*dtx;                                         % injection
  B=spdiags(dtx,0,N,N)*A;
  %spy(full(B));

@@ -84,7 +84,7 @@ function [ p_dim, param ] = initialize_parameter_variables(p_dim, param)
     Grid.hx   = ncread(file1,'hX');
     Grid.hy   = ncread(file1,'hY');
     Grid.hz   = ncread(file1,'hZ');
-    Grid.V    = ncread(file1,'V');
+    Grid.vol  = ncread(file1,'vol');
     Fluid.vw  = ncread(file1,'vw');
     Fluid.vo  = ncread(file1,'vo');
     Fluid.swc = ncread(file1,'swc');
@@ -99,7 +99,7 @@ function [ p_dim, param ] = initialize_parameter_variables(p_dim, param)
 
     Grid.por  = max(Por(:),1e-3);
     Grid.S    = Grid.S(:);
-    Steps.IR  = 2*Steps.IR*Grid.V;
+    Steps.IR  = 2*Steps.IR*Grid.vol;
     % Standard AD-Suite Interface
     % ===========================
     param.Grid  = Grid;

@@ -31,3 +31,6 @@
 *.o
 *.dvi
 *.mat
+Code/MIT*
+Code/OP2
+Code/OpenAD
