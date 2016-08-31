@@ -31,7 +31,7 @@ numerics_d.f90: numerics.f90
 numerics_b.f90: numerics.f90
 	${TAPENADE} -ext sparse_pmgmres_template_lib -head "wrapper(mu, sigma)\(oil)" -reverse numerics.f90 -o numerics -noisize 
 
-supporting_routines.f90: gnufor2.f90 utils.f90 mgmres.f90 
+supporting_routines.f90: gnufor2.f90 utils.f90 mgmres.f90 netcdfwrapper.f90
 	@echo "Creating a single supporting routines file from supporting files"
 	paste --delimiter=\\n --serial $^ > $@
 

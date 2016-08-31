@@ -74,7 +74,7 @@ contains
 
     do while(.not. converged)
        dt = (1.0d0 * st)/(2**it)
-       dtx = dt/(V_ * POR)
+       dtx = dt/(vol * POR)
 
        call mymax_1_0_double(Q, 0.0d0, fi)
        fi = fi * dtx
@@ -185,13 +185,13 @@ contains
     double precision, dimension((nx * ny * nz)), optional :: dMw
     double precision, dimension((nx * ny * nz)), optional :: dMo
 
-    S_temp = (S - swc_)/(1.0d0 - swc_ - sor_)   ! rescale saturation
-    Mw = S_temp**2/vw_
-    Mo = (1 - S_temp)**2/vo_
+    S_temp = (S - swc)/(1.0d0 - swc - sor)   ! rescale saturation
+    Mw = S_temp**2/vw
+    Mo = (1 - S_temp)**2/vo
 
     if (present(dMo) .and. present(dMw)) then
-       dMw = 2 * S_temp/vw_/(1 - swc_ - sor_)
-       dMo = -2 * (1 - S_temp)/vo_/(1 - swc_ - sor_)
+       dMw = 2 * S_temp/vw/(1 - swc - sor)
+       dMo = -2 * (1 - S_temp)/vo/(1 - swc - sor)
     endif
   end subroutine RelPerm_vector
 
@@ -203,13 +203,13 @@ contains
     double precision :: S, Mw, Mo, S_temp
     double precision, optional :: dMw, dMo
 
-    S_temp = (S - swc_)/(1.0d0 - swc_ - sor_)   ! rescale saturation
-    Mw = S_temp**2/vw_
-    Mo = (1 - S_temp)**2/vo_
+    S_temp = (S - swc)/(1.0d0 - swc - sor)   ! rescale saturation
+    Mw = S_temp**2/vw
+    Mo = (1 - S_temp)**2/vo
 
     if (present(dMo) .and. present(dMw)) then
-       dMw = 2 * S_temp/vw_/(1 - swc_ - sor_)
-       dMo = -2 * (1 - S_temp)/vo_/(1 - swc_ - sor_)
+       dMw = 2 * S_temp/vw/(1 - swc - sor)
+       dMo = -2 * (1 - S_temp)/vo/(1 - swc - sor)
     endif
   end subroutine RelPerm_scalar
 
@@ -326,9 +326,9 @@ contains
     ! get the point-wise inverse of the permeability matrix
     L = 1.0d0/K
 
-    tx_ = 2.0d0 * hy_ * hz_ / hx_
-    ty_ = 2.0d0 * hx_ * hz_ / hy_
-    tz_ = 2.0d0 * hy_ * hx_ / hz_
+    tx_ = 2.0d0 * hy * hz / hx
+    ty_ = 2.0d0 * hx * hz / hy
+    tz_ = 2.0d0 * hy * hx / hz
 
     TX = 0.0d0
     TY = 0.0d0
@@ -364,11 +364,14 @@ contains
 
 
     ! ! Increment the 1,1 element of A
+    ! ! Aarnes et al.
     !     call addx_elem(annz, arow_index, arow_compressed,&
     !                     acol_index, avalues, &
     !                     PERM(1,1,1,1) + PERM(2,1,1,1) + PERM(3,1,1,1), 1, 1)
 
     ! Fix the pressure at the inlets
+    ! This is apparently incorrect.
+    ! That the water saturation comes and goes
     do i = 1,annz
        if(arow_index(i) < nx * ny .and. mod(arow_index(i), ny) == 1) then
           if(arow_index(i) == acol_index(i)) then
@@ -378,6 +381,11 @@ contains
           endif
        endif
     enddo
+
+    ! Cannot duplicate the MATLAB version by TB
+    ! as A is a sparse matrix with pre-known number
+    ! of non-zeros
+
 
     ! solve the linear system
     ! Pass the rows_index, cols_index, values separately.
