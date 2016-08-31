@@ -12,7 +12,7 @@ function [  ] = eval_original_code(data_directory, results_directory)
 
     [m_dim, y]     = evaluate_original_code(n_dim, m_dim, p_dim, x, y, param);
     
-    save_dependent_variables( m_dim, y );
+    save_dependent_variables( m_dim, y, data_directory);
 
     [ n_dim, x ]     = deallocate_independent_variables( n_dim, x );
     [ n_dim, y ]     = deallocate_dependent_variables(   m_dim, y );
