@@ -17,9 +17,9 @@ function CreateDatasetFromSPE10(filename, NX, NY, NZ)
 
     % Set some parameters
     Nf = 3;
-    hX = 1.0/double(NX);
-    hY = 1.0/double(NY);
-    hZ = 1.0/double(NZ);
+    hX = 20 * 0.3048;
+    hY = 10 * 0.3048;
+    hZ = 2 * 0.3048;
     vw = 3e-4;
     vo = 3e-3;
     swc = 0.2000;
@@ -28,7 +28,7 @@ function CreateDatasetFromSPE10(filename, NX, NY, NZ)
     St = 5;
     Pt = 100;
     ND = 2000;
-    ir_const = 1.0;
+    ir_const = 795.0/(MaxNX * MaxNY * MaxNZ)*(NX * NY);
     solver_inner = 64;
     solver_outer = 100000;
     
@@ -176,7 +176,7 @@ function CreateDatasetFromSPE10(filename, NX, NY, NZ)
     % Create file for dependent variables
     m_dim = 1;
     y     = zeros(m_dim ,1);
-
+    
     ncid = netcdf.create('../y.nc','NC_WRITE');
     dimid_mdim = netcdf.defDim(ncid,'m_dim',1);
     dimid_y    = netcdf.defDim(ncid,'y',m_dim); 

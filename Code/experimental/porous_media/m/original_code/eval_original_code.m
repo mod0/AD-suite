@@ -96,7 +96,6 @@ function [ p_dim, param ] = initialize_parameter_variables(p_dim, param, data_di
 
     Grid.por  = max(Por(:),1e-3);
     Grid.S    = Grid.S(:);
-    Steps.IR  = 2*Steps.IR*Grid.vol;
     % Standard AD-Suite Interface
     % ===========================
     param.Grid  = Grid;

@@ -48,7 +48,7 @@ function [ ] = ConvertJPGtoNetCDF( file1, file2, file3 )
     St = 5;
     Pt = 100;
     ND = 2000;
-    ir_const = 1.0;
+    ir_const = 2 * vol;
     solver_inner = 64;
     solver_outer = 100000;
 

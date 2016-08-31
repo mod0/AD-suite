@@ -3386,7 +3386,7 @@ end
 end module mgmres
 module netcdfwrapper
   use netcdf
-
+  implicit none
   public :: ncread, ncwrite, ncopen, ncclose
 
   interface ncread
@@ -3425,6 +3425,10 @@ module netcdfwrapper
      module procedure ncwrite_4tensor_double
   end interface ncwrite
 
+  logical :: NC_WRITE, NC_NOWRITE
+  parameter(NC_WRITE = .true.)
+  parameter(NC_NOWRITE = .false.)
+
 contains
 
   ! ============= OPEN/CLOSE/HANDLE ERROR =============
@@ -3432,20 +3436,22 @@ contains
   ! Open file in mode and return ncid
   subroutine ncopen(filename, mode, ncid)
     integer :: nc_chunksize
-    character(len=50) :: filename
+    character(len=*) :: filename
     integer :: ncid
-    integer :: mode
+    logical :: mode
     
-    ! Try chunk size = 4K
-    nc_chunksize = 4096
-
-    call iserror(nf90_open(filename, mode, ncid, nc_chunksize))
-
     ! if the file is opened to write, end define mode
     ! each write operation will enter define mode 
     ! independently
-    if (mode == NF90_CLOBBER) then
+    if (mode .eqv. NC_WRITE) then
+       call iserror(nf90_create(trim(adjustl(filename)), NF90_CLOBBER, ncid))
        call iserror(nf90_enddef(ncid))
+    else if (mode .eqv. NC_NOWRITE) then
+       ! Try chunk size = 4K
+       nc_chunksize = 4096
+       call iserror(nf90_open(trim(adjustl(filename)), NF90_NOWRITE, ncid, nc_chunksize))
+    else
+       stop "Unsupported mode."
     end if
   end subroutine ncopen
   
@@ -3478,6 +3484,7 @@ contains
     integer :: var
     integer, dimension(1) :: vararray
     character(len=*) :: varname
+    character(len=nf90_max_name) :: temp_varname
     integer, dimension(nf90_max_var_dims) :: dimids
     integer, dimension(nf90_max_var_dims) :: dimlens
     character(len=nf90_max_name), dimension(1) :: dimnames
@@ -3486,16 +3493,16 @@ contains
     call iserror(nf90_inq_varid(ncid, varname, varid))
 
     ! now inquire the variable and get the number of dimensions
-    call iserror(nf90_inquire_variable(ncid, varid, varname, vartype, dimcount))
+    call iserror(nf90_inquire_variable(ncid, varid, temp_varname, vartype, dimcount))
  
     ! check that the dimensions is equal to 0 or 1
-    if (dimcount /= 1 .or. dimcount /= 0) then
+    if (.not.(dimcount == 1 .or. dimcount == 0)) then
        stop "The input variable is not a scalar"
     end if
 
     if(dimcount == 1) then
        ! now get the dimensions
-       call iserror(nf90_inquire_variable(ncid, varid, varname, vartype, dimcount, dimids(:dimcount)))
+       call iserror(nf90_inquire_variable(ncid, varid, temp_varname, vartype, dimcount, dimids(:dimcount)))
 
        ! check that the
        ! for each dimension, get the length of the dimension
@@ -3528,6 +3535,7 @@ contains
     double precision :: var
     double precision, dimension(1) :: vararray
     character(len=*) :: varname
+    character(len=nf90_max_name) :: temp_varname
     integer, dimension(nf90_max_var_dims) :: dimids
     integer, dimension(nf90_max_var_dims) :: dimlens
     character(len=nf90_max_name), dimension(1) :: dimnames
@@ -3536,16 +3544,16 @@ contains
     call iserror(nf90_inq_varid(ncid, varname, varid))
 
     ! now inquire the variable and get the number of dimensions
-    call iserror(nf90_inquire_variable(ncid, varid, varname, vartype, dimcount))
+    call iserror(nf90_inquire_variable(ncid, varid, temp_varname, vartype, dimcount))
  
     ! check that the dimensions is equal to 0 or 1
-    if (dimcount /= 1 .or. dimcount /= 0) then
+    if (.not.(dimcount == 1 .or. dimcount == 0)) then
        stop "The input variable is not a scalar"
     end if
 
     if(dimcount == 1) then
        ! now get the dimensions
-       call iserror(nf90_inquire_variable(ncid, varid, varname, vartype, dimcount, dimids(:dimcount)))
+       call iserror(nf90_inquire_variable(ncid, varid, temp_varname, vartype, dimcount, dimids(:dimcount)))
 
        ! check that the
        ! for each dimension, get the length of the dimension
@@ -3578,6 +3586,7 @@ contains
     real*4 :: var
     real*4, dimension(1) :: vararray
     character(len=*) :: varname
+    character(len=nf90_max_name) :: temp_varname
     integer, dimension(nf90_max_var_dims) :: dimids
     integer, dimension(nf90_max_var_dims) :: dimlens
     character(len=nf90_max_name), dimension(1) :: dimnames
@@ -3586,16 +3595,16 @@ contains
     call iserror(nf90_inq_varid(ncid, varname, varid))
 
     ! now inquire the variable and get the number of dimensions
-    call iserror(nf90_inquire_variable(ncid, varid, varname, vartype, dimcount))
+    call iserror(nf90_inquire_variable(ncid, varid, temp_varname, vartype, dimcount))
  
     ! check that the dimensions is equal to 0 or 1
-    if (dimcount /= 1 .or. dimcount /= 0) then
+    if (.not.(dimcount == 1 .or. dimcount == 0)) then
        stop "The input variable is not a scalar"
     end if
 
     if(dimcount == 1) then
        ! now get the dimensions
-       call iserror(nf90_inquire_variable(ncid, varid, varname, vartype, dimcount, dimids(:dimcount)))
+       call iserror(nf90_inquire_variable(ncid, varid, temp_varname, vartype, dimcount, dimids(:dimcount)))
 
        ! check that the
        ! for each dimension, get the length of the dimension
@@ -3627,6 +3636,7 @@ contains
     integer :: vartype
     integer, dimension(:) :: var
     character(len=*) :: varname
+    character(len=nf90_max_name) :: temp_varname
     integer, dimension(nf90_max_var_dims) :: dimids
     integer, dimension(nf90_max_var_dims) :: dimlens
     character(len=nf90_max_name), dimension(1) :: dimnames
@@ -3635,7 +3645,7 @@ contains
     call iserror(nf90_inq_varid(ncid, varname, varid))
 
     ! now inquire the variable and get the number of dimensions
-    call iserror(nf90_inquire_variable(ncid, varid, varname, vartype, dimcount))
+    call iserror(nf90_inquire_variable(ncid, varid, temp_varname, vartype, dimcount))
  
     ! check that the dimensions is equal to 1
     if (dimcount /= 1) then
@@ -3643,7 +3653,7 @@ contains
     end if
 
     ! now get the dimensions
-    call iserror(nf90_inquire_variable(ncid, varid, varname, vartype, dimcount, dimids(:dimcount)))
+    call iserror(nf90_inquire_variable(ncid, varid, temp_varname, vartype, dimcount, dimids(:dimcount)))
 
     ! for each dimension, get the length of the dimension
     do i = 1, dimcount
@@ -3668,6 +3678,7 @@ contains
     integer :: vartype
     double precision, dimension(:) :: var
     character(len=*) :: varname
+    character(len=nf90_max_name) :: temp_varname
     integer, dimension(nf90_max_var_dims) :: dimids
     integer, dimension(nf90_max_var_dims) :: dimlens
     character(len=nf90_max_name), dimension(1) :: dimnames
@@ -3676,7 +3687,7 @@ contains
     call iserror(nf90_inq_varid(ncid, varname, varid))
 
     ! now inquire the variable and get the number of dimensions
-    call iserror(nf90_inquire_variable(ncid, varid, varname, vartype, dimcount))
+    call iserror(nf90_inquire_variable(ncid, varid, temp_varname, vartype, dimcount))
  
     ! check that the dimensions is equal to 1
     if (dimcount /= 1) then
@@ -3684,7 +3695,7 @@ contains
     end if
 
     ! now get the dimensions
-    call iserror(nf90_inquire_variable(ncid, varid, varname, vartype, dimcount, dimids(:dimcount)))
+    call iserror(nf90_inquire_variable(ncid, varid, temp_varname, vartype, dimcount, dimids(:dimcount)))
 
     ! for each dimension, get the length of the dimension
     do i = 1, dimcount
@@ -3709,6 +3720,7 @@ contains
     integer :: vartype
     real*4, dimension(:) :: var
     character(len=*) :: varname
+    character(len=nf90_max_name) :: temp_varname
     integer, dimension(nf90_max_var_dims) :: dimids
     integer, dimension(nf90_max_var_dims) :: dimlens
     character(len=nf90_max_name), dimension(1) :: dimnames
@@ -3717,7 +3729,7 @@ contains
     call iserror(nf90_inq_varid(ncid, varname, varid))
 
     ! now inquire the variable and get the number of dimensions
-    call iserror(nf90_inquire_variable(ncid, varid, varname, vartype, dimcount))
+    call iserror(nf90_inquire_variable(ncid, varid, temp_varname, vartype, dimcount))
  
     ! check that the dimensions is equal to 1
     if (dimcount /= 1) then
@@ -3725,7 +3737,7 @@ contains
     end if
 
     ! now get the dimensions
-    call iserror(nf90_inquire_variable(ncid, varid, varname, vartype, dimcount, dimids(:dimcount)))
+    call iserror(nf90_inquire_variable(ncid, varid, temp_varname, vartype, dimcount, dimids(:dimcount)))
 
     ! for each dimension, get the length of the dimension
     do i = 1, dimcount
@@ -3750,6 +3762,7 @@ contains
     integer :: vartype
     integer, dimension(:,:) :: var
     character(len=*) :: varname
+    character(len=nf90_max_name) :: temp_varname
     integer, dimension(nf90_max_var_dims) :: dimids
     integer, dimension(nf90_max_var_dims) :: dimlens
     character(len=nf90_max_name), dimension(2) :: dimnames
@@ -3758,7 +3771,7 @@ contains
     call iserror(nf90_inq_varid(ncid, varname, varid))
 
     ! now inquire the variable and get the number of dimensions
-    call iserror(nf90_inquire_variable(ncid, varid, varname, vartype, dimcount))
+    call iserror(nf90_inquire_variable(ncid, varid, temp_varname, vartype, dimcount))
  
     ! check that the dimensions is equal to 2
     if (dimcount /= 2) then
@@ -3766,7 +3779,7 @@ contains
     end if
 
     ! now get the dimensions
-    call iserror(nf90_inquire_variable(ncid, varid, varname, vartype, dimcount, dimids(:dimcount)))
+    call iserror(nf90_inquire_variable(ncid, varid, temp_varname, vartype, dimcount, dimids(:dimcount)))
 
     ! for each dimension, get the length of the dimension
     do i = 1, dimcount
@@ -3791,6 +3804,7 @@ contains
     integer :: vartype
     double precision, dimension(:,:) :: var
     character(len=*) :: varname
+    character(len=nf90_max_name) :: temp_varname
     integer, dimension(nf90_max_var_dims) :: dimids
     integer, dimension(nf90_max_var_dims) :: dimlens
     character(len=nf90_max_name), dimension(2) :: dimnames
@@ -3799,7 +3813,7 @@ contains
     call iserror(nf90_inq_varid(ncid, varname, varid))
 
     ! now inquire the variable and get the number of dimensions
-    call iserror(nf90_inquire_variable(ncid, varid, varname, vartype, dimcount))
+    call iserror(nf90_inquire_variable(ncid, varid, temp_varname, vartype, dimcount))
  
     ! check that the dimensions is equal to 2
     if (dimcount /= 2) then
@@ -3807,7 +3821,7 @@ contains
     end if
 
     ! now get the dimensions
-    call iserror(nf90_inquire_variable(ncid, varid, varname, vartype, dimcount, dimids(:dimcount)))
+    call iserror(nf90_inquire_variable(ncid, varid, temp_varname, vartype, dimcount, dimids(:dimcount)))
 
     ! for each dimension, get the length of the dimension
     do i = 1, dimcount
@@ -3832,6 +3846,7 @@ contains
     integer :: vartype
     real*4, dimension(:,:) :: var
     character(len=*) :: varname
+    character(len=nf90_max_name) :: temp_varname
     integer, dimension(nf90_max_var_dims) :: dimids
     integer, dimension(nf90_max_var_dims) :: dimlens
     character(len=nf90_max_name), dimension(2) :: dimnames
@@ -3840,7 +3855,7 @@ contains
     call iserror(nf90_inq_varid(ncid, varname, varid))
 
     ! now inquire the variable and get the number of dimensions
-    call iserror(nf90_inquire_variable(ncid, varid, varname, vartype, dimcount))
+    call iserror(nf90_inquire_variable(ncid, varid, temp_varname, vartype, dimcount))
  
     ! check that the dimensions is equal to 2
     if (dimcount /= 2) then
@@ -3848,7 +3863,7 @@ contains
     end if
 
     ! now get the dimensions
-    call iserror(nf90_inquire_variable(ncid, varid, varname, vartype, dimcount, dimids(:dimcount)))
+    call iserror(nf90_inquire_variable(ncid, varid, temp_varname, vartype, dimcount, dimids(:dimcount)))
 
     ! for each dimension, get the length of the dimension
     do i = 1, dimcount
@@ -3873,6 +3888,7 @@ contains
     integer :: vartype
     integer, dimension(:,:,:) :: var
     character(len=*) :: varname
+    character(len=nf90_max_name) :: temp_varname
     integer, dimension(nf90_max_var_dims) :: dimids
     integer, dimension(nf90_max_var_dims) :: dimlens
     character(len=nf90_max_name), dimension(3) :: dimnames
@@ -3881,7 +3897,7 @@ contains
     call iserror(nf90_inq_varid(ncid, varname, varid))
 
     ! now inquire the variable and get the number of dimensions
-    call iserror(nf90_inquire_variable(ncid, varid, varname, vartype, dimcount))
+    call iserror(nf90_inquire_variable(ncid, varid, temp_varname, vartype, dimcount))
  
     ! check that the dimensions is equal to 3
     if (dimcount /= 3) then
@@ -3889,7 +3905,7 @@ contains
     end if
 
     ! now get the dimensions
-    call iserror(nf90_inquire_variable(ncid, varid, varname, vartype, dimcount, dimids(:dimcount)))
+    call iserror(nf90_inquire_variable(ncid, varid, temp_varname, vartype, dimcount, dimids(:dimcount)))
 
     ! for each dimension, get the length of the dimension
     do i = 1, dimcount
@@ -3914,6 +3930,7 @@ contains
     integer :: vartype
     double precision, dimension(:,:,:) :: var
     character(len=*) :: varname
+    character(len=nf90_max_name) :: temp_varname
     integer, dimension(nf90_max_var_dims) :: dimids
     integer, dimension(nf90_max_var_dims) :: dimlens
     character(len=nf90_max_name), dimension(3) :: dimnames
@@ -3922,7 +3939,7 @@ contains
     call iserror(nf90_inq_varid(ncid, varname, varid))
 
     ! now inquire the variable and get the number of dimensions
-    call iserror(nf90_inquire_variable(ncid, varid, varname, vartype, dimcount))
+    call iserror(nf90_inquire_variable(ncid, varid, temp_varname, vartype, dimcount))
  
     ! check that the dimensions is equal to 3
     if (dimcount /= 3) then
@@ -3930,7 +3947,7 @@ contains
     end if
 
     ! now get the dimensions
-    call iserror(nf90_inquire_variable(ncid, varid, varname, vartype, dimcount, dimids(:dimcount)))
+    call iserror(nf90_inquire_variable(ncid, varid, temp_varname, vartype, dimcount, dimids(:dimcount)))
 
     ! for each dimension, get the length of the dimension
     do i = 1, dimcount
@@ -3955,6 +3972,7 @@ contains
     integer :: vartype
     real*4, dimension(:,:,:) :: var
     character(len=*) :: varname
+    character(len=nf90_max_name) :: temp_varname
     integer, dimension(nf90_max_var_dims) :: dimids
     integer, dimension(nf90_max_var_dims) :: dimlens
     character(len=nf90_max_name), dimension(3) :: dimnames
@@ -3963,7 +3981,7 @@ contains
     call iserror(nf90_inq_varid(ncid, varname, varid))
 
     ! now inquire the variable and get the number of dimensions
-    call iserror(nf90_inquire_variable(ncid, varid, varname, vartype, dimcount))
+    call iserror(nf90_inquire_variable(ncid, varid, temp_varname, vartype, dimcount))
  
     ! check that the dimensions is equal to 3
     if (dimcount /= 3) then
@@ -3971,7 +3989,7 @@ contains
     end if
 
     ! now get the dimensions
-    call iserror(nf90_inquire_variable(ncid, varid, varname, vartype, dimcount, dimids(:dimcount)))
+    call iserror(nf90_inquire_variable(ncid, varid, temp_varname, vartype, dimcount, dimids(:dimcount)))
 
     ! for each dimension, get the length of the dimension
     do i = 1, dimcount
@@ -3996,6 +4014,7 @@ contains
     integer :: vartype
     integer, dimension(:,:,:,:) :: var
     character(len=*) :: varname
+    character(len=nf90_max_name) :: temp_varname
     integer, dimension(nf90_max_var_dims) :: dimids
     integer, dimension(nf90_max_var_dims) :: dimlens
     character(len=nf90_max_name), dimension(4) :: dimnames
@@ -4004,7 +4023,7 @@ contains
     call iserror(nf90_inq_varid(ncid, varname, varid))
 
     ! now inquire the variable and get the number of dimensions
-    call iserror(nf90_inquire_variable(ncid, varid, varname, vartype, dimcount))
+    call iserror(nf90_inquire_variable(ncid, varid, temp_varname, vartype, dimcount))
  
     ! check that the dimensions is equal to 4
     if (dimcount /= 4) then
@@ -4012,7 +4031,7 @@ contains
     end if
 
     ! now get the dimensions
-    call iserror(nf90_inquire_variable(ncid, varid, varname, vartype, dimcount, dimids(:dimcount)))
+    call iserror(nf90_inquire_variable(ncid, varid, temp_varname, vartype, dimcount, dimids(:dimcount)))
 
     ! for each dimension, get the length of the dimension
     do i = 1, dimcount
@@ -4037,6 +4056,7 @@ contains
     integer :: vartype
     double precision, dimension(:,:,:,:) :: var
     character(len=*) :: varname
+    character(len=nf90_max_name) :: temp_varname
     integer, dimension(nf90_max_var_dims) :: dimids
     integer, dimension(nf90_max_var_dims) :: dimlens
     character(len=nf90_max_name), dimension(4) :: dimnames
@@ -4045,7 +4065,7 @@ contains
     call iserror(nf90_inq_varid(ncid, varname, varid))
 
     ! now inquire the variable and get the number of dimensions
-    call iserror(nf90_inquire_variable(ncid, varid, varname, vartype, dimcount))
+    call iserror(nf90_inquire_variable(ncid, varid, temp_varname, vartype, dimcount))
  
     ! check that the dimensions is equal to 4
     if (dimcount /= 4) then
@@ -4053,7 +4073,7 @@ contains
     end if
 
     ! now get the dimensions
-    call iserror(nf90_inquire_variable(ncid, varid, varname, vartype, dimcount, dimids(:dimcount)))
+    call iserror(nf90_inquire_variable(ncid, varid, temp_varname, vartype, dimcount, dimids(:dimcount)))
 
     ! for each dimension, get the length of the dimension
     do i = 1, dimcount
@@ -4078,6 +4098,7 @@ contains
     integer :: vartype
     real*4, dimension(:,:,:,:) :: var
     character(len=*) :: varname
+    character(len=nf90_max_name) :: temp_varname
     integer, dimension(nf90_max_var_dims) :: dimids
     integer, dimension(nf90_max_var_dims) :: dimlens
     character(len=nf90_max_name), dimension(4) :: dimnames
@@ -4086,7 +4107,7 @@ contains
     call iserror(nf90_inq_varid(ncid, varname, varid))
 
     ! now inquire the variable and get the number of dimensions
-    call iserror(nf90_inquire_variable(ncid, varid, varname, vartype, dimcount))
+    call iserror(nf90_inquire_variable(ncid, varid, temp_varname, vartype, dimcount))
  
     ! check that the dimensions is equal to 4
     if (dimcount /= 4) then
@@ -4094,7 +4115,7 @@ contains
     end if
 
     ! now get the dimensions
-    call iserror(nf90_inquire_variable(ncid, varid, varname, vartype, dimcount, dimids(:dimcount)))
+    call iserror(nf90_inquire_variable(ncid, varid, temp_varname, vartype, dimcount, dimids(:dimcount)))
 
     ! for each dimension, get the length of the dimension
     do i = 1, dimcount

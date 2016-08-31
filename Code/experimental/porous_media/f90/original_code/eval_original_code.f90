@@ -18,9 +18,8 @@ program runspe10
 
   call allocate_independent_variables( n_dim, x     )
   call allocate_dependent_variables(   m_dim, y     )
-!!!!!!!!!!!!!!! Do we now remove the following statement?
   call allocate_parameter_variables(   p_dim, param )
-!!!!!!!!!!!!!!! Do we now remove the following statement?
+
   call initialize_parameter_variables(   p_dim, param )
   call initialize_independent_variables( n_dim, x     )
 
@@ -30,8 +29,7 @@ program runspe10
 
   call deallocate_independent_variables( n_dim, x )
   call deallocate_dependent_variables(   m_dim, y )
-!!!!!!!!!!!!!!! Do we now remove the following statement?
-  call deallocate_parameter_variables(    p_dim, param )
+  call deallocate_parameter_variables(   p_dim, param )
 
   return
 contains
@@ -58,13 +56,12 @@ contains
     allocate( y(m_dim) )
   end subroutine allocate_dependent_variables
 
-!!!!!!!!!!!!!!! Do we now remove this?
   subroutine allocate_parameter_variables( p_dim, param)
     integer, intent(out):: p_dim
     double precision, dimension(:), allocatable, intent(out):: param
     ! User-Application specific
     ! ===========================
-    ! N/A
+    p_dim = 1
     ! Standard AD-Suite Interface
     ! ===========================
     allocate( param(p_dim) )
@@ -86,7 +83,6 @@ contains
     ! N/A
   end subroutine initialize_independent_variables
 
-!!!!!!!!!!!!!!! Do we now remove this?
   subroutine initialize_parameter_variables(p_dim, param)
     integer, intent(in):: p_dim
     double precision, dimension(:), allocatable, intent(inout):: param
@@ -103,24 +99,32 @@ contains
     double precision, dimension(n_dim), intent(in) :: x
     double precision, dimension(m_dim), intent(inout) :: y
     double precision, dimension(p_dim), intent(in) :: param
+
     character(len = 100) :: data_directory
     character(len = 100) :: results_directory
+
     integer :: iargs  
     integer :: i, j, k, n_dof
     integer :: nx, ny, nz
     integer :: nd, st, pt
+    double precision :: totaloil
     double precision, dimension(:), allocatable :: Q
     double precision, dimension(:), allocatable :: S
     double precision, dimension(:, :, :), allocatable :: P
     double precision, dimension(:, :, :, :), allocatable :: V
-    double precision :: totaloil
     double precision, dimension(:), allocatable :: Tt
     double precision, dimension(:, :), allocatable :: Pc
     double precision, dimension(:), allocatable :: mu
     double precision, dimension(:), allocatable :: sigma
+
+    ! ==========================================
+    ! ALLOCATE SPACE FOR INDIVIDUAL INDEPENDENTS
+    ! ==========================================
     n_dof = n_dim/2
     allocate( mu(n_dof)    )
     allocate( sigma(n_dof) )    
+   
+    ! ===========================
     ! READ INDEPENDENT VARIABLES
     ! ===========================
     mu(1)    = x(1)
@@ -129,6 +133,7 @@ contains
     sigma(1) = x(4)
     sigma(2) = x(5)
     sigma(3) = x(6)
+
     ! =================================
     ! READ DATA AND RESULTS DIRECTORY
     ! =================================
@@ -140,26 +145,44 @@ contains
     call getarg(2, results_directory)
     write(*,*) "Data directory: ", data_directory
     write(*,*) "Results directory: ", results_directory  
+
     ! =======================================================
     ! INITIALIZE SCENARIO AND APPLICATION SPECIFIC VARIABLES
     ! =======================================================
-    call initialize_scenario(data_directory, nx, ny, nz, st, pt, nd, solver_inner, solver_outer)
-    call allocate_arrays(nx, ny, nz, st, pt, nd, Q, S, P, V, Tt, Pc)
-    call allocate_shared_arrays(nx, ny, nz, st, pt, nd)
-    call initialize_arrays(Q, S, P, V, Tt, Pc)
-    call initialize_shared_arrays(data_directory, nx, ny, nz, st, pt, nd)
+    call initialize_size_param_vars(nx, ny, nz, st, pt, nd, data_directory)
+
+    call allocate_vector_param_vars(nx, ny, nz)
+    call allocate_vector_sim_vars(nx, ny, nz, st, pt, nd, Q, S, P, V, Tt, Pc)
+
+    call initialize_scalar_param_vars(data_directory)
+    call initialize_vector_param_vars(nx, ny, nz, data_directory)
+    call initialize_vector_sim_vars(nx, ny, nz, Q, S, P, V, Tt, Pc, data_directory)
+
+    ! ======================================================
+    ! OVER-RIDE PARAMETER VARIABLES, UPDATE VALUES ETC.
+    ! ======================================================
     verbose = .false.   
+
+    ! ===========================
     ! EXECUTE CODE
     ! ===========================
     call wrapper(nx, ny, nz, nd, n_dof, pt, st, mu, sigma, Q, S, P, V, Tt, Pc, totaloil)
+
+    ! ===========================
+    ! WRITE RESULTS
     ! ===========================
     call write_results(results_directory, nx, ny, nz, st, pt, nd, n_dof, mu, sigma, Tt, Pc, totaloil)
+
+    ! ===========================
     ! WRITE DEPENDENT VARIABLES
     ! ===========================
     y(1) = totaloil
+
+    ! ==========================
+    ! DEALLOCATE VARIABLES
     ! ===========================
-    call deallocate_arrays(Q, S, P, V, Tt, Pc)
-    call deallocate_shared_arrays()
+    call deallocate_vector_sim_vars(Q, S, P, V, Tt, Pc)
+    call deallocate_vector_param_vars()
     deallocate(mu)
     deallocate(sigma)
   end subroutine evaluate_original_code
@@ -196,7 +219,6 @@ contains
     deallocate( y )
   end subroutine deallocate_dependent_variables
 
-!!!!!!!!!!!!!!! Do we now remove this?
   subroutine deallocate_parameter_variables( p_dim, param)
     integer, intent(in):: p_dim
     double precision, dimension(:), allocatable, intent(inout):: param
@@ -207,60 +229,4 @@ contains
     ! ===========================  
     ! N/A
   end subroutine deallocate_parameter_variables
-
-  subroutine initialize_parameters(data_directory, nx, ny, nz, st, pt, nd, solver_inner, solver_outer)
-    implicit none
-
-    integer :: ncid                                                  ! netcdf file handle
-
-    character(len = *) :: data_directory                             ! directory location of parameters 
-    integer :: varid                                                 ! generic variable id
-    integer :: nc_chunksize                                          ! chunk size for reading
-
-    integer :: nx, ny, nz
-    integer :: st, pt, nd
-    integer :: solver_inner, solver_outer  
-
-    ! Open parameters file
-    call ncopen(trim(adjustl(data_directory))//"/param1.nc", &
-         NF90_NOWRITE, ncid)
-
-    ! read NX, NY, and NZ
-    call ncread(ncid, "NX", nx)
-    call ncread(ncid, "NY", ny)
-    call ncread(ncid, "NZ", nz)
-
-    ! read St, Pt, ND
-    call ncread(ncid, "St",  st)
-    call ncread(ncid, "Pt",  pt)
-    call ncread(ncid, "ND",  nd)
-
-    ! initialize all constants insize parameters file.
-    ! read ir_const
-    call ncread(ncid, "ir_const", ir)
-
-    ! compute ir
-    ir = ir * nx * ny * nz
-
-    ! read hX, hY, hZ
-    call ncread(ncid, "hX", hx)
-    call ncread(ncid, "hY", hy)
-    call ncread(ncid, "hZ", hz)
-
-    ! compute V
-    vol = hx * hy * hz
-
-    ! read vw, vo, swc, sor
-    call ncread(ncid, "vw", vw)
-    call ncread(ncid, "vo", vo)
-    call ncread(ncid, "swc", swc)
-    call ncread(ncid, "sor", sor)
-
-    ! read solver_parameters
-    call ncread(ncid, "solver_inner", solver_inner)    
-    call ncread(ncid, "solver_outer", solver_outer)    
-
-    ! Close parameters file
-    call ncclose(ncid)
-  end subroutine initialize_scenario
 end program runspe10

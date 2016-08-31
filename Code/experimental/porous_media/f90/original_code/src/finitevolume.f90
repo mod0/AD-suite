@@ -362,11 +362,14 @@ contains
 
 
     ! ! Increment the 1,1 element of A
+    ! ! Aarnes et al.
     !     call addx_elem(annz, arow_index, arow_compressed,&
     !                     acol_index, avalues, &
     !                     PERM(1,1,1,1) + PERM(2,1,1,1) + PERM(3,1,1,1), 1, 1)
 
     ! Fix the pressure at the inlets
+    ! This is apparently incorrect.
+    ! That the water saturation comes and goes
     do i = 1,annz
        if(arow_index(i) < nx * ny .and. mod(arow_index(i), ny) == 1) then
           if(arow_index(i) == acol_index(i)) then
@@ -376,6 +379,11 @@ contains
           endif
        endif
     enddo
+
+    ! Cannot duplicate the MATLAB version by TB
+    ! as A is a sparse matrix with pre-known number
+    ! of non-zeros
+
 
     ! solve the linear system
     ! Pass the rows_index, cols_index, values separately.

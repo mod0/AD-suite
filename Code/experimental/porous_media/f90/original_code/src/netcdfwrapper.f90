@@ -39,6 +39,10 @@ module netcdfwrapper
      module procedure ncwrite_4tensor_double
   end interface ncwrite
 
+  logical :: NC_WRITE, NC_NOWRITE
+  parameter(NC_WRITE = .true.)
+  parameter(NC_NOWRITE = .false.)
+
 contains
 
   ! ============= OPEN/CLOSE/HANDLE ERROR =============
@@ -53,10 +57,10 @@ contains
     ! if the file is opened to write, end define mode
     ! each write operation will enter define mode 
     ! independently
-    if (mode .eqv. .true.) then
+    if (mode .eqv. NC_WRITE) then
        call iserror(nf90_create(trim(adjustl(filename)), NF90_CLOBBER, ncid))
        call iserror(nf90_enddef(ncid))
-    else if (mode .eqv. .false.) then
+    else if (mode .eqv. NC_NOWRITE) then
        ! Try chunk size = 4K
        nc_chunksize = 4096
        call iserror(nf90_open(trim(adjustl(filename)), NF90_NOWRITE, ncid, nc_chunksize))

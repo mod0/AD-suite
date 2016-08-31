@@ -1,18 +1,16 @@
 module parameters
-  ! FIXED PARAMETERS
+  use netcdfwrapper
+
   ! grid parameters 
-  integer :: scenario_id
   double precision :: hx, hy, hz, vol, ir
 
   ! fluid parameters
   double precision :: vw, vo, swc, sor
 
-  ! PARAMETERS READ FROM FILE
   ! porosity and permeability parameters
-  double precision, dimension(:), allocatable :: POR      ! Porosities
+  double precision, dimension(:), allocatable :: POR            ! Porosities
   double precision, dimension(:, :, :, :), allocatable :: PERM  ! Permeabilities  
 
-  ! PARAMETERS SET IN DRIVER
   ! linear solver parameters
   logical :: verbose
   integer :: solver_inner, solver_outer
@@ -976,11 +974,14 @@ contains
 
 
     ! ! Increment the 1,1 element of A
+    ! ! Aarnes et al.
     !     call addx_elem(annz, arow_index, arow_compressed,&
     !                     acol_index, avalues, &
     !                     PERM(1,1,1,1) + PERM(2,1,1,1) + PERM(3,1,1,1), 1, 1)
 
     ! Fix the pressure at the inlets
+    ! This is apparently incorrect.
+    ! That the water saturation comes and goes
     do i = 1,annz
        if(arow_index(i) < nx * ny .and. mod(arow_index(i), ny) == 1) then
           if(arow_index(i) == acol_index(i)) then
@@ -990,6 +991,11 @@ contains
           endif
        endif
     enddo
+
+    ! Cannot duplicate the MATLAB version by TB
+    ! as A is a sparse matrix with pre-known number
+    ! of non-zeros
+
 
     ! solve the linear system
     ! Pass the rows_index, cols_index, values separately.
@@ -1165,7 +1171,7 @@ contains
       x   = (i-1.0)*2.0/(nx-1.0d0) - 1.0d0;
       pdf = 0.0d0
       do j = 1, ndof
-          arg1 = -(((x-mu(j))**2/sigma(j))**2.0/2.0);
+          arg1 = -(((x-mu(j))/sigma(j))**2.0/2.0);
           pdf = pdf + 1.0/(sqrt(2.0*pi)*sigma(j))*exp(arg1);
       end do
       Q_x(i) = pdf;
@@ -1183,7 +1189,8 @@ contains
     end do
 
     ! now set the output
-    Q((nx * ny * nz)) = -ir
+    Q((nx * ny * nz)) = -ir/2.0
+    Q(ny) = -ir/2.0
   end subroutine init_flw_trnc_norm_xin_pt_out
 
 
@@ -1202,13 +1209,12 @@ contains
     double precision, dimension(3, nx + 1, ny + 1, nz + 1) :: V
 
     double precision, dimension((nd/st) + 1) :: Tt   
-    double precision, dimension(2, (nd/st) + 1) :: Pc
+    double precision, dimension(4, (nd/st) + 1) :: Pc
     double precision ::  oil
 
     integer :: i, j, k
-    double precision :: Mw, Mo, Mt, tempoil1, tempoil2
-
-    S = swc                            ! initial saturation
+    double precision :: tempoil1, tempoil2
+    double precision, dimension(2) :: Mw, Mo, Mt
 
     Pc(1, 1) = 0.0d0                    ! initial production
     Pc(2, 1) = 1.0d0
@@ -1229,12 +1235,13 @@ contains
              call stepforward(nx, ny, nz, nd, pt, st, 0, Q, S, P, V, Mw, Mo)            
           endif
 
-
           ! update quantites
           Mt = Mw + Mo
           Tt(k) = 1.0d0 * k * St  
-          Pc(1,k) = Mw/Mt
-          Pc(2,k) = Mo/Mt
+          Pc(1,k) = Mw(1)/Mt(1)
+          Pc(2,k) = Mo(1)/Mt(1)
+          Pc(3,k) = Mw(2)/Mt(2)
+          Pc(4,k) = Mo(2)/Mt(2)
 
           call update_oil(nd, pt, st, Pc, k, tempoil1, tempoil2)
           tempoil1 = tempoil2
@@ -1252,7 +1259,7 @@ contains
     double precision, dimension((nx * ny * nz)) :: S
     double precision, dimension(nx, ny, nz) :: P
     double precision, dimension(3, nx + 1, ny + 1, nz + 1) :: V
-    double precision :: Mw, Mo
+    double precision, dimension(2) :: Mw, Mo
 
     if (pressure_step == 1) then
        ! solve pressure
@@ -1260,7 +1267,8 @@ contains
     endif
 
     call NewtRaph(nx, ny, nz, nd, pt, st, Q, V, S)      ! Solve for saturation
-    call RelPerm(S((nx * ny * nz)), Mw, Mo)         ! Mobilities in well-block
+    call RelPerm(S((nx * ny * nz)), Mw(1), Mo(1))       ! Mobilities in well-block
+    call RelPerm(S(ny), Mw(2), Mo(2))                   ! Mobilities in well-block
   end subroutine stepforward
 
   subroutine update_oil(nd, pt, st, Pc, k, oilin, oilout)
@@ -1268,7 +1276,7 @@ contains
     integer :: nd, pt, st
     double precision ::  oilin
     double precision ::  oilout
-    double precision, dimension(2, (nd/st) + 1) :: Pc
+    double precision, dimension(4, (nd/st) + 1) :: Pc
 
     oilout = oilin +  Pc(2, k) * st                     ! Reimann sum
   end subroutine update_oil
@@ -1283,39 +1291,124 @@ contains
     double precision, dimension(nx, ny, nz) :: P
     double precision, dimension(3, nx + 1, ny + 1, nz + 1) :: V
     double precision, dimension((nd/st) + 1) :: Tt
-    double precision, dimension(2, (nd/st) + 1) :: Pc
+    double precision, dimension(4, (nd/st) + 1) :: Pc
     double precision :: oil
 
     call init_flw_trnc_norm_xin_pt_out(nx, ny, nz, ndof, mu, sigma, Q)
     call simulate_reservoir(nx, ny, nz, nd, pt, st, Q, S, P, V, Tt, Pc, oil)
   end subroutine wrapper
 
-  subroutine allocate_shared_arrays(nx, ny, nz, st, pt, nd)
+  subroutine initialize_size_param_vars(nx, ny, nz, st, pt, nd, data_directory)
+    integer :: ncid
     integer :: nx, ny, nz
     integer :: st, pt, nd
+    character(len = *) :: data_directory     
+
+    ! Open parameters file
+    call ncopen(trim(adjustl(data_directory))//"/parameters1.nc", &
+         NC_NOWRITE, ncid)
+
+    ! read NX, NY, and NZ
+    call ncread(ncid, "NX", nx)
+    call ncread(ncid, "NY", ny)
+    call ncread(ncid, "NZ", nz)
+
+    ! read St, Pt, ND
+    call ncread(ncid, "St",  st)
+    call ncread(ncid, "Pt",  pt)
+    call ncread(ncid, "ND",  nd)
+    
+    call ncclose(ncid)
+  end subroutine initialize_size_param_vars
+
+  subroutine initialize_scalar_param_vars(data_directory)
+    implicit none
+    integer :: ncid  
+    character(len = *) :: data_directory 
+
+    ! Open parameters file
+    call ncopen(trim(adjustl(data_directory))//"/parameters1.nc", &
+         NC_NOWRITE, ncid)
+
+    ! initialize all constants insize parameters file.
+    ! read ir_const
+    call ncread(ncid, "ir_const", ir)
+
+    ! read hX, hY, hZ
+    call ncread(ncid, "hX", hx)
+    call ncread(ncid, "hY", hy)
+    call ncread(ncid, "hZ", hz)
+
+    ! real volume
+    call ncread(ncid, "vol", vol)
+
+    ! read vw, vo, swc, sor
+    call ncread(ncid, "vw", vw)
+    call ncread(ncid, "vo", vo)
+    call ncread(ncid, "swc", swc)
+    call ncread(ncid, "sor", sor)
+
+    ! read solver_parameters
+    call ncread(ncid, "solver_inner", solver_inner)    
+    call ncread(ncid, "solver_outer", solver_outer)    
+
+    ! Close parameters file
+    call ncclose(ncid)
+  end subroutine initialize_scalar_param_vars
+
+  subroutine allocate_vector_param_vars(nx, ny, nz)
+    integer :: nx, ny, nz
 
     ! Allocate space for constant permeability/porosity
     allocate(POR(nx * ny * nz), PERM(3, nx, ny, nz))    
-  end subroutine allocate_shared_arrays
+  end subroutine allocate_vector_param_vars
 
-  subroutine deallocate_shared_arrays()
+  subroutine deallocate_vector_param_vars()
     ! also deallocate Porosity and Permeability
     deallocate(POR, PERM)
-  end subroutine deallocate_shared_arrays
+  end subroutine deallocate_vector_param_vars
 
-  subroutine initialize_shared_arrays(data_directory, nx, ny, nz, st, pt, nd)
-    character(len = *) :: data_directory                             ! directory location of parameters 
-
+  subroutine initialize_vector_param_vars(nx, ny, nz, data_directory)
+    character(len = *) :: data_directory                            
     integer :: nx, ny, nz
-    integer :: st, pt, nd
 
-    ! Now read the permeabilities and porosities which are global
-    call read_permeability_and_porosity(data_directory, nx, ny, nz, PERM, POR)
-  end subroutine initialize_shared_arrays
+    ! Now read the permeabilities and porosities 
+    call read_permeability_and_porosity(nx, ny, nz, PERM, POR, data_directory)
+  end subroutine initialize_vector_param_vars
 
-  subroutine allocate_arrays(nx, ny, nz, st, pt, nd, Q, S, P, V, Tt, Pc)
+  subroutine read_permeability_and_porosity(nx, ny, nz, PERM, POR, data_directory)   
+    integer :: ncid                                                  
+    integer :: nx, ny, nz
+    character(len = *) :: data_directory                             
+    
+    double precision, dimension((nx * ny * nz)) :: POR       ! Porosities
+    double precision, dimension(nx, ny, nz) :: POR_temp    ! Porosities_temp
+    double precision, dimension(3, nx, ny, nz)  :: PERM      ! Permeabilities
+
+    ! initialize porosity and permeability to zero
+    PERM = 0.0d0
+    POR = 0.0d0
+    POR_temp = 0.0d0
+
+    ! read permeability
+    call ncopen(trim(adjustl(data_directory))//"/parameters2.nc", &
+         NC_NOWRITE, ncid)
+    call ncread(ncid, "permeability", PERM)
+    call ncclose(ncid)
+
+    ! read porosity
+    call ncopen(trim(adjustl(data_directory))//"/parameters3.nc", &
+         NC_NOWRITE, ncid)
+    call ncread(ncid, "porosity", POR_temp)
+    call ncclose(ncid)    
+
+    POR = reshape(POR_temp, (/nx * ny * nz/))
+
+    call mymax_1_0_double(POR, 1.0d-3, POR)
+  end subroutine read_permeability_and_porosity
+
+  subroutine allocate_vector_sim_vars(nx, ny, nz, st, pt, nd, Q, S, P, V, Tt, Pc)
     implicit none
-
     integer :: nx, ny, nz
     integer :: st, pt, nd
      
@@ -1334,10 +1427,10 @@ contains
 
     ! Allocate space for Time and Production data 
     allocate(Tt((nd/st) + 1), & 
-         Pc(2, (nd/st) + 1))
-  end subroutine allocate_arrays
+         Pc(4, (nd/st) + 1))
+  end subroutine allocate_vector_sim_vars
 
-  subroutine deallocate_arrays(Q, S, P, V, Tt, Pc)
+  subroutine deallocate_vector_sim_vars(Q, S, P, V, Tt, Pc)
     implicit none
 
     double precision, dimension(:), allocatable          :: Q
@@ -1350,19 +1443,33 @@ contains
     ! deallocate variables
     deallocate(Q, S, P, V)
     deallocate(Tt, Pc)
-  end subroutine deallocate_arrays
+  end subroutine deallocate_vector_sim_vars
 
-  subroutine initialize_arrays(Q, S, P, V, Tt, Pc)
+  subroutine initialize_vector_sim_vars(nx, ny, nz, Q, S, P, V, Tt, Pc, data_directory)
+    integer :: ncid
+    integer :: nx, ny, nz
     double precision, dimension(:)          :: Q
     double precision, dimension(:)          :: S
     double precision, dimension(:, :, :)    :: P
     double precision, dimension(:, :, :, :) :: V
     double precision, dimension(:)          :: Tt
     double precision, dimension(:, :)       :: Pc
+    double precision, dimension(:,:,:), allocatable :: S_temp
+ 
+    character(len = *) :: data_directory                             
 
     ! initialize memory for inflow and saturation
     Q = 0.0d0
-    S = 0.0d0
+
+    ! read initial saturation from file
+    ! Open parameters file
+    allocate(S_temp(nx, ny, nz))
+    call ncopen(trim(adjustl(data_directory))//"/parameters4.nc", &
+         NC_NOWRITE, ncid)
+    call ncread(ncid, "saturation", S_temp) 
+    call ncclose(ncid)
+    S = reshape(S_temp, (/ nx * ny * nz /))
+    deallocate(S_temp)
 
     ! initialize memory for P and V
     P = 0.0d0
@@ -1373,159 +1480,33 @@ contains
 
     Tt = 0.0d0               ! simulation time
     Pc = 0.0d0               ! production data
-  end subroutine initialize_arrays
+  end subroutine initialize_vector_sim_vars
 
   subroutine write_results(results_directory, nx, ny, nz, st, pt, nd, n_dof, mu, sigma, Tt, Pc, totaloil)
     implicit none
-    character(len = *) :: results_directory
 
+    integer :: ncid                                                  
     integer :: nx, ny, nz, st, pt, nd, n_dof
-    double precision :: totaloil, totaloil_mud, totaloil_sigmad
+    double precision :: totaloil
     double precision, dimension(:)             :: mu
     double precision, dimension(:)             :: sigma
     double precision, dimension(:)             :: Tt
     double precision, dimension(:, :)          :: Pc
-
-    ! netCDF variables
-    integer :: ncid                                                     ! file handle
-    integer :: var_scene_id                                             ! scene variable id
-    character(len = *), parameter :: var_scene_name = "Scenario"        ! scene variable name
-    integer :: var_nx_id                                                ! nx variable id
-    character(len = *), parameter :: var_nx_name = "NX"                 ! nx variable name
-    integer :: var_ny_id                                                ! ny variable id
-    character(len = *), parameter :: var_ny_name = "NY"                 ! ny variable name
-    integer :: var_nz_id                                                ! nz variable id
-    character(len = *), parameter :: var_nz_name = "NZ"                 ! nz variable name
-!     integer :: var_mu_id                                                ! mu variable id
-!     character(len = *), parameter :: var_mu_name = "Mu"                 ! mu variable name
-!     integer :: var_sigma_id                                             ! sigma variable id
-!     character(len = *), parameter :: var_sigma_name = "Sigma"           ! sigma variable name
+    character(len = *) :: results_directory
                                                                         
-    integer :: dim_time_id                                              ! time dimension id
-    integer :: dim_time_len                                             ! time dimension length
-    character(len = *), parameter :: dim_time_name = "Time"             ! time dimension name
-                                                                        
-    integer :: var_time_id                                              ! time variable id
-    character(len = *), parameter :: var_time_name = "Time"             ! time variable name
-                                                                        
-    integer :: dim_mobility_id                                          ! mobility dimension id
-    integer :: dim_mobility_len                                         ! mobility dimension length
-    character(len = *), parameter :: dim_mobility_name = "Mobilities"   ! mobility dimension name
-                                                                        
-    integer :: var_mobility_id                                          ! mobility variable id
-    character(len = *), parameter :: var_mobility_name = "WaterOil"     ! mobility variable name
-    integer, dimension(2) :: var_mobility_dimids                        ! id of dimensions for mobilities
+    call ncopen(trim(adjustl(results_directory))//"/results_eval_original_code.nc", &
+         NC_WRITE, ncid)
 
-    integer :: var_oil_id                                               ! oil variable id
-    character(len = *), parameter :: var_oil_name = "Oil"               ! oil variable name
-
-    ! Start writing netCDF file having all the computed values
-    ! Open file
-    call iserror(nf90_create(trim(adjustl(results_directory))//"results_eval_original_code.nc", &
-         nf90_clobber, ncid))
-
-    ! setup the sizes of the dimensions
-    dim_time_len = (nd/st) + 1
-    dim_mobility_len = 2
-
-    ! Define all dimension
-    ! Define time dimensions
-    call iserror(nf90_def_dim(ncid, dim_time_name, dim_time_len, dim_time_id))
-    ! Define mobility dimensions
-    call iserror(nf90_def_dim(ncid, dim_mobility_name, dim_mobility_len, dim_mobility_id))
-
-    ! Define scalar scenario input
-    call iserror(nf90_def_var(ncid, var_scene_name, NF90_INT, var_scene_id))
-    ! Define scalar nx input
-    call iserror(nf90_def_var(ncid, var_nx_name, NF90_INT, var_nx_id))
-    ! Define scalar ny input
-    call iserror(nf90_def_var(ncid, var_ny_name, NF90_INT, var_ny_id))
-    ! Define scalar nz input
-    call iserror(nf90_def_var(ncid, var_nz_name, NF90_INT, var_nz_id))
-    ! Define scalar mu input
-!     call iserror(nf90_def_var(ncid, var_mu_name, NF90_DOUBLE, var_mu_id))
-    ! Define scalar sigma input
-!     call iserror(nf90_def_var(ncid, var_sigma_name, NF90_DOUBLE, var_sigma_id))
-
-    ! Define the time variables. Varid is returned.
-    call iserror(nf90_def_var(ncid, var_time_name, NF90_DOUBLE, dim_time_id, var_time_id))
-
-    ! Define the netCDF variables. The dimids array is used to pass the
-    ! dimids of the dimensions of the netCDF variables.
-    var_mobility_dimids = (/ dim_mobility_id, dim_time_id /)
-    call iserror(nf90_def_var(ncid, var_mobility_name, NF90_DOUBLE, var_mobility_dimids &
-         , var_mobility_id))
-
-    ! Define scalar oil output
-    call iserror(nf90_def_var(ncid, var_oil_name, NF90_DOUBLE, var_oil_id))
-
-    ! End define mode.
-    call iserror(nf90_enddef(ncid))
-
-    ! Write scalar inputs
-    call iserror(nf90_put_var(ncid, var_scene_id, scenario_id))
-    call iserror(nf90_put_var(ncid, var_nx_id, nx))
-    call iserror(nf90_put_var(ncid, var_ny_id, ny))
-    call iserror(nf90_put_var(ncid, var_nz_id, nz))
-!     call iserror(nf90_put_var(ncid, var_mu_id, mu))
-!     call iserror(nf90_put_var(ncid, var_sigma_id, sigma))
-
-    ! Write the time data. 
-    call iserror(nf90_put_var(ncid, var_time_id, Tt))
-
-    ! Write the data. This will write our mobility and oil data.
-    ! The arrays of data are the same size as
-    ! the netCDF variables we have defined.
-    call iserror(nf90_put_var(ncid, var_mobility_id, Pc))
-    call iserror(nf90_put_var(ncid, var_oil_id, totaloil))
+    call ncwrite(ncid, "NX", nx)
+    call ncwrite(ncid, "NY", ny)
+    call ncwrite(ncid, "NZ", nz)
+    call ncwrite(ncid, "MU", mu)
+    call ncwrite(ncid, "SIGMA", sigma)
+    call ncwrite(ncid, "TIME", Tt)
+    call ncwrite(ncid, "PROD_CURVES", Pc)
+    call ncwrite(ncid, "OIL", totaloil)
 
     ! Close the file.
-    call iserror(nf90_close(ncid))
+    call ncclose(ncid)
   end subroutine write_results
-
-  !
-  ! This routine opens the permeability and porosity used by
-  ! the MATLAB program and uses it for the simulation.
-  !
-  subroutine read_permeability_and_porosity(data_directory, nx, ny, nz, PERM, POR)   
-    integer :: ncid                                                  ! netcdf file handle
-
-    character(len = *) :: data_directory                             ! directory location of parameters 
-    integer :: varid                                                 ! generic variable id
-    integer :: nc_chunksize                                          ! chunk size for reading
-
-    integer :: i, j, k, l, m
-    integer :: nx, ny, nz
-    
-    double precision, dimension((nx * ny * nz)) :: POR       ! Porosities
-    double precision, dimension((nx * ny * nz)) :: POR_temp  ! Porosities_temp
-    double precision, dimension(3, nx, ny, nz)  :: PERM      ! Permeabilities
-
-    ! initialize porosity and permeability to zero
-    PERM = 0.0d0
-    POR = 0.0d0
-    POR_temp = 0.0d0
-
-    ! read permeability
-        nc_chunksize = 4096
-    call iserror(nf90_open(trim(adjustl(data_directory))//"/permeability.nc", &
-         NF90_NOWRITE, ncid, nc_chunksize))
-    write(*,*) "Chosen chunk size is ", nc_chunksize
-    
-    call iserror(nf90_inq_varid(ncid, "permeability", varid))
-    call iserror(nf90_get_var(ncid, varid, PERM))
-    call iserror(nf90_close(ncid))
-
-    ! read porosity
-    nc_chunksize = 4096
-    call iserror(nf90_open(trim(adjustl(data_directory))//"/porosity.nc", &
-         NF90_NOWRITE, ncid, nc_chunksize))
-    write(*,*) "Chosen chunk size is ", nc_chunksize
-    
-    call iserror(nf90_inq_varid(ncid, "porosity", varid))
-    call iserror(nf90_get_var(ncid, varid, POR_temp))
-    call iserror(nf90_close(ncid))
-
-    call mymax_1_0_double(POR_temp, 1.0d-3, POR)
-  end subroutine read_permeability_and_porosity
 end module simulation
