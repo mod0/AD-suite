@@ -509,6 +509,7 @@ subroutine ilu_cr ( n, nz_num, ia, ja, a, ua, l )
 !
   l(1:nz_num) = a(1:nz_num)
 
+
   do i = 1, n
 !
 !  IW points to the nonzero entries in row I.
@@ -1410,7 +1411,7 @@ subroutine rearrange_cr ( n, nz_num, ia, ja, a )
   real ( kind = 8 ) r8temp
 
   do i = 1, n
-     
+
     do k = ia(i), ia(i+1) - 2
       do l = k + 1, ia(i+1) - 1
 

@@ -633,7 +633,7 @@ contains
     integer :: i, j, it
     logical :: converged
     double precision :: dt, dsn
-    integer :: nx, ny, nz
+    integer :: nx, ny, nz, n
     integer :: nd, pt, st
     double precision, dimension((nx * ny * nz)) :: S
     double precision, dimension((nx * ny * nz)) :: Q
@@ -673,6 +673,7 @@ contains
 
     ! not yet converged
     converged = .false.
+    n = nx * ny * nz
 
     ! Assemble system matrix
     call GenA(nx, ny, nz, V, Q,  annz, arow_index, arow_compressed, acol_index, avalues)
@@ -691,7 +692,7 @@ contains
        fi = fi * dtx
 
        ! Matrix-diagonal matrix product
-       call spmat_multiply_diagonal((nx * ny * nz), annz, arow_index, arow_compressed,&
+       call spmat_multiply_diagonal(n, annz, arow_index, arow_compressed,&
             acol_index, avalues, dtx, &
             bnnz, brow_index, brow_compressed,&
             bcol_index, bvalues, "POS")
@@ -709,28 +710,28 @@ contains
              dF = dMw/(Mw + Mo) - (Mw/((Mw + Mo)**2) * (dMw + dMo))
 
              ! Matrix-diagonal matrix product
-             call spmat_multiply_diagonal((nx * ny * nz), bnnz, brow_index, brow_compressed, &
+             call spmat_multiply_diagonal(n, bnnz, brow_index, brow_compressed, &
                   bcol_index, bvalues, dF, &
                   dgnnz, dgrow_index, dgrow_compressed, &
                   dgcol_index, dgvalues, "PRE")
 
-             call addx_diagonal((nx * ny * nz), dgnnz, dgrow_index, dgrow_compressed, &
+             call addx_diagonal(n, dgnnz, dgrow_index, dgrow_compressed, &
                   dgcol_index, dgvalues, -1.0d0, 0)
 
              fw = Mw / (Mw + Mo)
 
              ! Matrix-vector matrix product
-             call spmat_multiply_vector((nx * ny * nz), bnnz, brow_index, brow_compressed, &
+             call spmat_multiply_vector(n, bnnz, brow_index, brow_compressed, &
                   bcol_index, bvalues, fw, bfw, "PRE")
 
              G = S - S_iter_copy - bfw - fi
 
-             call solve((nx * ny * nz),  dgnnz, dgrow_index, dgrow_compressed, &
+             call solve(n,  dgnnz, dgrow_index, dgrow_compressed, &
                   dgcol_index, dgvalues, G, dS)
 
              S = S + dS
 
-             call dnrm2(dS, (nx * ny * nz), dsn)
+             call dnrm2(dS, n, dsn)
 
              j = j + 1
           end do
@@ -902,7 +903,7 @@ contains
   !
   subroutine TPFA(nx, ny, nz, K, Q, P, V)
     implicit none
-    integer :: nx, ny, nz
+    integer :: nx, ny, nz, n
     integer :: i
     integer, dimension(7) :: idiags
     double precision, dimension((nx * ny * nz), 7) :: diags ! the matrix containing the diagonal entries
@@ -932,6 +933,7 @@ contains
     double precision, dimension(7 * (nx * ny * nz)) :: avalues
     integer, dimension((nx * ny * nz) + 1) :: arow_compressed
 
+    n = nx * ny * nz
 
     ! get the point-wise inverse of the permeability matrix
     L = 1.0d0/K
@@ -999,7 +1001,7 @@ contains
 
     ! solve the linear system
     ! Pass the rows_index, cols_index, values separately.
-    call solve((nx * ny * nz), annz, arow_index, arow_compressed, &
+    call solve(n, annz, arow_index, arow_compressed, &
          acol_index, avalues, Q, u)
 
     ! reshape the solution
@@ -1278,7 +1280,7 @@ contains
     double precision ::  oilout
     double precision, dimension(4, (nd/st) + 1) :: Pc
 
-    oilout = oilin +  Pc(2, k) * st                     ! Reimann sum
+    oilout = oilin +  (-Pc(1, k) + Pc(2, k) + Pc(3, k) - Pc(4, k)) * st    ! Reimann sum
   end subroutine update_oil
 
   subroutine wrapper(nx, ny, nz, nd, ndof, pt, st, mu, sigma, Q, S, P, V, Tt, Pc, oil) 

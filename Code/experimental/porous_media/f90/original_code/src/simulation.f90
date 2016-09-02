@@ -139,7 +139,7 @@ contains
     double precision ::  oilout
     double precision, dimension(4, (nd/st) + 1) :: Pc
 
-    oilout = oilin +  Pc(2, k) * st                     ! Reimann sum
+    oilout = oilin +  (-Pc(1, k) + Pc(2, k) + Pc(3, k) - Pc(4, k)) * st    ! Reimann sum
   end subroutine update_oil
 
   subroutine wrapper(nx, ny, nz, nd, ndof, pt, st, mu, sigma, Q, S, P, V, Tt, Pc, oil) 
