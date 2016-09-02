@@ -3,19 +3,15 @@
 !
 MODULE PARAMETERS_B
   IMPLICIT NONE
-! FIXED PARAMETERS
 ! grid parameters 
-  INTEGER :: scenario_id
-  DOUBLE PRECISION :: hx_, hy_, hz_, v_, ir
+  DOUBLE PRECISION :: hx, hy, hz, vol, ir
 ! fluid parameters
-  DOUBLE PRECISION :: vw_, vo_, swc_, sor_
-! PARAMETERS READ FROM FILE
+  DOUBLE PRECISION :: vw, vo, swc, sor
 ! porosity and permeability parameters
 ! Porosities
   DOUBLE PRECISION, DIMENSION(:), ALLOCATABLE :: por
 ! Permeabilities  
   DOUBLE PRECISION, DIMENSION(:, :, :, :), ALLOCATABLE :: perm
-! PARAMETERS SET IN DRIVER
 ! linear solver parameters
   LOGICAL :: verbose
   INTEGER :: solver_inner, solver_outer
@@ -1030,7 +1026,7 @@ CONTAINS
     ad_count1 = 0
     DO WHILE (.NOT.converged)
       dt = 1.0d0*st/2**it
-      dtx = dt/(v_*por)
+      dtx = dt/(vol*por)
       CALL MYMAX_1_0_DOUBLE(q, 0.0d0, fi)
       fi = fi*dtx
 ! Matrix-diagonal matrix product
@@ -1191,7 +1187,7 @@ CONTAINS
         sb = sb + s_iter_copyb
       END DO
       dt = 1.0d0*st/2**it
-      dtx = dt/(v_*por)
+      dtx = dt/(vol*por)
       CALL POPINTEGER4(bnnz)
       CALL POPINTEGER4ARRAY(brow_index, 7*nx*ny*nz)
       CALL POPINTEGER4ARRAY(bcol_index, 7*nx*ny*nz)
@@ -1261,7 +1257,7 @@ CONTAINS
     it = 0
     DO WHILE (.NOT.converged)
       dt = 1.0d0*st/2**it
-      dtx = dt/(v_*por)
+      dtx = dt/(vol*por)
       CALL MYMAX_1_0_DOUBLE(q, 0.0d0, fi)
       fi = fi*dtx
 ! Matrix-diagonal matrix product
@@ -1414,17 +1410,17 @@ CONTAINS
     DOUBLE PRECISION, DIMENSION(nx*ny*nz), OPTIONAL :: dmob
     INTRINSIC PRESENT
 ! rescale saturation
-    s_temp = (s-swc_)/(1.0d0-swc_-sor_)
+    s_temp = (s-swc)/(1.0d0-swc-sor)
     IF (PRESENT(dmo) .AND. PRESENT(dmw)) THEN
       s_tempb = 0.D0
-      s_tempb = 2*dmwb/(vw_*(1-sor_-swc_)) + 2*dmob/(vo_*(1-sor_-swc_))
+      s_tempb = 2*dmwb/(vw*(1-sor-swc)) + 2*dmob/(vo*(1-sor-swc))
       dmob = 0.D0
       dmwb = 0.D0
     ELSE
       s_tempb = 0.D0
     END IF
-    s_tempb = s_tempb + 2*s_temp*mwb/vw_ - 2*(1-s_temp)*mob/vo_
-    sb = sb + s_tempb/(1.0d0-sor_-swc_)
+    s_tempb = s_tempb + 2*s_temp*mwb/vw - 2*(1-s_temp)*mob/vo
+    sb = sb + s_tempb/(1.0d0-sor-swc)
   END SUBROUTINE RELPERM_VECTOR_B
 !
 ! Relative Permeabilities
@@ -1440,12 +1436,12 @@ CONTAINS
     DOUBLE PRECISION, DIMENSION(nx*ny*nz), OPTIONAL :: dmo
     INTRINSIC PRESENT
 ! rescale saturation
-    s_temp = (s-swc_)/(1.0d0-swc_-sor_)
-    mw = s_temp**2/vw_
-    mo = (1-s_temp)**2/vo_
+    s_temp = (s-swc)/(1.0d0-swc-sor)
+    mw = s_temp**2/vw
+    mo = (1-s_temp)**2/vo
     IF (PRESENT(dmo) .AND. PRESENT(dmw)) THEN
-      dmw = 2*s_temp/vw_/(1-swc_-sor_)
-      dmo = -(2*(1-s_temp)/vo_/(1-swc_-sor_))
+      dmw = 2*s_temp/vw/(1-swc-sor)
+      dmo = -(2*(1-s_temp)/vo/(1-swc-sor))
     END IF
   END SUBROUTINE RELPERM_VECTOR
 !  Differentiation of relperm_scalar in reverse (adjoint) mode (with options noISIZE):
@@ -1461,9 +1457,9 @@ CONTAINS
     DOUBLE PRECISION, OPTIONAL :: dmw, dmo
     INTRINSIC PRESENT
 ! rescale saturation
-    s_temp = (s-swc_)/(1.0d0-swc_-sor_)
-    s_tempb = 2*s_temp*mwb/vw_ - 2*(1-s_temp)*mob/vo_
-    sb = sb + s_tempb/(1.0d0-sor_-swc_)
+    s_temp = (s-swc)/(1.0d0-swc-sor)
+    s_tempb = 2*s_temp*mwb/vw - 2*(1-s_temp)*mob/vo
+    sb = sb + s_tempb/(1.0d0-sor-swc)
   END SUBROUTINE RELPERM_SCALAR_B
 !
 ! Relative Permeabilities
@@ -1474,12 +1470,12 @@ CONTAINS
     DOUBLE PRECISION, OPTIONAL :: dmw, dmo
     INTRINSIC PRESENT
 ! rescale saturation
-    s_temp = (s-swc_)/(1.0d0-swc_-sor_)
-    mw = s_temp**2/vw_
-    mo = (1-s_temp)**2/vo_
+    s_temp = (s-swc)/(1.0d0-swc-sor)
+    mw = s_temp**2/vw
+    mo = (1-s_temp)**2/vo
     IF (PRESENT(dmo) .AND. PRESENT(dmw)) THEN
-      dmw = 2*s_temp/vw_/(1-swc_-sor_)
-      dmo = -(2*(1-s_temp)/vo_/(1-swc_-sor_))
+      dmw = 2*s_temp/vw/(1-swc-sor)
+      dmo = -(2*(1-s_temp)/vo/(1-swc-sor))
     END IF
   END SUBROUTINE RELPERM_SCALAR
 !  Differentiation of gena in reverse (adjoint) mode (with options noISIZE):
@@ -1756,9 +1752,9 @@ CONTAINS
     n = nx*ny*nz
 ! get the point-wise inverse of the permeability matrix
     l = 1.0d0/k
-    tx_ = 2.0d0*hy_*hz_/hx_
-    ty_ = 2.0d0*hx_*hz_/hy_
-    tz_ = 2.0d0*hy_*hx_/hz_
+    tx_ = 2.0d0*hy*hz/hx
+    ty_ = 2.0d0*hx*hz/hy
+    tz_ = 2.0d0*hy*hx/hz
     tx = 0.0d0
     ty = 0.0d0
     tz = 0.0d0
@@ -1795,10 +1791,13 @@ CONTAINS
     CALL SPDIAGS_FVM_CSR(nx, ny, nz, diags, annz, arow_index, &
 &                  arow_compressed, acol_index, avalues)
 ! ! Increment the 1,1 element of A
+! ! Aarnes et al.
 !     call addx_elem(annz, arow_index, arow_compressed,&
 !                     acol_index, avalues, &
 !                     PERM(1,1,1,1) + PERM(2,1,1,1) + PERM(3,1,1,1), 1, 1)
 ! Fix the pressure at the inlets
+! This is apparently incorrect.
+! That the water saturation comes and goes
     DO i=1,annz
       IF (arow_index(i) .LT. nx*ny .AND. MOD(arow_index(i), ny) .EQ. 1) &
 &     THEN
@@ -1814,6 +1813,9 @@ CONTAINS
       END IF
     END DO
     CALL PUSHINTEGER4(i - 1)
+! Cannot duplicate the MATLAB version by TB
+! as A is a sparse matrix with pre-known number
+! of non-zeros
 ! solve the linear system
 ! Pass the rows_index, cols_index, values separately.
     CALL PUSHBOOLEAN(verbose)
@@ -1959,9 +1961,9 @@ CONTAINS
     n = nx*ny*nz
 ! get the point-wise inverse of the permeability matrix
     l = 1.0d0/k
-    tx_ = 2.0d0*hy_*hz_/hx_
-    ty_ = 2.0d0*hx_*hz_/hy_
-    tz_ = 2.0d0*hy_*hx_/hz_
+    tx_ = 2.0d0*hy*hz/hx
+    ty_ = 2.0d0*hx*hz/hy
+    tz_ = 2.0d0*hy*hx/hz
     tx = 0.0d0
     ty = 0.0d0
     tz = 0.0d0
@@ -1998,10 +2000,13 @@ CONTAINS
     CALL SPDIAGS_FVM_CSR(nx, ny, nz, diags, annz, arow_index, &
 &                  arow_compressed, acol_index, avalues)
 ! ! Increment the 1,1 element of A
+! ! Aarnes et al.
 !     call addx_elem(annz, arow_index, arow_compressed,&
 !                     acol_index, avalues, &
 !                     PERM(1,1,1,1) + PERM(2,1,1,1) + PERM(3,1,1,1), 1, 1)
 ! Fix the pressure at the inlets
+! This is apparently incorrect.
+! That the water saturation comes and goes
     DO i=1,annz
       IF (arow_index(i) .LT. nx*ny .AND. MOD(arow_index(i), ny) .EQ. 1) &
 &     THEN
@@ -2012,6 +2017,9 @@ CONTAINS
         END IF
       END IF
     END DO
+! Cannot duplicate the MATLAB version by TB
+! as A is a sparse matrix with pre-known number
+! of non-zeros
 ! solve the linear system
 ! Pass the rows_index, cols_index, values separately.
     CALL SOLVE(n, annz, arow_index, arow_compressed, acol_index, avalues&
@@ -2246,13 +2254,15 @@ CONTAINS
 !   with respect to varying inputs: sigma oil mu
 !   RW status of diff variables: p:(loc) q:(loc) s:(loc) v:(loc)
 !                sigma:out oil:in-zero pc:(loc) mu:out
-  SUBROUTINE WRAPPER_B(nx, ny, nz, nd, pt, st, mu, mub, sigma, sigmab, q&
-&   , qb, s, sb, p, pb, v, vb, tt, pc, pcb, oil, oilb)
+  SUBROUTINE WRAPPER_B(nx, ny, nz, nd, ndof, pt, st, mu, mub, sigma, &
+&   sigmab, q, qb, s, sb, p, pb, v, vb, tt, pc, pcb, oil, oilb)
     IMPLICIT NONE
-    INTEGER :: nx, ny, nz
+    INTEGER :: nx, ny, nz, ndof
     INTEGER :: nd, pt, st
-    DOUBLE PRECISION :: mu, sigma
-    DOUBLE PRECISION :: mub, sigmab
+    DOUBLE PRECISION, DIMENSION(ndof) :: mu
+    DOUBLE PRECISION, DIMENSION(ndof) :: mub
+    DOUBLE PRECISION, DIMENSION(ndof) :: sigma
+    DOUBLE PRECISION, DIMENSION(ndof) :: sigmab
     DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: q
     DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: qb
     DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: s
@@ -2262,15 +2272,15 @@ CONTAINS
     DOUBLE PRECISION, DIMENSION(3, nx + 1, ny + 1, nz + 1) :: v
     DOUBLE PRECISION, DIMENSION(3, nx+1, ny+1, nz+1) :: vb
     DOUBLE PRECISION, DIMENSION(nd/st + 1) :: tt
-    DOUBLE PRECISION, DIMENSION(2, nd/st + 1) :: pc
-    DOUBLE PRECISION, DIMENSION(2, nd/st+1) :: pcb
+    DOUBLE PRECISION, DIMENSION(4, nd/st + 1) :: pc
+    DOUBLE PRECISION, DIMENSION(4, nd/st+1) :: pcb
     DOUBLE PRECISION :: oil
     DOUBLE PRECISION :: oilb
-    CALL INIT_FLW_TRNC_NORM_XIN_PT_OUT(nx, ny, nz, mu, sigma, q)
+    CALL INIT_FLW_TRNC_NORM_XIN_PT_OUT(nx, ny, nz, ndof, mu, sigma, q)
     CALL SIMULATE_RESERVOIR_B(nx, ny, nz, nd, pt, st, q, qb, s, sb, p, &
 &                       pb, v, vb, tt, pc, pcb, oil, oilb)
-    CALL INIT_FLW_TRNC_NORM_XIN_PT_OUT_B(nx, ny, nz, mu, mub, sigma, &
-&                                  sigmab, q, qb)
+    CALL INIT_FLW_TRNC_NORM_XIN_PT_OUT_B(nx, ny, nz, ndof, mu, mub, &
+&                                  sigma, sigmab, q, qb)
     oilb = 0.D0
   END SUBROUTINE WRAPPER_B
 !  Differentiation of init_flw_trnc_norm_xin_pt_out in reverse (adjoint) mode (with options noISIZE):
@@ -2279,23 +2289,22 @@ CONTAINS
 !
 ! Initialize inflow and outflow.
 !
-  SUBROUTINE INIT_FLW_TRNC_NORM_XIN_PT_OUT_B(nx, ny, nz, mu, mub, sigma&
-&   , sigmab, q, qb)
+  SUBROUTINE INIT_FLW_TRNC_NORM_XIN_PT_OUT_B(nx, ny, nz, ndof, mu, mub, &
+&   sigma, sigmab, q, qb)
     IMPLICIT NONE
-    INTEGER :: nx, ny, nz
-    DOUBLE PRECISION :: mu, sigma
-    DOUBLE PRECISION :: mub, sigmab
+    INTEGER :: nx, ny, nz, ndof
+    DOUBLE PRECISION, DIMENSION(:) :: mu, sigma
+    DOUBLE PRECISION, DIMENSION(:) :: mub, sigmab
     DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: q
     DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: qb
     INTEGER :: i, j
-    DOUBLE PRECISION :: x, pi, pdf, mass
-    DOUBLE PRECISION :: pdfb, massb
+    DOUBLE PRECISION :: x, pi, pdf, mass, arg1
+    DOUBLE PRECISION :: pdfb, massb, arg1b
     DOUBLE PRECISION, DIMENSION(nx) :: idx
     DOUBLE PRECISION, DIMENSION(nx) :: q_x
     DOUBLE PRECISION, DIMENSION(nx) :: q_xb
     INTRINSIC SQRT
     INTRINSIC EXP
-    DOUBLE PRECISION :: temp1
     DOUBLE PRECISION :: temp0
     DOUBLE PRECISION :: tempb1(nx)
     DOUBLE PRECISION :: tempb0
@@ -2309,17 +2318,14 @@ CONTAINS
 ! Note that the portion of the  Standard Normal distribution between
 ! -3sigma/2 to 3sigma/2 is assumed to fit the 1..Nx where sigma is 1
     DO i=1,nx
-! get the real x coordinate
-! Mapping x = [-1.5, 1.5] to nx dimension
-      x = -1.5d0 + (i-1)*3.0d0/(nx-1)
-! Now use mu and sigma to find the pdf value at x
-      pdf = 1.0d0/(sigma*SQRT(2.0d0*pi))*EXP(-(((x-mu)/sigma)**2.0d0/&
-&       2.0d0))
-! set the value at the index equal to the pdf value at that point
+      x = (i-1.0)*2.0/(nx-1.0d0) - 1.0d0
+      pdf = 0.0d0
+      DO j=1,ndof
+        arg1 = -(((x-mu(j))/sigma(j))**2.0/2.0)
+        pdf = pdf + 1.0/(SQRT(2.0*pi)*sigma(j))*EXP(arg1)
+      END DO
       q_x(i) = pdf
-! increment the mass by the value of the pdf
       mass = mass + pdf
-! index to test initialization by plot
     END DO
 ! now rescale all the entities
 ! Assign Q_x to Q
@@ -2328,6 +2334,7 @@ CONTAINS
       CALL PUSHINTEGER4(j)
       j = j + 1
     END DO
+    qb(ny) = 0.D0
     qb(nx*ny*nz) = 0.D0
     q_xb = 0.D0
     DO i=nx*ny-MOD(nx*ny-1, ny),1,-ny
@@ -2343,14 +2350,17 @@ CONTAINS
     DO i=nx,1,-1
       pdfb = q_xb(i) + massb
       q_xb(i) = 0.D0
-      x = -1.5d0 + (i-1)*3.0d0/(nx-1)
-      temp1 = SQRT(2.0d0*pi)
-      tempb = pdfb/(temp1*sigma)
-      temp = (x-mu)/sigma
-      temp0 = -(temp**2.0d0/2.0d0)
-      tempb0 = -(temp*EXP(temp0)*tempb/sigma)
-      mub = mub - tempb0
-      sigmab = sigmab - EXP(temp0)*tempb/sigma - temp*tempb0
+      x = (i-1.0)*2.0/(nx-1.0d0) - 1.0d0
+      DO j=ndof,1,-1
+        arg1 = -(((x-mu(j))/sigma(j))**2.0/2.0)
+        temp0 = SQRT(2.0*pi)
+        tempb = pdfb/(temp0*sigma(j))
+        arg1b = EXP(arg1)*tempb
+        temp = (x-mu(j))/sigma(j)
+        tempb0 = -(temp*arg1b/sigma(j))
+        sigmab(j) = sigmab(j) - temp*tempb0 - EXP(arg1)*tempb/sigma(j)
+        mub(j) = mub(j) - tempb0
+      END DO
     END DO
   END SUBROUTINE INIT_FLW_TRNC_NORM_XIN_PT_OUT_B
 !  Differentiation of simulate_reservoir in reverse (adjoint) mode (with options noISIZE):
@@ -2375,16 +2385,20 @@ CONTAINS
     DOUBLE PRECISION, DIMENSION(3, nx + 1, ny + 1, nz + 1) :: v
     DOUBLE PRECISION, DIMENSION(3, nx+1, ny+1, nz+1) :: vb
     DOUBLE PRECISION, DIMENSION(nd/st + 1) :: tt
-    DOUBLE PRECISION, DIMENSION(2, nd/st + 1) :: pc
-    DOUBLE PRECISION, DIMENSION(2, nd/st+1) :: pcb
+    DOUBLE PRECISION, DIMENSION(4, nd/st + 1) :: pc
+    DOUBLE PRECISION, DIMENSION(4, nd/st+1) :: pcb
     DOUBLE PRECISION :: oil
     DOUBLE PRECISION :: oilb
     INTEGER :: i, j, k
-    DOUBLE PRECISION :: mw, mo, mt, tempoil1, tempoil2
-    DOUBLE PRECISION :: mwb, mob, mtb, tempoil1b, tempoil2b
+    DOUBLE PRECISION :: tempoil1, tempoil2
+    DOUBLE PRECISION :: tempoil1b, tempoil2b
+    DOUBLE PRECISION, DIMENSION(2) :: mw, mo, mt
+    DOUBLE PRECISION, DIMENSION(2) :: mwb, mob, mtb
     INTEGER :: branch
-! initial saturation
-    s = swc_
+    DOUBLE PRECISION :: tempb2
+    DOUBLE PRECISION :: tempb1
+    DOUBLE PRECISION :: tempb0
+    DOUBLE PRECISION :: tempb
 ! initial production
 ! initial time.
     k = 1
@@ -2396,8 +2410,8 @@ CONTAINS
           CALL PUSHBOOLEAN(verbose)
           CALL PUSHINTEGER4(solver_outer)
           CALL PUSHINTEGER4(solver_inner)
-          CALL PUSHREAL8(mo)
-          CALL PUSHREAL8(mw)
+          CALL PUSHREAL8ARRAY(mo, 2)
+          CALL PUSHREAL8ARRAY(mw, 2)
           CALL PUSHREAL8ARRAY(v, 3*(nx+1)*(ny+1)*(nz+1))
           CALL PUSHREAL8ARRAY(p, nx*ny*nz)
           CALL PUSHREAL8ARRAY(s, nx*ny*nz)
@@ -2409,8 +2423,8 @@ CONTAINS
           CALL PUSHBOOLEAN(verbose)
           CALL PUSHINTEGER4(solver_outer)
           CALL PUSHINTEGER4(solver_inner)
-          CALL PUSHREAL8(mo)
-          CALL PUSHREAL8(mw)
+          CALL PUSHREAL8ARRAY(mo, 2)
+          CALL PUSHREAL8ARRAY(mw, 2)
           CALL PUSHREAL8ARRAY(v, 3*(nx+1)*(ny+1)*(nz+1))
           CALL PUSHREAL8ARRAY(p, nx*ny*nz)
           CALL PUSHREAL8ARRAY(s, nx*ny*nz)
@@ -2420,7 +2434,7 @@ CONTAINS
           CALL PUSHCONTROL1B(1)
         END IF
 ! update quantites
-        CALL PUSHREAL8(mt)
+        CALL PUSHREAL8ARRAY(mt, 2)
         mt = mw + mo
       END DO
     END DO
@@ -2431,18 +2445,30 @@ CONTAINS
     vb = 0.D0
     pcb = 0.D0
     tempoil1b = 0.D0
+    mob = 0.D0
+    mwb = 0.D0
     DO i=nd/pt,1,-1
       DO j=pt/st,1,-1
         tempoil2b = tempoil2b + tempoil1b
         CALL UPDATE_OIL_B(nd, pt, st, pc, pcb, k, tempoil1, tempoil1b, &
 &                   tempoil2, tempoil2b)
-        mob = pcb(2, k)/mt
-        mtb = -(mo*pcb(2, k)/mt**2)
+        mtb = 0.D0
+        tempb = pcb(4, k)/mt(2)
+        mob(2) = mob(2) + tempb
+        pcb(4, k) = 0.D0
+        tempb0 = pcb(3, k)/mt(2)
+        mtb(2) = mtb(2) - mw(2)*tempb0/mt(2) - mo(2)*tempb/mt(2)
+        mwb(2) = mwb(2) + tempb0
+        pcb(3, k) = 0.D0
+        tempb1 = pcb(2, k)/mt(1)
+        mob(1) = mob(1) + tempb1
         pcb(2, k) = 0.D0
-        mtb = mtb - mw*pcb(1, k)/mt**2
-        mwb = mtb + pcb(1, k)/mt
+        tempb2 = pcb(1, k)/mt(1)
+        mtb(1) = mtb(1) - mw(1)*tempb2/mt(1) - mo(1)*tempb1/mt(1)
+        mwb(1) = mwb(1) + tempb2
         pcb(1, k) = 0.D0
-        CALL POPREAL8(mt)
+        CALL POPREAL8ARRAY(mt, 2)
+        mwb = mwb + mtb
         mob = mob + mtb
         CALL POPCONTROL1B(branch)
         IF (branch .EQ. 0) THEN
@@ -2450,8 +2476,8 @@ CONTAINS
           CALL POPREAL8ARRAY(s, nx*ny*nz)
           CALL POPREAL8ARRAY(p, nx*ny*nz)
           CALL POPREAL8ARRAY(v, 3*(nx+1)*(ny+1)*(nz+1))
-          CALL POPREAL8(mw)
-          CALL POPREAL8(mo)
+          CALL POPREAL8ARRAY(mw, 2)
+          CALL POPREAL8ARRAY(mo, 2)
           CALL POPINTEGER4(solver_inner)
           CALL POPINTEGER4(solver_outer)
           CALL POPBOOLEAN(verbose)
@@ -2462,8 +2488,8 @@ CONTAINS
           CALL POPREAL8ARRAY(s, nx*ny*nz)
           CALL POPREAL8ARRAY(p, nx*ny*nz)
           CALL POPREAL8ARRAY(v, 3*(nx+1)*(ny+1)*(nz+1))
-          CALL POPREAL8(mw)
-          CALL POPREAL8(mo)
+          CALL POPREAL8ARRAY(mw, 2)
+          CALL POPREAL8ARRAY(mo, 2)
           CALL POPINTEGER4(solver_inner)
           CALL POPINTEGER4(solver_outer)
           CALL POPBOOLEAN(verbose)
@@ -2477,7 +2503,7 @@ CONTAINS
   END SUBROUTINE SIMULATE_RESERVOIR_B
 !  Differentiation of stepforward in reverse (adjoint) mode (with options noISIZE):
 !   gradient     of useful results: p q s v mo mw
-!   with respect to varying inputs: p q s v
+!   with respect to varying inputs: p q s v mo mw
   SUBROUTINE STEPFORWARD_B(nx, ny, nz, nd, pt, st, pressure_step, q, qb&
 &   , s, sb, p, pb, v, vb, mw, mwb, mo, mob)
     IMPLICIT NONE
@@ -2493,8 +2519,8 @@ CONTAINS
     DOUBLE PRECISION, DIMENSION(nx, ny, nz) :: pb
     DOUBLE PRECISION, DIMENSION(3, nx + 1, ny + 1, nz + 1) :: v
     DOUBLE PRECISION, DIMENSION(3, nx+1, ny+1, nz+1) :: vb
-    DOUBLE PRECISION :: mw, mo
-    DOUBLE PRECISION :: mwb, mob
+    DOUBLE PRECISION, DIMENSION(2) :: mw, mo
+    DOUBLE PRECISION, DIMENSION(2) :: mwb, mob
     INTEGER :: branch
     IF (pressure_step .EQ. 1) THEN
 ! solve pressure
@@ -2515,7 +2541,14 @@ CONTAINS
     CALL PUSHREAL8ARRAY(s, nx*ny*nz)
     CALL NEWTRAPH(nx, ny, nz, nd, pt, st, q, v, s)
 ! Solve for saturation
-    CALL RELPERM_B(s(nx*ny*nz), sb(nx*ny*nz), mw, mwb, mo, mob)
+! Mobilities in well-block
+    CALL RELPERM_B(s(ny), sb(ny), mw(2), mwb(2), mo(2), mob(2))
+    mwb(2) = 0.D0
+    mob(2) = 0.D0
+    CALL RELPERM_B(s(nx*ny*nz), sb(nx*ny*nz), mw(1), mwb(1), mo(1), mob(&
+&            1))
+    mwb(1) = 0.D0
+    mob(1) = 0.D0
     CALL POPREAL8ARRAY(s, nx*ny*nz)
     CALL POPINTEGER4(solver_inner)
     CALL POPINTEGER4(solver_outer)
@@ -2543,39 +2576,46 @@ CONTAINS
     DOUBLE PRECISION :: oilinb
     DOUBLE PRECISION :: oilout
     DOUBLE PRECISION :: oiloutb
-    DOUBLE PRECISION, DIMENSION(2, nd/st + 1) :: pc
-    DOUBLE PRECISION, DIMENSION(2, nd/st+1) :: pcb
+    DOUBLE PRECISION, DIMENSION(4, nd/st + 1) :: pc
+    DOUBLE PRECISION, DIMENSION(4, nd/st+1) :: pcb
 ! Reimann sum
+    DOUBLE PRECISION :: tempb
+    tempb = st*oiloutb
     oilinb = oiloutb
-    pcb(2, k) = pcb(2, k) + st*oiloutb
+    pcb(2, k) = pcb(2, k) + tempb
+    pcb(1, k) = pcb(1, k) - tempb
+    pcb(3, k) = pcb(3, k) + tempb
+    pcb(4, k) = pcb(4, k) - tempb
   END SUBROUTINE UPDATE_OIL_B
-  SUBROUTINE WRAPPER(nx, ny, nz, nd, pt, st, mu, sigma, q, s, p, v, tt, &
-&   pc, oil)
+  SUBROUTINE WRAPPER(nx, ny, nz, nd, ndof, pt, st, mu, sigma, q, s, p, v&
+&   , tt, pc, oil)
     IMPLICIT NONE
-    INTEGER :: nx, ny, nz
+    INTEGER :: nx, ny, nz, ndof
     INTEGER :: nd, pt, st
-    DOUBLE PRECISION :: mu, sigma
+    DOUBLE PRECISION, DIMENSION(ndof) :: mu
+    DOUBLE PRECISION, DIMENSION(ndof) :: sigma
     DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: q
     DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: s
     DOUBLE PRECISION, DIMENSION(nx, ny, nz) :: p
     DOUBLE PRECISION, DIMENSION(3, nx + 1, ny + 1, nz + 1) :: v
     DOUBLE PRECISION, DIMENSION(nd/st + 1) :: tt
-    DOUBLE PRECISION, DIMENSION(2, nd/st + 1) :: pc
+    DOUBLE PRECISION, DIMENSION(4, nd/st + 1) :: pc
     DOUBLE PRECISION :: oil
-    CALL INIT_FLW_TRNC_NORM_XIN_PT_OUT(nx, ny, nz, mu, sigma, q)
+    CALL INIT_FLW_TRNC_NORM_XIN_PT_OUT(nx, ny, nz, ndof, mu, sigma, q)
     CALL SIMULATE_RESERVOIR(nx, ny, nz, nd, pt, st, q, s, p, v, tt, pc, &
 &                     oil)
   END SUBROUTINE WRAPPER
 !
 ! Initialize inflow and outflow.
 !
-  SUBROUTINE INIT_FLW_TRNC_NORM_XIN_PT_OUT(nx, ny, nz, mu, sigma, q)
+  SUBROUTINE INIT_FLW_TRNC_NORM_XIN_PT_OUT(nx, ny, nz, ndof, mu, sigma, &
+&   q)
     IMPLICIT NONE
-    INTEGER :: nx, ny, nz
-    DOUBLE PRECISION :: mu, sigma
+    INTEGER :: nx, ny, nz, ndof
+    DOUBLE PRECISION, DIMENSION(:) :: mu, sigma
     DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: q
     INTEGER :: i, j
-    DOUBLE PRECISION :: x, pi, pdf, mass
+    DOUBLE PRECISION :: x, pi, pdf, mass, arg1
     DOUBLE PRECISION, DIMENSION(nx) :: idx
     DOUBLE PRECISION, DIMENSION(nx) :: q_x
     INTRINSIC SQRT
@@ -2588,18 +2628,14 @@ CONTAINS
 ! Note that the portion of the  Standard Normal distribution between
 ! -3sigma/2 to 3sigma/2 is assumed to fit the 1..Nx where sigma is 1
     DO i=1,nx
-! get the real x coordinate
-! Mapping x = [-1.5, 1.5] to nx dimension
-      x = -1.5d0 + (i-1)*3.0d0/(nx-1)
-! Now use mu and sigma to find the pdf value at x
-      pdf = 1.0d0/(sigma*SQRT(2.0d0*pi))*EXP(-(((x-mu)/sigma)**2.0d0/&
-&       2.0d0))
-! set the value at the index equal to the pdf value at that point
+      x = (i-1.0)*2.0/(nx-1.0d0) - 1.0d0
+      pdf = 0.0d0
+      DO j=1,ndof
+        arg1 = -(((x-mu(j))/sigma(j))**2.0/2.0)
+        pdf = pdf + 1.0/(SQRT(2.0*pi)*sigma(j))*EXP(arg1)
+      END DO
       q_x(i) = pdf
-! increment the mass by the value of the pdf
       mass = mass + pdf
-! index to test initialization by plot
-      idx(i) = i*1.0
     END DO
 ! now rescale all the entities
 ! Assign Q_x to Q
@@ -2611,7 +2647,8 @@ CONTAINS
       j = j + 1
     END DO
 ! now set the output
-    q(nx*ny*nz) = -ir
+    q(nx*ny*nz) = -(ir/2.0)
+    q(ny) = -(ir/2.0)
   END SUBROUTINE INIT_FLW_TRNC_NORM_XIN_PT_OUT
 !
 ! This subroutine simulates the reservoir
@@ -2628,12 +2665,11 @@ CONTAINS
     DOUBLE PRECISION, DIMENSION(nx, ny, nz) :: p
     DOUBLE PRECISION, DIMENSION(3, nx + 1, ny + 1, nz + 1) :: v
     DOUBLE PRECISION, DIMENSION(nd/st + 1) :: tt
-    DOUBLE PRECISION, DIMENSION(2, nd/st + 1) :: pc
+    DOUBLE PRECISION, DIMENSION(4, nd/st + 1) :: pc
     DOUBLE PRECISION :: oil
     INTEGER :: i, j, k
-    DOUBLE PRECISION :: mw, mo, mt, tempoil1, tempoil2
-! initial saturation
-    s = swc_
+    DOUBLE PRECISION :: tempoil1, tempoil2
+    DOUBLE PRECISION, DIMENSION(2) :: mw, mo, mt
 ! initial production
 ! initial time.
     pc(1, 1) = 0.0d0
@@ -2656,8 +2692,10 @@ CONTAINS
 ! update quantites
         mt = mw + mo
         tt(k) = 1.0d0*k*st
-        pc(1, k) = mw/mt
-        pc(2, k) = mo/mt
+        pc(1, k) = mw(1)/mt(1)
+        pc(2, k) = mo(1)/mt(1)
+        pc(3, k) = mw(2)/mt(2)
+        pc(4, k) = mo(2)/mt(2)
         CALL UPDATE_OIL(nd, pt, st, pc, k, tempoil1, tempoil2)
         tempoil1 = tempoil2
       END DO
@@ -2675,13 +2713,16 @@ CONTAINS
     DOUBLE PRECISION, DIMENSION(nx*ny*nz) :: s
     DOUBLE PRECISION, DIMENSION(nx, ny, nz) :: p
     DOUBLE PRECISION, DIMENSION(3, nx + 1, ny + 1, nz + 1) :: v
-    DOUBLE PRECISION :: mw, mo
+    DOUBLE PRECISION, DIMENSION(2) :: mw, mo
     IF (pressure_step .EQ. 1) CALL PRES(nx, ny, nz, q, s, p, v)
 ! solve pressure
 ! Pressure solver
     CALL NEWTRAPH(nx, ny, nz, nd, pt, st, q, v, s)
 ! Solve for saturation
-    CALL RELPERM(s(nx*ny*nz), mw, mo)
+! Mobilities in well-block
+    CALL RELPERM(s(nx*ny*nz), mw(1), mo(1))
+! Mobilities in well-block
+    CALL RELPERM(s(ny), mw(2), mo(2))
   END SUBROUTINE STEPFORWARD
   SUBROUTINE UPDATE_OIL(nd, pt, st, pc, k, oilin, oilout)
     IMPLICIT NONE
@@ -2689,9 +2730,9 @@ CONTAINS
     INTEGER :: nd, pt, st
     DOUBLE PRECISION :: oilin
     DOUBLE PRECISION :: oilout
-    DOUBLE PRECISION, DIMENSION(2, nd/st + 1) :: pc
+    DOUBLE PRECISION, DIMENSION(4, nd/st + 1) :: pc
 ! Reimann sum
-    oilout = oilin + pc(2, k)*st
+    oilout = oilin + (-pc(1, k)+pc(2, k)+pc(3, k)-pc(4, k))*st
   END SUBROUTINE UPDATE_OIL
 END MODULE SIMULATION_B
 

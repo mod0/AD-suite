@@ -1,6 +1,4 @@
 module parameters
-  use netcdfwrapper
-
   ! grid parameters 
   double precision :: hx, hy, hz, vol, ir
 

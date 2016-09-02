@@ -1,18 +1,14 @@
 module parameters
-  ! FIXED PARAMETERS
   ! grid parameters 
-  integer :: scenario_id
-  double precision :: hx_, hy_, hz_, V_, ir
+  double precision :: hx, hy, hz, vol, ir
 
   ! fluid parameters
-  double precision :: vw_, vo_, swc_, sor_
+  double precision :: vw, vo, swc, sor
 
-  ! PARAMETERS READ FROM FILE
   ! porosity and permeability parameters
-  double precision, dimension(:), allocatable :: POR      ! Porosities
+  double precision, dimension(:), allocatable :: POR            ! Porosities
   double precision, dimension(:, :, :, :), allocatable :: PERM  ! Permeabilities  
 
-  ! PARAMETERS SET IN DRIVER
   ! linear solver parameters
   logical :: verbose
   integer :: solver_inner, solver_outer
@@ -688,7 +684,7 @@ contains
 
     do while(.not. converged)
        dt = (1.0d0 * st)/(2**it)
-       dtx = dt/(V_ * POR)
+       dtx = dt/(vol * POR)
 
        call mymax_1_0_double(Q, 0.0d0, fi)
        fi = fi * dtx
@@ -799,13 +795,13 @@ contains
     double precision, dimension((nx * ny * nz)), optional :: dMw
     double precision, dimension((nx * ny * nz)), optional :: dMo
 
-    S_temp = (S - swc_)/(1.0d0 - swc_ - sor_)   ! rescale saturation
-    Mw = S_temp**2/vw_
-    Mo = (1 - S_temp)**2/vo_
+    S_temp = (S - swc)/(1.0d0 - swc - sor)   ! rescale saturation
+    Mw = S_temp**2/vw
+    Mo = (1 - S_temp)**2/vo
 
     if (present(dMo) .and. present(dMw)) then
-       dMw = 2 * S_temp/vw_/(1 - swc_ - sor_)
-       dMo = -2 * (1 - S_temp)/vo_/(1 - swc_ - sor_)
+       dMw = 2 * S_temp/vw/(1 - swc - sor)
+       dMo = -2 * (1 - S_temp)/vo/(1 - swc - sor)
     endif
   end subroutine RelPerm_vector
 
@@ -817,13 +813,13 @@ contains
     double precision :: S, Mw, Mo, S_temp
     double precision, optional :: dMw, dMo
 
-    S_temp = (S - swc_)/(1.0d0 - swc_ - sor_)   ! rescale saturation
-    Mw = S_temp**2/vw_
-    Mo = (1 - S_temp)**2/vo_
+    S_temp = (S - swc)/(1.0d0 - swc - sor)   ! rescale saturation
+    Mw = S_temp**2/vw
+    Mo = (1 - S_temp)**2/vo
 
     if (present(dMo) .and. present(dMw)) then
-       dMw = 2 * S_temp/vw_/(1 - swc_ - sor_)
-       dMo = -2 * (1 - S_temp)/vo_/(1 - swc_ - sor_)
+       dMw = 2 * S_temp/vw/(1 - swc - sor)
+       dMo = -2 * (1 - S_temp)/vo/(1 - swc - sor)
     endif
   end subroutine RelPerm_scalar
 
@@ -940,9 +936,9 @@ contains
     ! get the point-wise inverse of the permeability matrix
     L = 1.0d0/K
 
-    tx_ = 2.0d0 * hy_ * hz_ / hx_
-    ty_ = 2.0d0 * hx_ * hz_ / hy_
-    tz_ = 2.0d0 * hy_ * hx_ / hz_
+    tx_ = 2.0d0 * hy * hz / hx
+    ty_ = 2.0d0 * hx * hz / hy
+    tz_ = 2.0d0 * hy * hx / hz
 
     TX = 0.0d0
     TY = 0.0d0
@@ -978,11 +974,14 @@ contains
 
 
     ! ! Increment the 1,1 element of A
+    ! ! Aarnes et al.
     !     call addx_elem(annz, arow_index, arow_compressed,&
     !                     acol_index, avalues, &
     !                     PERM(1,1,1,1) + PERM(2,1,1,1) + PERM(3,1,1,1), 1, 1)
 
     ! Fix the pressure at the inlets
+    ! This is apparently incorrect.
+    ! That the water saturation comes and goes
     do i = 1,annz
        if(arow_index(i) < nx * ny .and. mod(arow_index(i), ny) == 1) then
           if(arow_index(i) == acol_index(i)) then
@@ -992,6 +991,11 @@ contains
           endif
        endif
     enddo
+
+    ! Cannot duplicate the MATLAB version by TB
+    ! as A is a sparse matrix with pre-known number
+    ! of non-zeros
+
 
     ! solve the linear system
     ! Pass the rows_index, cols_index, values separately.
@@ -1137,19 +1141,20 @@ module simulation
   use parameters
   use matrix
   use finitevolume
+
   implicit none
 contains
 
   !
   ! Initialize inflow and outflow.
   !
-  subroutine init_flw_trnc_norm_xin_pt_out(nx, ny, nz, mu, sigma, Q)
-    integer :: nx, ny, nz
-    double precision :: mu, sigma
+  subroutine init_flw_trnc_norm_xin_pt_out(nx, ny, nz, ndof, mu, sigma, Q)
+    integer :: nx, ny, nz, ndof
+    double precision, dimension( : ) :: mu, sigma
     double precision, dimension((nx * ny * nz)) :: Q
 
     integer :: i, j
-    double precision :: x, pi, pdf, mass
+    double precision :: x, pi, pdf, mass, arg1
     double precision, dimension(nx) :: idx
     double precision, dimension(nx) :: Q_x
 
@@ -1163,20 +1168,14 @@ contains
     ! Note that the portion of the  Standard Normal distribution between
     ! -3sigma/2 to 3sigma/2 is assumed to fit the 1..Nx where sigma is 1
     do i = 1, nx
-       ! get the real x coordinate
-       x = -1.5d0 + ((i - 1) * 3.0d0)/(nx - 1)    ! Mapping x = [-1.5, 1.5] to nx dimension
-
-       ! Now use mu and sigma to find the pdf value at x
-       pdf = 1.0d0/(sigma * sqrt(2.0d0 * pi)) * exp(-(((x - mu)/sigma)**2.0d0)/2.0d0)
-
-       ! set the value at the index equal to the pdf value at that point
-       Q_x(i) = pdf
-
-       ! increment the mass by the value of the pdf
-       mass = mass + pdf
-
-       ! index to test initialization by plot
-       idx(i) = i * 1.0
+      x   = (i-1.0)*2.0/(nx-1.0d0) - 1.0d0;
+      pdf = 0.0d0
+      do j = 1, ndof
+          arg1 = -(((x-mu(j))/sigma(j))**2.0/2.0);
+          pdf = pdf + 1.0/(sqrt(2.0*pi)*sigma(j))*exp(arg1);
+      end do
+      Q_x(i) = pdf;
+      mass = mass + pdf;
     end do
 
     ! now rescale all the entities
@@ -1190,7 +1189,8 @@ contains
     end do
 
     ! now set the output
-    Q((nx * ny * nz)) = -ir
+    Q((nx * ny * nz)) = -ir/2.0
+    Q(ny) = -ir/2.0
   end subroutine init_flw_trnc_norm_xin_pt_out
 
 
@@ -1209,13 +1209,12 @@ contains
     double precision, dimension(3, nx + 1, ny + 1, nz + 1) :: V
 
     double precision, dimension((nd/st) + 1) :: Tt   
-    double precision, dimension(2, (nd/st) + 1) :: Pc
+    double precision, dimension(4, (nd/st) + 1) :: Pc
     double precision ::  oil
 
     integer :: i, j, k
-    double precision :: Mw, Mo, Mt, tempoil1, tempoil2
-
-    S = swc_                            ! initial saturation
+    double precision :: tempoil1, tempoil2
+    double precision, dimension(2) :: Mw, Mo, Mt
 
     Pc(1, 1) = 0.0d0                    ! initial production
     Pc(2, 1) = 1.0d0
@@ -1236,12 +1235,13 @@ contains
              call stepforward(nx, ny, nz, nd, pt, st, 0, Q, S, P, V, Mw, Mo)            
           endif
 
-
           ! update quantites
           Mt = Mw + Mo
           Tt(k) = 1.0d0 * k * St  
-          Pc(1,k) = Mw/Mt
-          Pc(2,k) = Mo/Mt
+          Pc(1,k) = Mw(1)/Mt(1)
+          Pc(2,k) = Mo(1)/Mt(1)
+          Pc(3,k) = Mw(2)/Mt(2)
+          Pc(4,k) = Mo(2)/Mt(2)
 
           call update_oil(nd, pt, st, Pc, k, tempoil1, tempoil2)
           tempoil1 = tempoil2
@@ -1259,7 +1259,7 @@ contains
     double precision, dimension((nx * ny * nz)) :: S
     double precision, dimension(nx, ny, nz) :: P
     double precision, dimension(3, nx + 1, ny + 1, nz + 1) :: V
-    double precision :: Mw, Mo
+    double precision, dimension(2) :: Mw, Mo
 
     if (pressure_step == 1) then
        ! solve pressure
@@ -1267,7 +1267,8 @@ contains
     endif
 
     call NewtRaph(nx, ny, nz, nd, pt, st, Q, V, S)      ! Solve for saturation
-    call RelPerm(S((nx * ny * nz)), Mw, Mo)         ! Mobilities in well-block
+    call RelPerm(S((nx * ny * nz)), Mw(1), Mo(1))       ! Mobilities in well-block
+    call RelPerm(S(ny), Mw(2), Mo(2))                   ! Mobilities in well-block
   end subroutine stepforward
 
   subroutine update_oil(nd, pt, st, Pc, k, oilin, oilout)
@@ -1275,24 +1276,25 @@ contains
     integer :: nd, pt, st
     double precision ::  oilin
     double precision ::  oilout
-    double precision, dimension(2, (nd/st) + 1) :: Pc
+    double precision, dimension(4, (nd/st) + 1) :: Pc
 
-    oilout = oilin +  Pc(2, k) * st                     ! Reimann sum
+    oilout = oilin +  (-Pc(1, k) + Pc(2, k) + Pc(3, k) - Pc(4, k)) * st    ! Reimann sum
   end subroutine update_oil
 
-  subroutine wrapper(nx, ny, nz, nd, pt, st, mu, sigma, Q, S, P, V, Tt, Pc, oil) 
-    integer :: nx, ny, nz
+  subroutine wrapper(nx, ny, nz, nd, ndof, pt, st, mu, sigma, Q, S, P, V, Tt, Pc, oil) 
+    integer :: nx, ny, nz, ndof
     integer :: nd, pt, st
-    double precision :: mu, sigma
+    double precision, dimension( ndof ) :: mu
+    double precision, dimension( ndof ) :: sigma
     double precision, dimension((nx * ny * nz)) :: Q
     double precision, dimension((nx * ny * nz)) :: S
     double precision, dimension(nx, ny, nz) :: P
     double precision, dimension(3, nx + 1, ny + 1, nz + 1) :: V
     double precision, dimension((nd/st) + 1) :: Tt
-    double precision, dimension(2, (nd/st) + 1) :: Pc
+    double precision, dimension(4, (nd/st) + 1) :: Pc
     double precision :: oil
 
-    call init_flw_trnc_norm_xin_pt_out(nx, ny, nz, mu, sigma, Q)
+    call init_flw_trnc_norm_xin_pt_out(nx, ny, nz, ndof, mu, sigma, Q)
     call simulate_reservoir(nx, ny, nz, nd, pt, st, Q, S, P, V, Tt, Pc, oil)
   end subroutine wrapper
 end module simulation
