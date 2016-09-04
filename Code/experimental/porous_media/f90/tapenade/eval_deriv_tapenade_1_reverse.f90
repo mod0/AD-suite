@@ -5,124 +5,508 @@ program runspe10
   use finitevolume_b
   use simulation_b
   use netcdf
+  use netcdfwrapper
+  implicit none  
 
-  implicit none
-
-  integer :: i, j, k
-  integer :: nx, ny, nz
-  integer :: nd, st, pt
-
-  ! input/intermediate variables
-  double precision :: mu, sigma
-  double precision :: mub, sigmab
-  double precision, dimension(:), allocatable :: Q
-  double precision, dimension(:), allocatable :: S
-  double precision, dimension(:, :, :), allocatable :: P
-  double precision, dimension(:, :, :, :), allocatable :: V
-
-  ! output variables
-  double precision :: totaloil
-  double precision :: totaloilb
-  double precision, dimension(:), allocatable :: Tt
-  double precision, dimension(:, :), allocatable :: Pc
-
-  ! direction version of arrays Ttb is unused and is only present for convenience
-  double precision, dimension(:), allocatable :: Qb
-  double precision, dimension(:), allocatable :: Sb
-  double precision, dimension(:, :, :), allocatable :: Pb
-  double precision, dimension(:, :, :, :), allocatable :: Vb
-  double precision, dimension(:), allocatable :: Ttb
-  double precision, dimension(:, :), allocatable :: Pcb
-
-  ! read the command line argument for the location of the data files
-  integer :: iargs
+  ! directory to read all input data from
   character(len = 100) :: data_directory
+  ! directory to write results into
   character(len = 100) :: results_directory
+  ! filename input for adjoint direction
+  character(len = 100) :: dir_y_file
 
-  iargs = iargc()
-  if(iargs /= 2) then
-     write(*,*) "Incorrect number of arguments passed. Expected data and results directory"
-  endif
+  ! dimension for independent, dependent, and the parameter  
+  integer :: n_dim, m_dim, p_dim
+  ! input variables
+  double precision, dimension(:), allocatable :: x
+  ! output variables
+  double precision, dimension(:), allocatable :: y
+  ! parameter variables
+  double precision, dimension(:), allocatable :: param
+  ! gradient variables
+  double precision, dimension(:), allocatable :: deriv_x
+  ! adjoint direction
+  double precision, dimension(:), allocatable :: dir_y
 
-  call getarg(1, data_directory)
-  call getarg(2, results_directory)
-  
-  write(*,*) "Data directory: ", data_directory
-  write(*,*) "Results directory: ", results_directory
+  call get_filepaths(data_directory, results_directory, dir_y_file)
 
-  ! Not passing shared constants present in the parameters file.
-  call initialize_scenario(data_directory, nx, ny, nz, st, pt, nd, solver_inner, solver_outer)
+  call get_independent_size( n_dim, data_directory )
+  call get_dependent_size(   m_dim, data_directory )
 
-  ! allocate arrays
-  call allocate_arrays(nx, ny, nz, st, pt, nd, Q, S, P, V, Tt, Pc)
-  call allocate_arrays(nx, ny, nz, st, pt, nd, Qb, Sb, Pb, Vb, Ttb, Pcb)
-  call allocate_shared_arrays(nx, ny, nz, st, pt, nd)
+  call allocate_independent_variables( n_dim, x       )
+  call allocate_dependent_variables(   m_dim, y       )
+  call allocate_parameter_variables(   p_dim, param   )
+  call allocate_gradient_variables(    n_dim, deriv_x   )
+  call allocate_adjoint_variables(     m_dim, dir_y )
 
-  ! initialize arrays
-  call initialize_arrays(Q, S, P, V, Tt, Pc)
-  call initialize_arrays(Qb, Sb, Pb, Vb, Ttb, Pcb)
-  call initialize_shared_arrays(data_directory, nx, ny, nz, st, pt, nd)  ! will not be reinitialized
+  call initialize_parameter_variables(   p_dim, param )
+  call initialize_independent_variables( n_dim, x,   data_directory )
+  call initialize_adjoint_variables(     m_dim, dir_y,  dir_y_file  )
 
-  ! initialize scalar inputs and outputs
-  mu = 0.0d0
-  sigma = 1.0d0
-  totaloil = 0.0d0
+  call evaluate_gradient(n_dim, m_dim, p_dim, x, deriv_x, y, dir_y, param, &
+       data_directory, results_directory, dir_y_file)
 
-  ! initialize directions
-  mub = 0.0d0
-  sigmab = 0.0d0
-  totaloilb = 1.0d0
+  call save_dependent_variables( m_dim, y       , data_directory )
+  call save_gradient_variables(  n_dim, deriv_x , data_directory )
 
-  ! solver verbose parameter, inner and outer iterations are read from
-  ! command file.
-  verbose = .false.              ! Verbose solver output  
+  call deallocate_independent_variables( n_dim, x       )
+  call deallocate_dependent_variables(   m_dim, y       )
+  call deallocate_parameter_variables(   p_dim, param   )
+  call deallocate_gradient_variables(   n_dim, deriv_x  )
+  call deallocate_adjoint_variables(    m_dim, dir_y    )
 
-  call wrapper_b(nx, ny, nz, nd, pt, st, mu, mub, sigma, sigmab, Q, &
-       Qb, S, Sb, P, Pb, V, Vb, Tt, Pc, Pcb, totaloil, totaloilb)
-
-  !reinitialize arrays
-  call initialize_arrays(Q, S, P, V, Tt, Pc)
-
-  call wrapper(nx, ny, nz, nd, pt, st, mu, sigma, Q, S, P, V, Tt, Pc, totaloil)
-
-  ! write results from both experiments
-  call write_results(results_directory, nx, ny, nz, mu, sigma, Tt, Pc, totaloil, mub, sigmab)
-
-  call deallocate_arrays(Q, S, P, V, Tt, Pc)
-  call deallocate_arrays(Qb, Sb, Pb, Vb, Ttb, Pcb)
-  call deallocate_shared_arrays()
   return
 contains
 
-  subroutine allocate_shared_arrays(nx, ny, nz, st, pt, nd)
+  subroutine get_filepaths(data_directory, results_directory, dir_y_file)
+    integer :: iargs  
+    character(len = 100) :: data_directory
+    character(len = 100) :: results_directory
+    character(len = 100) :: dir_y_file
+
+    ! =================================
+    ! READ DATA AND RESULTS DIRECTORY
+    ! =================================
+    iargs = iargc()
+    if(iargs /= 3) then
+       write(*,*) "Incorrect number of arguments passed. Expected data and results directory, and adjoint file."
+    endif
+    call getarg(1, data_directory)
+    call getarg(2, results_directory)
+    call getarg(3, dir_y_file)
+    write(*,*) "Data directory: ", data_directory
+    write(*,*) "Results directory: ", results_directory  
+    write(*,*) "Adjoint file: ", dir_y_file
+  end subroutine get_filepaths
+
+  subroutine get_independent_size( n_dim, data_directory )
+    integer :: ncid
+    integer, intent(out):: n_dim
+    character(len = 100) :: data_directory
+
+    call ncopen(trim(adjustl(data_directory))//"x.nc", NC_NOWRITE, ncid)
+    call ncread(ncid, "n_dim", n_dim)
+    call ncclose(ncid)
+  end subroutine get_independent_size
+
+  subroutine get_dependent_size( m_dim, data_directory )
+    integer :: ncid
+    integer, intent(out):: m_dim
+    character(len = 100) :: data_directory
+
+    call ncopen(trim(adjustl(data_directory))//"y.nc", NC_NOWRITE, ncid)
+    call ncread(ncid, "m_dim", m_dim)
+    call ncclose(ncid)
+  end subroutine get_dependent_size
+
+  subroutine allocate_independent_variables( n_dim, x)
+    integer, intent(in):: n_dim
+    double precision, dimension(:), allocatable, intent(out):: x
+    ! User-Application specific
+    ! ===========================
+    ! N/A
+    ! Standard AD-Suite Interface
+    ! ===========================
+    allocate( x(n_dim) )
+  end subroutine allocate_independent_variables
+
+  subroutine allocate_dependent_variables( m_dim, y)
+    integer, intent(in):: m_dim
+    double precision, dimension(:), allocatable, intent(out):: y
+    ! User-Application specific
+    ! ===========================
+    ! N/A
+    ! Standard AD-Suite Interface
+    ! ===========================
+    allocate( y(m_dim) )
+  end subroutine allocate_dependent_variables
+
+  subroutine allocate_parameter_variables( p_dim, param)
+    integer, intent(out):: p_dim
+    double precision, dimension(:), allocatable, intent(out):: param
+    ! User-Application specific
+    ! ===========================
+    p_dim = 1 ! parameter is not used through this interface in this app.
+    ! Standard AD-Suite Interface
+    ! ===========================
+    allocate( param(p_dim) )
+  end subroutine allocate_parameter_variables
+
+  subroutine allocate_gradient_variables( n_dim, deriv_x)
+    integer, intent(in):: n_dim
+    double precision, dimension(:), allocatable, intent(out):: deriv_x
+    ! User-Application specific
+    ! ===========================
+    ! N/A
+    ! Standard AD-Suite Interface
+    ! ===========================
+    allocate( deriv_x(n_dim) )
+  end subroutine allocate_gradient_variables
+
+  subroutine allocate_adjoint_variables( m_dim, dir_y)
+    integer, intent(in):: m_dim
+    double precision, dimension(:), allocatable, intent(out):: dir_y
+    ! User-Application specific
+    ! ===========================
+    ! N/A
+    ! Standard AD-Suite Interface
+    ! ===========================
+    allocate( dir_y(m_dim) )
+  end subroutine allocate_adjoint_variables
+
+  subroutine initialize_independent_variables(n_dim, x, data_directory)
+    integer :: ncid
+    integer, intent(in):: n_dim
+    character(len = 100) :: data_directory
+    double precision, dimension(:), allocatable, intent(inout):: x
+    ! User-Application specific
+    ! ===========================
+    x = 0.0d0
+    ! Standard AD-Suite Interface
+    ! =========================== 
+    call ncopen(trim(adjustl(data_directory))//"x.nc", NC_NOWRITE, ncid)
+    call ncread(ncid, "x", x)
+    call ncclose(ncid)
+  end subroutine initialize_independent_variables
+
+  subroutine initialize_parameter_variables(p_dim, param)
+    integer, intent(in):: p_dim
+    double precision, dimension(:), allocatable, intent(inout):: param
+    ! User-Application specific
+    ! ===========================
+    ! N/A
+    ! Standard AD-Suite Interface
+    ! ===========================
+    ! N/A
+  end subroutine initialize_parameter_variables
+
+  subroutine initialize_adjoint_variables(m_dim, dir_y, dir_y_file)
+    integer :: ncid 
+    integer, intent(in):: m_dim
+    character(len = 100) :: dir_y_file
+    double precision, dimension(:), allocatable, intent(inout):: dir_y
+    ! User-Application specific
+    ! ===========================
+    dir_y = 0.0d0
+    ! Standard AD-Suite Interface
+    ! =========================== 
+    call ncopen(trim(adjustl(dir_y_file)), NC_NOWRITE, ncid)
+    call ncread(ncid, "dir_y", dir_y)
+    call ncclose(ncid)
+  end subroutine initialize_adjoint_variables
+
+  subroutine evaluate_gradient(n_dim, m_dim, p_dim, x, deriv_x, y, dir_y, param, &
+       data_directory, results_directory, dir_y_file)
+    integer, intent(in) :: n_dim, m_dim, p_dim
+    double precision, dimension(n_dim), intent(in) :: x
+    double precision, dimension(m_dim), intent(inout) :: y
+    double precision, dimension(p_dim), intent(in) :: param
+    double precision, dimension(m_dim), intent(in) :: dir_y
+    double precision, dimension(n_dim), intent(inout) :: deriv_x
+
+    character(len = 100) :: data_directory
+    character(len = 100) :: results_directory
+    character(len = 100) :: dir_y_file
+
+
+    integer :: i, j, k, n_dof
+    integer :: nx, ny, nz
+    integer :: nd, st, pt
+
+    double precision :: totaloil
+    double precision, dimension(:), allocatable :: Q
+    double precision, dimension(:), allocatable :: S
+    double precision, dimension(:, :, :), allocatable :: P
+    double precision, dimension(:, :, :, :), allocatable :: V
+    double precision, dimension(:), allocatable :: Tt
+    double precision, dimension(:, :), allocatable :: Pc
+    double precision, dimension(:), allocatable :: mu
+    double precision, dimension(:), allocatable :: sigma
+
+    double precision :: totaloilb
+    double precision, dimension(:), allocatable :: Qb
+    double precision, dimension(:), allocatable :: Sb
+    double precision, dimension(:, :, :), allocatable :: Pb
+    double precision, dimension(:, :, :, :), allocatable :: Vb
+    double precision, dimension(:), allocatable :: Ttb
+    double precision, dimension(:, :), allocatable :: Pcb
+    double precision, dimension(:), allocatable :: mub
+    double precision, dimension(:), allocatable :: sigmab
+
+    ! ==========================================
+    ! ALLOCATE SPACE FOR INDIVIDUAL INDEPENDENTS
+    ! ==========================================
+    n_dof = n_dim/2
+    allocate( mu(n_dof)    )
+    allocate( sigma(n_dof) )    
+
+    ! =========================================
+    ! ALLOCATE SPACE FOR INDIVIDUAL GRADIENTS
+    ! =========================================
+    allocate( mub(n_dof)    )
+    allocate( sigmab(n_dof) )    
+
+    ! ===========================
+    ! READ INDEPENDENT VARIABLES
+    ! ===========================
+    mu    = x(1:n_dof)
+    sigma = x(n_dof + 1:)
+
+    ! ===========================
+    ! READ DIRECTION VARIABLES
+    ! ===========================
+    totaloilb = dir_y(1)
+
+    ! =======================================================
+    ! INITIALIZE SCENARIO AND APPLICATION SPECIFIC VARIABLES
+    ! =======================================================
+    call initialize_size_param_vars(nx, ny, nz, st, pt, nd, data_directory)
+
+    call allocate_vector_param_vars(nx, ny, nz)
+    call allocate_vector_sim_vars(nx, ny, nz, st, pt, nd, Q, S, P, V, Tt, Pc)
+    call allocate_vector_sim_vars_b(nx, ny, nz, st, pt, nd, Qb, Sb, Pb, Vb, Ttb, Pcb)
+
+    call initialize_scalar_param_vars(data_directory)
+    call initialize_vector_param_vars(nx, ny, nz, data_directory)
+    call initialize_vector_sim_vars(nx, ny, nz, Q, S, P, V, Tt, Pc, data_directory)
+    call initialize_vector_sim_vars_b(nx, ny, nz, Qb, Sb, Pb, Vb, Ttb, Pcb, data_directory)
+
+    ! ======================================================
+    ! OVER-RIDE PARAMETER VARIABLES, UPDATE VALUES ETC.
+    ! ======================================================
+    verbose = .false.   
+
+    ! ===========================
+    ! EXECUTE CODE
+    ! ===========================
+    call wrapper_b(nx, ny, nz, nd, n_dof, pt, st, mu, mub, sigma, &
+         &   sigmab, Q, Qb, S, Sb, P, Pb, V, Vb, Tt, Pc, Pcb, totaloil, totaloilb)
+
+    ! ===========================
+    ! WRITE RESULTS
+    ! ===========================
+    call write_results(results_directory, nx, ny, nz, st, pt, nd, n_dof, mu, sigma, Tt, Pc, totaloil)
+
+    ! ===========================
+    ! WRITE DEPENDENT VARIABLES
+    ! ===========================
+    y(1) = totaloil
+    deriv_x(1:n_dof) = mub
+    deriv_x(n_dof + 1:) = sigmab
+
+    ! ==========================
+    ! DEALLOCATE VARIABLES
+    ! ===========================
+    call deallocate_vector_sim_vars_b(Qb, Sb, Pb, Vb, Ttb, Pcb)
+    call deallocate_vector_sim_vars(Q, S, P, V, Tt, Pc)
+    call deallocate_vector_param_vars()
+    deallocate(mu)
+    deallocate(sigma)
+    deallocate(mub)
+    deallocate(sigmab)
+  end subroutine evaluate_gradient
+
+  subroutine save_dependent_variables(m_dim, y, data_directory)
+    integer :: ncid
+    integer, intent(in):: m_dim
+    character(len = 100) :: data_directory
+    double precision, dimension(:), allocatable, intent(in):: y
+    ! Standard AD-Suite Interface
+    ! ===========================  
+    ! N/A
+    ! Standard AD-Suite Interface
+    ! ===========================  
+    call ncopen(trim(adjustl(data_directory))//"y.nc", NC_WRITE, ncid)
+    call ncwrite(ncid, "m_dim", m_dim)
+    call ncwrite(ncid, "y", y, (/"m_dim"/))
+    call ncclose(ncid)
+  end subroutine save_dependent_variables
+
+  subroutine save_gradient_variables(n_dim, deriv_x, data_directory)
+    integer :: ncid
+    integer, intent(in):: n_dim
+    character(len = 100) :: data_directory
+    double precision, dimension(:), allocatable, intent(in):: deriv_x
+    ! Standard AD-Suite Interface
+    ! ===========================  
+    ! N/A
+    ! Standard AD-Suite Interface
+    ! ===========================  
+    call ncopen(trim(adjustl(data_directory))//"grad_x.nc", NC_WRITE, ncid)
+    call ncwrite(ncid, "n_dim", n_dim)
+    call ncwrite(ncid, "grad_x", deriv_x, (/"n_dim"/))
+    call ncclose(ncid)
+  end subroutine save_gradient_variables
+
+  subroutine deallocate_independent_variables( n_dim, x)
+    integer, intent(in):: n_dim
+    double precision, dimension(:), allocatable, intent(inout):: x
+    ! User-Application specific
+    ! ===========================
+    ! N/A
+    ! Standard AD-Suite Interface
+    ! ===========================  
+    deallocate( x )
+  end subroutine deallocate_independent_variables
+
+  subroutine deallocate_dependent_variables( m_dim, y)
+    integer, intent(in):: m_dim
+    double precision, dimension(:), allocatable, intent(inout):: y
+    ! User-Application specific
+    ! ===========================
+    ! N/A
+    ! Standard AD-Suite Interface
+    ! ===========================  
+    deallocate( y )
+  end subroutine deallocate_dependent_variables
+
+  subroutine deallocate_parameter_variables( p_dim, param)
+    integer, intent(in):: p_dim
+    double precision, dimension(:), allocatable, intent(inout):: param
+    ! User-Application specific
+    ! ===========================
+    ! N/A
+    ! Standard AD-Suite Interface
+    ! ===========================  
+    deallocate( param )
+  end subroutine deallocate_parameter_variables
+
+  subroutine deallocate_adjoint_variables( m_dim, dir_y)
+    integer, intent(out):: m_dim
+    double precision, dimension(:), allocatable, intent(inout):: dir_y
+    ! User-Application specific
+    ! ===========================
+    ! N/A
+    ! Standard AD-Suite Interface
+    ! ===========================
+    deallocate( dir_y )
+  end subroutine deallocate_adjoint_variables
+
+  subroutine deallocate_gradient_variables( n_dim, deriv_x)
+    integer, intent(out):: n_dim
+    double precision, dimension(:), allocatable, intent(inout):: deriv_x
+    ! User-Application specific
+    ! ===========================
+    ! N/A
+    ! Standard AD-Suite Interface
+    ! ===========================
+    deallocate( deriv_x )
+  end subroutine deallocate_gradient_variables
+
+  subroutine initialize_size_param_vars(nx, ny, nz, st, pt, nd, data_directory)
+    integer :: ncid
     integer :: nx, ny, nz
     integer :: st, pt, nd
+    character(len = *) :: data_directory     
+
+    ! Open parameters file
+    call ncopen(trim(adjustl(data_directory))//"/parameters1.nc", &
+         NC_NOWRITE, ncid)
+
+    ! read NX, NY, and NZ
+    call ncread(ncid, "NX", nx)
+    call ncread(ncid, "NY", ny)
+    call ncread(ncid, "NZ", nz)
+
+    ! read St, Pt, ND
+    call ncread(ncid, "St",  st)
+    call ncread(ncid, "Pt",  pt)
+    call ncread(ncid, "ND",  nd)
+
+    call ncclose(ncid)
+  end subroutine initialize_size_param_vars
+
+  subroutine initialize_scalar_param_vars(data_directory)
+    implicit none
+    integer :: ncid  
+    character(len = *) :: data_directory 
+
+    ! Open parameters file
+    call ncopen(trim(adjustl(data_directory))//"/parameters1.nc", &
+         NC_NOWRITE, ncid)
+
+    ! initialize all constants insize parameters file.
+    ! read ir_const
+    call ncread(ncid, "ir_const", ir)
+
+    ! read hX, hY, hZ
+    call ncread(ncid, "hX", hx)
+    call ncread(ncid, "hY", hy)
+    call ncread(ncid, "hZ", hz)
+
+    ! real volume
+    call ncread(ncid, "vol", vol)
+
+    ! read vw, vo, swc, sor
+    call ncread(ncid, "vw", vw)
+    call ncread(ncid, "vo", vo)
+    call ncread(ncid, "swc", swc)
+    call ncread(ncid, "sor", sor)
+
+    ! read solver_parameters
+    call ncread(ncid, "solver_inner", solver_inner)    
+    call ncread(ncid, "solver_outer", solver_outer)    
+
+    ! Close parameters file
+    call ncclose(ncid)
+  end subroutine initialize_scalar_param_vars
+
+  subroutine allocate_vector_param_vars(nx, ny, nz)
+    integer :: nx, ny, nz
 
     ! Allocate space for constant permeability/porosity
     allocate(POR(nx * ny * nz), PERM(3, nx, ny, nz))    
-  end subroutine allocate_shared_arrays
+  end subroutine allocate_vector_param_vars
 
-  subroutine deallocate_shared_arrays()
+  subroutine deallocate_vector_param_vars()
     ! also deallocate Porosity and Permeability
     deallocate(POR, PERM)
-  end subroutine deallocate_shared_arrays
+  end subroutine deallocate_vector_param_vars
 
-  subroutine initialize_shared_arrays(data_directory, nx, ny, nz, st, pt, nd)
-    character(len = *) :: data_directory                             ! directory location of parameters 
-
+  subroutine initialize_vector_param_vars(nx, ny, nz, data_directory)
+    character(len = *) :: data_directory                            
     integer :: nx, ny, nz
-    integer :: st, pt, nd
 
-    ! Now read the permeabilities and porosities which are global
-    call read_permeability_and_porosity(data_directory, nx, ny, nz, PERM, POR)
-  end subroutine initialize_shared_arrays
+    ! Now read the permeabilities and porosities 
+    call read_permeability_and_porosity(nx, ny, nz, PERM, POR, data_directory)
+  end subroutine initialize_vector_param_vars
 
-  subroutine allocate_arrays(nx, ny, nz, st, pt, nd, Q, S, P, V, Tt, Pc)
+  subroutine read_permeability_and_porosity(nx, ny, nz, PERM, POR, data_directory)   
+    integer :: ncid                                                  
+    integer :: nx, ny, nz
+    character(len = *) :: data_directory                             
+
+    double precision, dimension((nx * ny * nz)) :: POR       ! Porosities
+    double precision, dimension(nx, ny, nz) :: POR_temp    ! Porosities_temp
+    double precision, dimension(3, nx, ny, nz)  :: PERM      ! Permeabilities
+
+    ! initialize porosity and permeability to zero
+    PERM = 0.0d0
+    POR = 0.0d0
+    POR_temp = 0.0d0
+
+    ! read permeability
+    call ncopen(trim(adjustl(data_directory))//"/parameters2.nc", &
+         NC_NOWRITE, ncid)
+    call ncread(ncid, "permeability", PERM)
+    call ncclose(ncid)
+
+    ! read porosity
+    call ncopen(trim(adjustl(data_directory))//"/parameters3.nc", &
+         NC_NOWRITE, ncid)
+    call ncread(ncid, "porosity", POR_temp)
+    call ncclose(ncid)    
+
+    POR = reshape(POR_temp, (/nx * ny * nz/))
+
+    call mymax_1_0_double(POR, 1.0d-3, POR)
+  end subroutine read_permeability_and_porosity
+
+  subroutine allocate_vector_sim_vars(nx, ny, nz, st, pt, nd, Q, S, P, V, Tt, Pc)
     implicit none
-
     integer :: nx, ny, nz
     integer :: st, pt, nd
-     
+
     double precision, dimension(:), allocatable          :: Q
     double precision, dimension(:), allocatable          :: S
     double precision, dimension(:, :, :), allocatable    :: P
@@ -138,10 +522,10 @@ contains
 
     ! Allocate space for Time and Production data 
     allocate(Tt((nd/st) + 1), & 
-         Pc(2, (nd/st) + 1))
-  end subroutine allocate_arrays
+         Pc(4, (nd/st) + 1))
+  end subroutine allocate_vector_sim_vars
 
-  subroutine deallocate_arrays(Q, S, P, V, Tt, Pc)
+  subroutine deallocate_vector_sim_vars(Q, S, P, V, Tt, Pc)
     implicit none
 
     double precision, dimension(:), allocatable          :: Q
@@ -154,19 +538,33 @@ contains
     ! deallocate variables
     deallocate(Q, S, P, V)
     deallocate(Tt, Pc)
-  end subroutine deallocate_arrays
+  end subroutine deallocate_vector_sim_vars
 
-  subroutine initialize_arrays(Q, S, P, V, Tt, Pc)
+  subroutine initialize_vector_sim_vars(nx, ny, nz, Q, S, P, V, Tt, Pc, data_directory)
+    integer :: ncid
+    integer :: nx, ny, nz
     double precision, dimension(:)          :: Q
     double precision, dimension(:)          :: S
     double precision, dimension(:, :, :)    :: P
     double precision, dimension(:, :, :, :) :: V
     double precision, dimension(:)          :: Tt
     double precision, dimension(:, :)       :: Pc
+    double precision, dimension(:,:,:), allocatable :: S_temp
+
+    character(len = *) :: data_directory                             
 
     ! initialize memory for inflow and saturation
     Q = 0.0d0
-    S = 0.0d0
+
+    ! read initial saturation from file
+    ! Open parameters file
+    allocate(S_temp(nx, ny, nz))
+    call ncopen(trim(adjustl(data_directory))//"/parameters4.nc", &
+         NC_NOWRITE, ncid)
+    call ncread(ncid, "saturation", S_temp) 
+    call ncclose(ncid)
+    S = reshape(S_temp, (/ nx * ny * nz /))
+    deallocate(S_temp)
 
     ! initialize memory for P and V
     P = 0.0d0
@@ -177,335 +575,91 @@ contains
 
     Tt = 0.0d0               ! simulation time
     Pc = 0.0d0               ! production data
-  end subroutine initialize_arrays
+  end subroutine initialize_vector_sim_vars
 
-  subroutine initialize_scenario(data_directory, nx, ny, nz, st, pt, nd, solver_inner, solver_outer)
+  subroutine allocate_vector_sim_vars_b(nx, ny, nz, st, pt, nd, Qb, Sb, Pb, Vb, Ttb, Pcb)
     implicit none
-    
-    integer :: ncid                                                  ! netcdf file handle
-
-    character(len = *) :: data_directory                             ! directory location of parameters 
-    integer :: varid                                                 ! generic variable id
-    integer :: nc_chunksize                                          ! chunk size for reading
-
     integer :: nx, ny, nz
     integer :: st, pt, nd
-    integer :: solver_inner, solver_outer  
 
-    ! Open parameters file
-    nc_chunksize = 4096
-    call iserror(nf90_open(trim(adjustl(data_directory))//"/parameters.nc", &
-         NF90_NOWRITE, ncid, nc_chunksize))
-    write(*,*) "Chosen chunk size is ", nc_chunksize
+    double precision, dimension(:), allocatable          :: Qb
+    double precision, dimension(:), allocatable          :: Sb
+    double precision, dimension(:, :, :), allocatable    :: Pb
+    double precision, dimension(:, :, :, :), allocatable :: Vb
+    double precision, dimension(:), allocatable          :: Ttb
+    double precision, dimension(:, :), allocatable       :: Pcb
 
-    ! read scenario_id
-    call iserror(nf90_inq_varid(ncid, "scenario_id", varid))
-    call iserror(nf90_get_var(ncid, varid, scenario_id))
-    write (*,*) "Scenario: ", scenario_id
+    ! Allocate space for Q, S, P, V
+    allocate(Qb(nx * ny * nz), &
+         Sb(nx * ny * nz), &
+         Pb(nx, ny, nz), &
+         Vb(3, nx+1, ny+1, nz+1))
 
-    ! read NX, NY, and NZ
-    call iserror(nf90_inq_varid(ncid, "NX", varid))
-    call iserror(nf90_get_var(ncid, varid, nx))
-    call iserror(nf90_inq_varid(ncid, "NY", varid))
-    call iserror(nf90_get_var(ncid, varid, ny))
-    call iserror(nf90_inq_varid(ncid, "NZ", varid))
-    call iserror(nf90_get_var(ncid, varid, nz))
-    write (*,*) "(NX, NY, NZ) = ", NX, NY, NZ
+    ! Allocate space for Time and Production data 
+    allocate(Ttb((nd/st) + 1), & 
+         Pcb(4, (nd/st) + 1))
+  end subroutine allocate_vector_sim_vars_b
 
-    ! read St, Pt, ND
-    call iserror(nf90_inq_varid(ncid, "St", varid))
-    call iserror(nf90_get_var(ncid, varid, st))
-    call iserror(nf90_inq_varid(ncid, "Pt", varid))
-    call iserror(nf90_get_var(ncid, varid, pt))
-    call iserror(nf90_inq_varid(ncid, "ND", varid))
-    call iserror(nf90_get_var(ncid, varid, nd))
-    write (*,*) "(St, Pt, ND) = ", st, pt, nd
-
-    ! initialize all constants insize parameters file.
-    ! read ir_const
-    call iserror(nf90_inq_varid(ncid, "ir_const", varid))
-    call iserror(nf90_get_var(ncid, varid, ir))
-
-    ! compute ir
-    ir = ir * nx * ny * nz
-    write (*,*) "(ir) = ", ir
-
-    ! read hX, hY, hZ
-    call iserror(nf90_inq_varid(ncid, "hX", varid))
-    call iserror(nf90_get_var(ncid, varid, hx_))
-    call iserror(nf90_inq_varid(ncid, "hY", varid))
-    call iserror(nf90_get_var(ncid, varid, hy_))
-    call iserror(nf90_inq_varid(ncid, "hZ", varid))
-    call iserror(nf90_get_var(ncid, varid, hz_))
-    write (*,*) "(hX, hY, hZ) = ", hx_, hy_, hz_
-
-    ! compute V
-    V_ = hx_ * hy_ * hz_
-    write (*,*) "(V) = ", V_
-
-    ! read vw, vo, swc, sor
-    call iserror(nf90_inq_varid(ncid, "vw", varid))
-    call iserror(nf90_get_var(ncid, varid, vw_))
-    call iserror(nf90_inq_varid(ncid, "vo", varid))
-    call iserror(nf90_get_var(ncid, varid, vo_))
-    call iserror(nf90_inq_varid(ncid, "swc", varid))
-    call iserror(nf90_get_var(ncid, varid, swc_))
-    call iserror(nf90_inq_varid(ncid, "sor", varid))
-    call iserror(nf90_get_var(ncid, varid, sor_))
-    write (*,*) "(vw, vo, swc, sor) = ", vw_, vo_, swc_, sor_ 
-
-    ! read solver_parameters
-    call iserror(nf90_inq_varid(ncid, "solver_inner", varid))
-    call iserror(nf90_get_var(ncid, varid, solver_inner))    
-    call iserror(nf90_inq_varid(ncid, "solver_outer", varid))
-    call iserror(nf90_get_var(ncid, varid, solver_outer))    
-
-    ! Close parameters file
-    call iserror(nf90_close(ncid))
-  end subroutine initialize_scenario
-
-  subroutine write_results(results_directory, nx, ny, nz, mu, sigma, Tt, Pc, totaloil, totaloil_mud, totaloil_sigmad)
+  subroutine deallocate_vector_sim_vars_b(Qb, Sb, Pb, Vb, Ttb, Pcb)
     implicit none
-    character(len = *) :: results_directory
 
+    double precision, dimension(:), allocatable          :: Qb
+    double precision, dimension(:), allocatable          :: Sb
+    double precision, dimension(:, :, :), allocatable    :: Pb
+    double precision, dimension(:, :, :, :), allocatable :: Vb
+    double precision, dimension(:), allocatable          :: Ttb
+    double precision, dimension(:, :), allocatable       :: Pcb
+
+    ! deallocate variables
+    deallocate(Qb, Sb, Pb, Vb)
+    deallocate(Ttb, Pcb)
+  end subroutine deallocate_vector_sim_vars_b
+
+  subroutine initialize_vector_sim_vars_b(nx, ny, nz, Qb, Sb, Pb, Vb, Ttb, Pcb, data_directory)
+    integer :: ncid
     integer :: nx, ny, nz
-    double precision :: mu, sigma, totaloil, totaloil_mud, totaloil_sigmad
+    double precision, dimension(:)          :: Qb
+    double precision, dimension(:)          :: Sb
+    double precision, dimension(:, :, :)    :: Pb
+    double precision, dimension(:, :, :, :) :: Vb
+    double precision, dimension(:)          :: Ttb
+    double precision, dimension(:, :)       :: Pcb
+
+    character(len = *) :: data_directory                             
+
+    Qb = 0.0d0
+    Sb = 0.0d0
+    Pb = 0.0d0
+    Vb = 0.0d0
+    Ttb = 0.0d0               
+    Pcb = 0.0d0               
+  end subroutine initialize_vector_sim_vars_b
+
+  subroutine write_results(results_directory, nx, ny, nz, st, pt, nd, n_dof, mu, sigma, Tt, Pc, totaloil)
+    implicit none
+
+    integer :: ncid                                                  
+    integer :: nx, ny, nz, st, pt, nd, n_dof
+    double precision :: totaloil
+    double precision, dimension(:)             :: mu
+    double precision, dimension(:)             :: sigma
     double precision, dimension(:)             :: Tt
     double precision, dimension(:, :)          :: Pc
+    character(len = *) :: results_directory
 
-    ! netCDF variables
-    integer :: ncid                                                     ! file handle
-    integer :: var_scene_id                                             ! scene variable id
-    character(len = *), parameter :: var_scene_name = "Scenario"        ! scene variable name
-    integer :: var_nx_id                                                ! nx variable id
-    character(len = *), parameter :: var_nx_name = "NX"                 ! nx variable name
-    integer :: var_ny_id                                                ! ny variable id
-    character(len = *), parameter :: var_ny_name = "NY"                 ! ny variable name
-    integer :: var_nz_id                                                ! nz variable id
-    character(len = *), parameter :: var_nz_name = "NZ"                 ! nz variable name
-    integer :: var_mu_id                                                ! mu variable id
-    character(len = *), parameter :: var_mu_name = "Mu"                 ! mu variable name
-    integer :: var_sigma_id                                             ! sigma variable id
-    character(len = *), parameter :: var_sigma_name = "Sigma"           ! sigma variable name
-                                                                        
-    integer :: dim_time_id                                              ! time dimension id
-    integer :: dim_time_len                                             ! time dimension length
-    character(len = *), parameter :: dim_time_name = "Time"             ! time dimension name
-                                                                        
-    integer :: var_time_id                                              ! time variable id
-    character(len = *), parameter :: var_time_name = "Time"             ! time variable name
-                                                                        
-    integer :: dim_mobility_id                                          ! mobility dimension id
-    integer :: dim_mobility_len                                         ! mobility dimension length
-    character(len = *), parameter :: dim_mobility_name = "Mobilities"   ! mobility dimension name
-                                                                        
-    integer :: var_mobility_id                                          ! mobility variable id
-    character(len = *), parameter :: var_mobility_name = "WaterOil"     ! mobility variable name
-    integer, dimension(2) :: var_mobility_dimids                        ! id of dimensions for mobilities
+    call ncopen(trim(adjustl(results_directory))//"/results_eval_deriv_tapenade_1_forward.nc", &
+         NC_WRITE, ncid)
 
-    integer :: var_oil_id                                               ! oil variable id
-    character(len = *), parameter :: var_oil_name = "Oil"               ! oil variable name
-    integer :: var_oil_mud_id                                           ! oil_mu variable id
-    character(len = *), parameter :: var_oil_mud_name = "Oil_mu"        ! oil_mu variable name
-    integer :: var_oil_sigmad_id                                        ! oil_sigma variable id
-    character(len = *), parameter :: var_oil_sigmad_name = "Oil_sigma"  ! oil_sigma variable name
-
-    ! Start writing netCDF file having all the computed values
-    ! Open file
-    call iserror(nf90_create(trim(adjustl(results_directory))//"results_eval_deriv_tapenade_1_reverse.nc", &
-         nf90_clobber, ncid))
-
-    ! setup the sizes of the dimensions
-    dim_time_len = (nd/st) + 1
-    dim_mobility_len = 2
-
-    ! Define all dimension
-    ! Define time dimensions
-    call iserror(nf90_def_dim(ncid, dim_time_name, dim_time_len, dim_time_id))
-    ! Define mobility dimensions
-    call iserror(nf90_def_dim(ncid, dim_mobility_name, dim_mobility_len, dim_mobility_id))
-
-    ! Define scalar scenario input
-    call iserror(nf90_def_var(ncid, var_scene_name, NF90_INT, var_scene_id))
-    ! Define scalar nx input
-    call iserror(nf90_def_var(ncid, var_nx_name, NF90_INT, var_nx_id))
-    ! Define scalar ny input
-    call iserror(nf90_def_var(ncid, var_ny_name, NF90_INT, var_ny_id))
-    ! Define scalar nz input
-    call iserror(nf90_def_var(ncid, var_nz_name, NF90_INT, var_nz_id))
-    ! Define scalar mu input
-    call iserror(nf90_def_var(ncid, var_mu_name, NF90_DOUBLE, var_mu_id))
-    ! Define scalar sigma input
-    call iserror(nf90_def_var(ncid, var_sigma_name, NF90_DOUBLE, var_sigma_id))
-
-    ! Define the time variables. Varid is returned.
-    call iserror(nf90_def_var(ncid, var_time_name, NF90_DOUBLE, dim_time_id, var_time_id))
-
-    ! Define the netCDF variables. The dimids array is used to pass the
-    ! dimids of the dimensions of the netCDF variables.
-    var_mobility_dimids = (/ dim_mobility_id, dim_time_id /)
-    call iserror(nf90_def_var(ncid, var_mobility_name, NF90_DOUBLE, var_mobility_dimids &
-         , var_mobility_id))
-
-    ! Define scalar oil output
-    call iserror(nf90_def_var(ncid, var_oil_name, NF90_DOUBLE, var_oil_id))
-    ! Define scalar oil sensitivity in mu direction
-    call iserror(nf90_def_var(ncid, var_oil_mud_name, NF90_DOUBLE, var_oil_mud_id))
-    ! Define scalar oil sensitivity in sigma direction
-    call iserror(nf90_def_var(ncid, var_oil_sigmad_name, NF90_DOUBLE, var_oil_sigmad_id))
-
-    ! End define mode.
-    call iserror(nf90_enddef(ncid))
-
-    ! Write scalar inputs
-    call iserror(nf90_put_var(ncid, var_scene_id, scenario_id))
-    call iserror(nf90_put_var(ncid, var_nx_id, nx))
-    call iserror(nf90_put_var(ncid, var_ny_id, ny))
-    call iserror(nf90_put_var(ncid, var_nz_id, nz))
-    call iserror(nf90_put_var(ncid, var_mu_id, mu))
-    call iserror(nf90_put_var(ncid, var_sigma_id, sigma))
-
-    ! Write the time data. 
-    call iserror(nf90_put_var(ncid, var_time_id, Tt))
-
-    ! Write the data. This will write our mobility and oil data.
-    ! The arrays of data are the same size as
-    ! the netCDF variables we have defined.
-    call iserror(nf90_put_var(ncid, var_mobility_id, Pc))
-    call iserror(nf90_put_var(ncid, var_oil_id, totaloil))
-    call iserror(nf90_put_var(ncid, var_oil_mud_id, totaloil_mud))
-    call iserror(nf90_put_var(ncid, var_oil_sigmad_id, totaloil_sigmad))
+    call ncwrite(ncid, "NX", nx)
+    call ncwrite(ncid, "NY", ny)
+    call ncwrite(ncid, "NZ", nz)
+    call ncwrite(ncid, "MU", mu)
+    call ncwrite(ncid, "SIGMA", sigma)
+    call ncwrite(ncid, "TIME", Tt)
+    call ncwrite(ncid, "PROD_CURVES", Pc)
+    call ncwrite(ncid, "OIL", totaloil)
 
     ! Close the file.
-    call iserror(nf90_close(ncid))
+    call ncclose(ncid)
   end subroutine write_results
-
-  !
-  ! This routine opens the permeability and porosity used by
-  ! the MATLAB program and uses it for the simulation.
-  !
-  subroutine read_permeability_and_porosity(data_directory, nx, ny, nz, PERM, POR)   
-    integer :: ncid                                                  ! netcdf file handle
-
-    character(len = *) :: data_directory                             ! directory location of parameters 
-    integer :: varid                                                 ! generic variable id
-    integer :: nc_chunksize                                          ! chunk size for reading
-
-    integer :: i, j, k, l, m
-    integer :: nx, ny, nz
-    
-    double precision, dimension((nx * ny * nz)) :: POR       ! Porosities
-    double precision, dimension((nx * ny * nz)) :: POR_temp  ! Porosities_temp
-    double precision, dimension(3, nx, ny, nz)  :: PERM      ! Permeabilities
-
-    ! initialize porosity and permeability to zero
-    PERM = 0.0d0
-    POR = 0.0d0
-    POR_temp = 0.0d0
-
-    ! read permeability
-        nc_chunksize = 4096
-    call iserror(nf90_open(trim(adjustl(data_directory))//"/permeability.nc", &
-         NF90_NOWRITE, ncid, nc_chunksize))
-    write(*,*) "Chosen chunk size is ", nc_chunksize
-    
-    call iserror(nf90_inq_varid(ncid, "permeability", varid))
-    call iserror(nf90_get_var(ncid, varid, PERM))
-    call iserror(nf90_close(ncid))
-
-    ! read porosity
-    nc_chunksize = 4096
-    call iserror(nf90_open(trim(adjustl(data_directory))//"/porosity.nc", &
-         NF90_NOWRITE, ncid, nc_chunksize))
-    write(*,*) "Chosen chunk size is ", nc_chunksize
-    
-    call iserror(nf90_inq_varid(ncid, "porosity", varid))
-    call iserror(nf90_get_var(ncid, varid, POR_temp))
-    call iserror(nf90_close(ncid))
-
-    call mymax_1_0_double(POR_temp, 1.0d-3, POR)
-  end subroutine read_permeability_and_porosity
-
-  ! !
-  ! ! This routine opens the permeability and porosity used by
-  ! ! the MATLAB program and uses it for the simulation.
-  ! !
-  ! subroutine read_permeability_and_porosity(data_directory, nx, ny, nz, PERM, POR)   
-    
-  !   integer :: i, j, k, l, m
-  !   integer :: nx, ny, nz
-  !   integer :: maxnx, maxny, maxnz
-  !   parameter(maxnx = 60, maxny = 220, maxnz = 85)
-  !   character(len = *) :: data_directory                             ! directory location of parameters 
-  !   double precision, dimension((nx * ny * nz)) :: POR                 ! Porosities
-  !   double precision, dimension(3, nx, ny, nz) :: PERM  ! Permeabilities
-
-  !   double precision, dimension(nx, ny, nz) :: P
-  !   double precision, dimension(maxnx * maxny * maxnz) :: pUr
-  !   double precision, dimension(3 * maxnx, maxny * maxnz) :: KUr
-  !   double precision, dimension(3 * maxnx * maxny * maxnz) :: KUrl
-
-  !   integer, dimension(nx * ny * nz) :: Pindices
-  !   integer, dimension(3 * nx * ny * nz) :: Kindices
-
-  !   ! initialize porosity and permeability to zero
-  !   PERM = 0.0d0
-  !   POR = 0.0d0
-
-  !   ! read KUr
-  !   open(1,file=trim(adjustl(data_directory))//"KUr.txt",status='old')
-  !   read(1,*) ((KUr(i,j), j=1,maxny * maxnz), i=1,3 * maxnx)
-  !   close(1)
-
-  !   ! reshape 2 dimension to 1 dimension
-  !   call myreshape_2_1(KUr, KUrl)
-
-  !   ! select according to specified dimension
-  !   m = 0
-  !   do l = 1, nz
-  !      do k = 1,ny
-  !         do j = 1,nx
-  !            do i = 1,3
-  !               m = m + 1
-  !               Kindices(m) = ((l - 1) * (maxnx * maxny * 3) &
-  !                    + (k - 1) * (maxnx * 3) &
-  !                    + 3 * (j-1) + i)
-  !            end do
-  !         end do
-  !      end do
-  !   end do
-
-  !   ! then reshape 1 dimension to 4 dimension (hack for time being)
-  !   call myreshape_1_4(KUrl(Kindices), PERM)
-
-  !   ! read KUr
-  !   open(1,file=trim(adjustl(data_directory))//"pUr.txt",status='old')
-  !   read(1,*) (pUr(i), i=1,maxnx * maxny * maxnz)
-
-  !   close(1)
-
-  !   m = 0
-  !   do k = 1,nz
-  !      do j = 1,ny
-  !         do i = 1,nx
-  !            m = m + 1
-  !            Pindices(m) = ((k - 1) * (maxnx * maxny) &
-  !                 + (j - 1) * (maxnx) + i)
-  !         end do
-  !      end do
-  !   end do
-
-  !   call mymax_1_0_double(pUr(Pindices), 1.0d-3, POR) 
-  ! end subroutine read_permeability_and_porosity
-
-  ! netCDF Error Check Routine
-  subroutine iserror(status)
-    integer, intent ( in) :: status
-
-    if(status /= nf90_noerr) then 
-       print *, trim(nf90_strerror(status))
-       stop "Error encountered. Stopped."
-    end if
-  end subroutine iserror
-
 end program runspe10

@@ -7,6 +7,13 @@ program runspe10
   use netcdf
   use netcdfwrapper
   implicit none  
+
+  ! directory to read all input data from
+  character(len = 100) :: data_directory
+  ! directory to write results into
+  character(len = 100) :: results_directory
+
+
   ! dimension for independent, dependent, and the parameter  
   integer :: n_dim, m_dim, p_dim
   ! input variables
@@ -16,16 +23,23 @@ program runspe10
   ! parameter variables
   double precision, dimension(:), allocatable :: param
 
-  call allocate_independent_variables( n_dim, x     )
-  call allocate_dependent_variables(   m_dim, y     )
-  call allocate_parameter_variables(   p_dim, param )
+  call get_filepaths(data_directory, results_directory)
+
+  call get_independent_size( n_dim, data_directory )
+  call get_dependent_size(   m_dim, data_directory )
+
+  call allocate_independent_variables( n_dim, x       )
+  call allocate_dependent_variables(   m_dim, y       )
+  call allocate_parameter_variables(   p_dim, param   )
+
 
   call initialize_parameter_variables(   p_dim, param )
-  call initialize_independent_variables( n_dim, x     )
+  call initialize_independent_variables( n_dim, x,   data_directory )
 
-  call evaluate_original_code(n_dim, m_dim, p_dim, x, y, param)
+  call evaluate_original_code(n_dim, m_dim, p_dim, x, y, param, &
+       data_directory, results_directory)
 
-  call save_dependent_variables( m_dim, y )
+  call save_dependent_variables( m_dim, y       , data_directory )
 
   call deallocate_independent_variables( n_dim, x )
   call deallocate_dependent_variables(   m_dim, y )
@@ -34,23 +48,61 @@ program runspe10
   return
 contains
 
-  subroutine allocate_independent_variables( n_dim, x)
+  subroutine get_filepaths(data_directory, results_directory)
+    integer :: iargs  
+    character(len = 100) :: data_directory
+    character(len = 100) :: results_directory
+
+    ! =================================
+    ! READ DATA AND RESULTS DIRECTORY
+    ! =================================
+    iargs = iargc()
+    if(iargs /= 2) then
+       write(*,*) "Incorrect number of arguments passed. Expected data and results directory."
+    endif
+    call getarg(1, data_directory)
+    call getarg(2, results_directory)
+    write(*,*) "Data directory: ", data_directory
+    write(*,*) "Results directory: ", results_directory  
+  end subroutine get_filepaths
+
+  subroutine get_independent_size( n_dim, data_directory )
+    integer :: ncid
     integer, intent(out):: n_dim
+    character(len = 100) :: data_directory
+
+    call ncopen(trim(adjustl(data_directory))//"x.nc", NC_NOWRITE, ncid)
+    call ncread(ncid, "n_dim", n_dim)
+    call ncclose(ncid)
+  end subroutine get_independent_size
+
+  subroutine get_dependent_size( m_dim, data_directory )
+    integer :: ncid
+    integer, intent(out):: m_dim
+    character(len = 100) :: data_directory
+
+    call ncopen(trim(adjustl(data_directory))//"y.nc", NC_NOWRITE, ncid)
+    call ncread(ncid, "m_dim", m_dim)
+    call ncclose(ncid)
+  end subroutine get_dependent_size
+
+  subroutine allocate_independent_variables( n_dim, x)
+    integer, intent(in):: n_dim
     double precision, dimension(:), allocatable, intent(out):: x
     ! User-Application specific
     ! ===========================
-    n_dim = 6
+    ! N/A
     ! Standard AD-Suite Interface
     ! ===========================
     allocate( x(n_dim) )
   end subroutine allocate_independent_variables
 
   subroutine allocate_dependent_variables( m_dim, y)
-    integer, intent(out):: m_dim
+    integer, intent(in):: m_dim
     double precision, dimension(:), allocatable, intent(out):: y
     ! User-Application specific
     ! ===========================
-    m_dim = 1
+    ! N/A
     ! Standard AD-Suite Interface
     ! ===========================
     allocate( y(m_dim) )
@@ -61,26 +113,25 @@ contains
     double precision, dimension(:), allocatable, intent(out):: param
     ! User-Application specific
     ! ===========================
-    p_dim = 1
+    p_dim = 1 ! parameter is not used through this interface in this app.
     ! Standard AD-Suite Interface
     ! ===========================
     allocate( param(p_dim) )
   end subroutine allocate_parameter_variables
 
-  subroutine initialize_independent_variables(n_dim, x)
+  subroutine initialize_independent_variables(n_dim, x, data_directory)
+    integer :: ncid
     integer, intent(in):: n_dim
+    character(len = 100) :: data_directory
     double precision, dimension(:), allocatable, intent(inout):: x
     ! User-Application specific
     ! ===========================
-    x(1) = -1.0d0
-    x(2) =  0.0d0
-    x(3) = +1.0d0
-    x(4) = 0.0001d0
-    x(5) = 0.0001d0
-    x(6) = 0.0001d0
+    x = 0.0d0
     ! Standard AD-Suite Interface
     ! =========================== 
-    ! N/A
+    call ncopen(trim(adjustl(data_directory))//"x.nc", NC_NOWRITE, ncid)
+    call ncread(ncid, "x", x)
+    call ncclose(ncid)
   end subroutine initialize_independent_variables
 
   subroutine initialize_parameter_variables(p_dim, param)
@@ -94,7 +145,8 @@ contains
     ! N/A
   end subroutine initialize_parameter_variables
 
-  subroutine evaluate_original_code(n_dim, m_dim, p_dim, x, y, param)
+  subroutine evaluate_original_code(n_dim, m_dim, p_dim, x, y, param, &
+	 data_directory, results_directory)
     integer, intent(in) :: n_dim, m_dim, p_dim
     double precision, dimension(n_dim), intent(in) :: x
     double precision, dimension(m_dim), intent(inout) :: y
@@ -103,10 +155,10 @@ contains
     character(len = 100) :: data_directory
     character(len = 100) :: results_directory
 
-    integer :: iargs  
     integer :: i, j, k, n_dof
     integer :: nx, ny, nz
     integer :: nd, st, pt
+
     double precision :: totaloil
     double precision, dimension(:), allocatable :: Q
     double precision, dimension(:), allocatable :: S
@@ -133,18 +185,6 @@ contains
     sigma(1) = x(4)
     sigma(2) = x(5)
     sigma(3) = x(6)
-
-    ! =================================
-    ! READ DATA AND RESULTS DIRECTORY
-    ! =================================
-    iargs = iargc()
-    if(iargs /= 2) then
-       write(*,*) "Incorrect number of arguments passed. Expected data and results directory"
-    endif
-    call getarg(1, data_directory)
-    call getarg(2, results_directory)
-    write(*,*) "Data directory: ", data_directory
-    write(*,*) "Results directory: ", results_directory  
 
     ! =======================================================
     ! INITIALIZE SCENARIO AND APPLICATION SPECIFIC VARIABLES
@@ -187,14 +227,20 @@ contains
     deallocate(sigma)
   end subroutine evaluate_original_code
 
-  subroutine save_dependent_variables(m_dim, y)
+  subroutine save_dependent_variables(m_dim, y, data_directory)
+    integer :: ncid
     integer, intent(in):: m_dim
+    character(len = 100) :: data_directory
     double precision, dimension(:), allocatable, intent(in):: y
     ! Standard AD-Suite Interface
     ! ===========================  
     ! N/A
     ! Standard AD-Suite Interface
     ! ===========================  
+    call ncopen(trim(adjustl(data_directory))//"y.nc", NC_WRITE, ncid)
+    call ncwrite(ncid, "m_dim", m_dim)
+    call ncwrite(ncid, "y", y)
+    call ncclose(ncid)
   end subroutine save_dependent_variables
 
   subroutine deallocate_independent_variables( n_dim, x)
@@ -227,7 +273,7 @@ contains
     ! N/A
     ! Standard AD-Suite Interface
     ! ===========================  
-    ! N/A
+    deallocate( param )
   end subroutine deallocate_parameter_variables
 
   subroutine initialize_size_param_vars(nx, ny, nz, st, pt, nd, data_directory)
@@ -249,7 +295,7 @@ contains
     call ncread(ncid, "St",  st)
     call ncread(ncid, "Pt",  pt)
     call ncread(ncid, "ND",  nd)
-    
+
     call ncclose(ncid)
   end subroutine initialize_size_param_vars
 
@@ -312,7 +358,7 @@ contains
     integer :: ncid                                                  
     integer :: nx, ny, nz
     character(len = *) :: data_directory                             
-    
+
     double precision, dimension((nx * ny * nz)) :: POR       ! Porosities
     double precision, dimension(nx, ny, nz) :: POR_temp    ! Porosities_temp
     double precision, dimension(3, nx, ny, nz)  :: PERM      ! Permeabilities
@@ -343,7 +389,7 @@ contains
     implicit none
     integer :: nx, ny, nz
     integer :: st, pt, nd
-     
+
     double precision, dimension(:), allocatable          :: Q
     double precision, dimension(:), allocatable          :: S
     double precision, dimension(:, :, :), allocatable    :: P
@@ -387,7 +433,7 @@ contains
     double precision, dimension(:)          :: Tt
     double precision, dimension(:, :)       :: Pc
     double precision, dimension(:,:,:), allocatable :: S_temp
- 
+
     character(len = *) :: data_directory                             
 
     ! initialize memory for inflow and saturation
@@ -425,7 +471,7 @@ contains
     double precision, dimension(:)             :: Tt
     double precision, dimension(:, :)          :: Pc
     character(len = *) :: results_directory
-                                                                        
+
     call ncopen(trim(adjustl(results_directory))//"/results_eval_original_code.nc", &
          NC_WRITE, ncid)
 
