@@ -255,8 +255,8 @@ contains
     ! ===========================
     ! READ DIRECTION VARIABLES
     ! ===========================
-    mud(1)    = dir_x(1:n_dof)
-    sigmad(1) = dir_x(n_dof + 1:)
+    mud    = dir_x(1:n_dof)
+    sigmad = dir_x(n_dof + 1:)
 
     ! =======================================================
     ! INITIALIZE SCENARIO AND APPLICATION SPECIFIC VARIABLES

@@ -179,12 +179,8 @@ contains
     ! ===========================
     ! READ INDEPENDENT VARIABLES
     ! ===========================
-    mu(1)    = x(1)
-    mu(2)    = x(2)
-    mu(3)    = x(3)
-    sigma(1) = x(4)
-    sigma(2) = x(5)
-    sigma(3) = x(6)
+    mu    = x(1  :  n_dof)
+    sigma = x(n_dof + 1 :)
 
     ! =======================================================
     ! INITIALIZE SCENARIO AND APPLICATION SPECIFIC VARIABLES
@@ -239,7 +235,7 @@ contains
     ! ===========================  
     call ncopen(trim(adjustl(data_directory))//"y.nc", NC_WRITE, ncid)
     call ncwrite(ncid, "m_dim", m_dim)
-    call ncwrite(ncid, "y", y)
+    call ncwrite(ncid, "y", y, (/"m_dim"/))
     call ncclose(ncid)
   end subroutine save_dependent_variables
 

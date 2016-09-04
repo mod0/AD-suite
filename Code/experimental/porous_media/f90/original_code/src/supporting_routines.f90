@@ -3439,7 +3439,7 @@ contains
     character(len=*) :: filename
     integer :: ncid
     logical :: mode
-    
+
     ! if the file is opened to write, end define mode
     ! each write operation will enter define mode 
     ! independently
@@ -3454,7 +3454,7 @@ contains
        stop "Unsupported mode."
     end if
   end subroutine ncopen
-  
+
   ! close the file identified by ncid
   subroutine ncclose(ncid)
     integer :: ncid
@@ -3494,7 +3494,7 @@ contains
 
     ! now inquire the variable and get the number of dimensions
     call iserror(nf90_inquire_variable(ncid, varid, temp_varname, vartype, dimcount))
- 
+
     ! check that the dimensions is equal to 0 or 1
     if (.not.(dimcount == 1 .or. dimcount == 0)) then
        stop "The input variable is not a scalar"
@@ -3545,7 +3545,7 @@ contains
 
     ! now inquire the variable and get the number of dimensions
     call iserror(nf90_inquire_variable(ncid, varid, temp_varname, vartype, dimcount))
- 
+
     ! check that the dimensions is equal to 0 or 1
     if (.not.(dimcount == 1 .or. dimcount == 0)) then
        stop "The input variable is not a scalar"
@@ -3575,7 +3575,7 @@ contains
        call iserror(nf90_get_var(ncid, varid, var))
     end if
   end subroutine ncread_scalar_double
-  
+
   ! routine to read a scalar float value
   subroutine ncread_scalar_float(ncid, varname, var)
     integer :: i
@@ -3596,7 +3596,7 @@ contains
 
     ! now inquire the variable and get the number of dimensions
     call iserror(nf90_inquire_variable(ncid, varid, temp_varname, vartype, dimcount))
- 
+
     ! check that the dimensions is equal to 0 or 1
     if (.not.(dimcount == 1 .or. dimcount == 0)) then
        stop "The input variable is not a scalar"
@@ -3646,7 +3646,7 @@ contains
 
     ! now inquire the variable and get the number of dimensions
     call iserror(nf90_inquire_variable(ncid, varid, temp_varname, vartype, dimcount))
- 
+
     ! check that the dimensions is equal to 1
     if (dimcount /= 1) then
        stop "The input variable is not a vector"
@@ -3688,7 +3688,7 @@ contains
 
     ! now inquire the variable and get the number of dimensions
     call iserror(nf90_inquire_variable(ncid, varid, temp_varname, vartype, dimcount))
- 
+
     ! check that the dimensions is equal to 1
     if (dimcount /= 1) then
        stop "The input variable is not a vector"
@@ -3730,7 +3730,7 @@ contains
 
     ! now inquire the variable and get the number of dimensions
     call iserror(nf90_inquire_variable(ncid, varid, temp_varname, vartype, dimcount))
- 
+
     ! check that the dimensions is equal to 1
     if (dimcount /= 1) then
        stop "The input variable is not a vector"
@@ -3772,7 +3772,7 @@ contains
 
     ! now inquire the variable and get the number of dimensions
     call iserror(nf90_inquire_variable(ncid, varid, temp_varname, vartype, dimcount))
- 
+
     ! check that the dimensions is equal to 2
     if (dimcount /= 2) then
        stop "The input variable is not a matrix"
@@ -3814,7 +3814,7 @@ contains
 
     ! now inquire the variable and get the number of dimensions
     call iserror(nf90_inquire_variable(ncid, varid, temp_varname, vartype, dimcount))
- 
+
     ! check that the dimensions is equal to 2
     if (dimcount /= 2) then
        stop "The input variable is not a matrix"
@@ -3837,7 +3837,7 @@ contains
     call iserror(nf90_get_var(ncid, varid, var))    
   end subroutine ncread_matrix_double
 
-! routine to read a matrix float value
+  ! routine to read a matrix float value
   subroutine ncread_matrix_float(ncid, varname, var)
     integer :: i
     integer :: ncid
@@ -3856,7 +3856,7 @@ contains
 
     ! now inquire the variable and get the number of dimensions
     call iserror(nf90_inquire_variable(ncid, varid, temp_varname, vartype, dimcount))
- 
+
     ! check that the dimensions is equal to 2
     if (dimcount /= 2) then
        stop "The input variable is not a vector"
@@ -3898,7 +3898,7 @@ contains
 
     ! now inquire the variable and get the number of dimensions
     call iserror(nf90_inquire_variable(ncid, varid, temp_varname, vartype, dimcount))
- 
+
     ! check that the dimensions is equal to 3
     if (dimcount /= 3) then
        stop "The input variable is not a 3-tensor"
@@ -3940,7 +3940,7 @@ contains
 
     ! now inquire the variable and get the number of dimensions
     call iserror(nf90_inquire_variable(ncid, varid, temp_varname, vartype, dimcount))
- 
+
     ! check that the dimensions is equal to 3
     if (dimcount /= 3) then
        stop "The input variable is not a 3-tensor"
@@ -3982,7 +3982,7 @@ contains
 
     ! now inquire the variable and get the number of dimensions
     call iserror(nf90_inquire_variable(ncid, varid, temp_varname, vartype, dimcount))
- 
+
     ! check that the dimensions is equal to 3
     if (dimcount /= 3) then
        stop "The input variable is not a 3-tensor"
@@ -4024,7 +4024,7 @@ contains
 
     ! now inquire the variable and get the number of dimensions
     call iserror(nf90_inquire_variable(ncid, varid, temp_varname, vartype, dimcount))
- 
+
     ! check that the dimensions is equal to 4
     if (dimcount /= 4) then
        stop "The input variable is not a 4-tensor"
@@ -4066,7 +4066,7 @@ contains
 
     ! now inquire the variable and get the number of dimensions
     call iserror(nf90_inquire_variable(ncid, varid, temp_varname, vartype, dimcount))
- 
+
     ! check that the dimensions is equal to 4
     if (dimcount /= 4) then
        stop "The input variable is not a 4-tensor"
@@ -4108,7 +4108,7 @@ contains
 
     ! now inquire the variable and get the number of dimensions
     call iserror(nf90_inquire_variable(ncid, varid, temp_varname, vartype, dimcount))
- 
+
     ! check that the dimensions is equal to 4
     if (dimcount /= 4) then
        stop "The input variable is not a 4-tensor"
@@ -4138,7 +4138,7 @@ contains
     integer :: ncid
     character(len=*) :: varname
     integer :: varid, var
-    
+
     ! enter define mode.
     call iserror(nf90_redef(ncid))
 
@@ -4158,7 +4158,7 @@ contains
     integer :: varid
     integer :: vardimid1
     integer, dimension(:) :: var
-    character(len=nf90_max_name), dimension(1), optional :: dimnames
+    character(len=*), dimension(1), optional :: dimnames
 
     ! enter define mode.
     call iserror(nf90_redef(ncid))
@@ -4187,7 +4187,7 @@ contains
     integer :: varid
     integer :: vardimid1, vardimid2
     integer, dimension(:,:) :: var
-    character(len=nf90_max_name), dimension(2), optional :: dimnames
+    character(len=*), dimension(2), optional :: dimnames
 
     ! enter define mode.
     call iserror(nf90_redef(ncid))
@@ -4218,7 +4218,7 @@ contains
     integer :: varid
     integer :: vardimid1, vardimid2, vardimid3
     integer, dimension(:,:,:) :: var
-    character(len=nf90_max_name), dimension(3), optional :: dimnames
+    character(len=*), dimension(3), optional :: dimnames
 
     ! enter define mode.
     call iserror(nf90_redef(ncid))
@@ -4253,7 +4253,7 @@ contains
     integer :: varid
     integer :: vardimid1, vardimid2, vardimid3, vardimid4
     integer, dimension(:,:,:,:) :: var
-    character(len=nf90_max_name), dimension(4), optional :: dimnames
+    character(len=*), dimension(4), optional :: dimnames
 
     ! enter define mode.
     call iserror(nf90_redef(ncid))
@@ -4308,7 +4308,7 @@ contains
     integer :: varid
     integer :: vardimid1
     double precision, dimension(:) :: var
-    character(len=nf90_max_name), dimension(1), optional :: dimnames
+    character(len=*), dimension(1), optional :: dimnames
 
     ! enter define mode.
     call iserror(nf90_redef(ncid))
@@ -4337,7 +4337,7 @@ contains
     integer :: varid
     integer :: vardimid1, vardimid2
     double precision, dimension(:,:) :: var
-    character(len=nf90_max_name), dimension(2), optional :: dimnames
+    character(len=*), dimension(2), optional :: dimnames
 
     ! enter define mode.
     call iserror(nf90_redef(ncid))
@@ -4368,7 +4368,7 @@ contains
     integer :: varid
     integer :: vardimid1, vardimid2, vardimid3
     double precision, dimension(:,:,:) :: var
-    character(len=nf90_max_name), dimension(3), optional :: dimnames
+    character(len=*), dimension(3), optional :: dimnames
 
     ! enter define mode.
     call iserror(nf90_redef(ncid))
@@ -4403,7 +4403,7 @@ contains
     integer :: varid
     integer :: vardimid1, vardimid2, vardimid3, vardimid4
     double precision, dimension(:,:,:,:) :: var
-    character(len=nf90_max_name), dimension(4), optional :: dimnames
+    character(len=*), dimension(4), optional :: dimnames
 
     ! enter define mode.
     call iserror(nf90_redef(ncid))
@@ -4459,7 +4459,7 @@ contains
     integer :: varid
     integer :: vardimid1
     real*4, dimension(:) :: var
-    character(len=nf90_max_name), dimension(1), optional :: dimnames
+    character(len=*), dimension(1), optional :: dimnames
 
     ! enter define mode.
     call iserror(nf90_redef(ncid))
@@ -4488,7 +4488,7 @@ contains
     integer :: varid
     integer :: vardimid1, vardimid2
     real*4, dimension(:,:) :: var
-    character(len=nf90_max_name), dimension(2), optional :: dimnames
+    character(len=*), dimension(2), optional :: dimnames
 
     ! enter define mode.
     call iserror(nf90_redef(ncid))
@@ -4520,7 +4520,7 @@ contains
     integer :: varid
     integer :: vardimid1, vardimid2, vardimid3
     real*4, dimension(:,:,:) :: var
-    character(len=nf90_max_name), dimension(3), optional :: dimnames
+    character(len=*), dimension(3), optional :: dimnames
 
     ! enter define mode.
     call iserror(nf90_redef(ncid))
@@ -4555,7 +4555,7 @@ contains
     integer :: varid
     integer :: vardimid1, vardimid2, vardimid3, vardimid4
     real*4, dimension(:,:,:,:) :: var
-    character(len=nf90_max_name), dimension(4), optional :: dimnames
+    character(len=*), dimension(4), optional :: dimnames
 
     ! enter define mode.
     call iserror(nf90_redef(ncid))
