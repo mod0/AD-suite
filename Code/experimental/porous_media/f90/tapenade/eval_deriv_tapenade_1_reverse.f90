@@ -647,7 +647,7 @@ contains
     double precision, dimension(:, :)          :: Pc
     character(len = *) :: results_directory
 
-    call ncopen(trim(adjustl(results_directory))//"/results_eval_deriv_tapenade_1_forward.nc", &
+    call ncopen(trim(adjustl(results_directory))//"/results_eval_deriv_tapenade_1_reverse.nc", &
          NC_WRITE, ncid)
 
     call ncwrite(ncid, "NX", nx)
