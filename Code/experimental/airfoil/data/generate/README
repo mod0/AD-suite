@@ -1,0 +1,3 @@
+generate.m: accepts the size for the grid and a boolean of whether or not initial flow file has to be created and generates all the necessary input files.
+One can run generate.m to generate these files and copy them over to the corresponding sub-directory in the data directory and run the code to generate the
+updated flow. The updated_flow should then be used to replace the base flow that is created using generate.m
